@@ -1,0 +1,30 @@
+services:
+
+  #contenedor 1
+  frontend:
+    #Construye la imagen usando los archivos en esta carpeta ( . es la carpeta actual)
+    build: .
+    container_name: frontend #el contenedor se llama asi
+    restart: unless-stopped #Si el contenedor se cae o docker se reincia, vuelve a levantarlo automaticamente
+    networks:
+      - frontend_network
+      #Conecta el contenedor frontend a la red llamada frontend_network.
+
+  #contenedor 2
+  cloudflared:
+    image: cloudflare/cloudflared:latest #Utiliza la imagen oficial de Cloudflare Tunnel
+    container_name: cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN} #ejecuta cloudfare tunnel usando este token
+    depends_on:
+      - frontend
+      #Antes de iniciar cloudfare, inicia el servicio frontend
+    networks:
+      - frontend_network
+      #permite comunicarse con frontend con la misma red q frontend
+
+#definir la red que utilizaremos
+networks:
+  frontend_network:
+    driver: bridge 
+    #red privada de docker q permite q los contenedores se comuniquen entre ellos
