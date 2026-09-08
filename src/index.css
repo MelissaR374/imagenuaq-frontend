@@ -127,18 +127,59 @@ body,
   margin: 0;
   padding: 0;
   overflow-x: hidden;
-  /* Evita la barra de scroll horizontal fantasma */
 }
 
 body {
   font-family: "Poppins", sans-serif;
+  background-color: #16171d;
 }
 
 #root {
   min-height: 100vh;
+  text-align: center;
+  flex: 1;
 }
 
-/* Si quieres que el fondo sea oscuro como en tu menú */
-body {
-  background-color: #16171d;
+/* #root {
+  width: 100%;
+  min-width: 100vh;
+  margin: 0 auto;
+  text-align: center;
+  border-inline: 1px solid var(--border);
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+} */
+
+h1,
+h2 {
+  font-family: "Poppins", sans-serif;
+  color: var(--text-h);
+}
+
+h1 {
+  font-size: 56px;
+  letter-spacing: -1.68px;
+  margin: 38px 0;
+
+  @media (max-width: 1024px) {
+    font-size: 36px;
+    margin: 20px 0;
+  }
+}
+
+h2 {
+  font-size: 24px;
+  line-height: 118%;
+  letter-spacing: -0.24px;
+  margin: 0 0 8px;
+
+  @media (max-width: 1024px) {
+    font-size: 20px;
+  }
+}
+
+p {
+  margin: 0;
 }

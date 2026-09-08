@@ -1,4 +1,4 @@
-import React from "react";
+import React, {useState} from "react";
 import "./sidebar.css";
 
 import {
@@ -15,48 +15,92 @@ import {
   MdReceipt,
   MdAssessment,
   MdLogout,
+  MdChatBubbleOutline,
+  MdCheckBox,
+  MdAttachFile,
+  MdCurrencyExchange,
+  MdAttachMoney,
+  MdAssignmentInd,
+  MdMenu,
 } from "react-icons/md";
 
 const menuSections = [
   {
     title: null,
     items: [
+      //VISTAS GENERALES
       {
         label: "Notificaciones",
         icon: MdNotificationsNone,
-        roles: ["admin", "trabajador"],
-        badge: 12,
-      },
-      {
-        label: "Panel general",
-        icon: MdDashboard,
-        roles: ["admin", "trabajador"],
-      },
-      {
-        label: "Bandeja de solicitudes",
-        icon: MdInbox,
-        roles: ["admin", "trabajador"],
-        badge: 12,
-      },
-      {
-        label: "Proyectos",
-        icon: MdFolder,
-        roles: ["admin", "trabajador"],
-      },
-      {
-        label: "Personas y carga",
-        icon: MdPeople,
-        roles: ["admin", "trabajador"],
+        roles: ["admin", "lider","finanzas","trabajador"]
       },
       {
         label: "Cronograma",
         icon: MdSchedule,
-        roles: ["admin", "trabajador"],
+        roles: ["admin", "lider","finanzas","trabajador"]
+      },
+      {
+        label: "Mensajes",
+        icon: MdChatBubbleOutline,
+        roles: ["admin", "lider","finanzas","trabajador"]
+      },
+
+      //VISTAS TRABAJADOR Y FINANZAS
+      {
+        label: "Mis tareas",
+        icon:MdCheckBox,
+        roles: ["trabajador", "finanzas"]
+      },
+      {
+        label: "Mi semana",
+        icon: MdCalendarToday,
+        roles: ["trabajador", "finanzas"]
+      },
+      {
+        label: "Mis proyectos",
+        icon: MdFolder,
+        roles: ["trabajador", "finanzas"]
+      },
+
+      //VISTA TRABAJADOR
+      {
+        label: "Mis archivos",
+        icon: MdAttachFile,
+        roles: ["trabajador"]
+      },
+            
+    ],
+  },
+  
+  //SECCIONES ADMIN
+  {
+    title: "ADMINISTRAR",
+    items: [
+      {
+        label: "Panel general",
+        icon: MdDashboard,
+        roles: ["admin"],
+      },
+      {
+        label: "Bandeja de solicitudes",
+        icon: MdInbox,
+        roles: ["admin"],
+        //badge: 12,
+      },
+      {
+        label: "Proyectos",
+        icon: MdFolder,
+        roles: ["admin"],
+      },
+      {
+        label: "Personas y carga",
+        icon: MdPeople,
+        roles: ["admin"],
       },
       {
         label: "Calendario",
         icon: MdCalendarToday,
-        roles: ["admin", "trabajador"],
+        roles: ["admin"],
       },
     ],
   },
@@ -67,17 +111,17 @@ const menuSections = [
       {
         label: "Diseñador de flujos",
         icon: MdAccountTree,
-        roles: ["admin", "trabajador"],
+        roles: ["admin"],
       },
       {
         label: "Áreas y usuarios",
         icon: MdBusiness,
-        roles: ["admin", "trabajador"],
+        roles: ["admin"],
       },
       {
         label: "Formatos de solicitud",
         icon: MdDescription,
-        roles: ["admin", "trabajador"],
+        roles: ["admin"],
       },
     ],
   },
@@ -88,20 +132,97 @@ const menuSections = [
       {
         label: "Facturación",
         icon: MdReceipt,
-        roles: ["admin", "trabajador"],
+        roles: ["admin"],
       },
       {
         label: "Reportes",
         icon: MdAssessment,
-        roles: ["admin", "trabajador"],
+        roles: ["admin"],
+      },
+    ],
+  },
+
+  //SECCIÓN FINANZAS
+  {
+    title: "COBRO",
+    items: [
+      {
+        label: "Facturas",
+        icon: MdCurrencyExchange,
+        roles: ["finanzas"],
+      },
+      {
+        label: "Cotizaciones",
+        icon: MdAttachMoney,
+        roles: ["finanzas"],
+        badge: 12,
+      },
+    ],
+  },
+
+
+  //SECCIÓN LÍDER
+  {
+    title: "LÍDER",
+    items: [
+      {
+        label: "Panel de área",
+        icon: MdDashboard,
+        roles: ["lider"],
+      },
+      {
+        label: "Por asignar",
+        icon: MdInbox,
+        roles: ["lider"],
+        badge: 12,
+      },
+      {
+        label: "Proyectos del área",
+        icon: MdFolder,
+        roles: ["lider"],
+      },
+      {
+        label: "Equipo",
+        icon: MdPeople,
+        roles: ["lider"],
+      },
+      {
+        label: "Calendario del área",
+        icon: MdCalendarToday,
+        roles: ["lider"],
+      },
+    ],
+  },
+
+  {
+    title: "ÁREA",
+    items: [
+      {
+        label: "Flujos aplicables",
+        icon: MdAccountTree,
+        roles: ["lider"],
+      },
+      {
+        label: "Capacidad y turnos",
+        icon: MdAssignmentInd,
+        roles: ["lider"],
+        //badge: 12,
       },
     ],
   },
 ];
 
 function Sidebar({ role = "admin", activeItem = "Proyectos", onNavigate }) {
+  
+  //CREAMOS EL ESTADO, al inicio es false
+  /* isClosed = false -> menú abierto 
+    Al presionar el botón será:
+    isClosed = true -> menú cerrado
+    */
+  const [isClosed, setIsClosed] = useState(false);
+
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${isClosed ? "closed" : ""}`}>
       {/* LOGO */}
       <div className="sidebar-brand">
         <div className="brand-icon">
@@ -109,7 +230,12 @@ function Sidebar({ role = "admin", activeItem = "Proyectos", onNavigate }) {
         </div>
 
         <span className="brand-name">IMAGEN UAQ</span>
+        <button className = "sidebar-toggle"
+        onClick = {() => setIsClosed(!isClosed)}>
+          {isClosed ? <MdMenu /> : <MdMenu />}
+        </button>
       </div>
+      
 
       {/* MENÚ */}
       <nav className="sidebar-menu">

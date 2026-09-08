@@ -7,7 +7,7 @@ function App() {
     <div className="app-container">
 
       <Sidebar
-        role="admin"
+        role="lider"
         activeItem="Proyectos"
         onNavigate={(item) => {
           console.log("Seleccionaste:", item);
