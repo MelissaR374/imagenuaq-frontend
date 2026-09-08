@@ -43,7 +43,7 @@
     height: 20px;
     border-radius: 50%;
     background-color: #ffffff;
-    color: #10243a;
+    color: #e11eba;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -121,12 +121,12 @@
 }
 
 .sidebar-item:hover {
-    background-color: #102844;
+    background-color: #a212d2;
     color: #ffffff;
 }
 
 /* .sidebar-item.active {
-    background-color: #17345b;
+    background-color: #8916a9;
     color: #ffffff;
 } */
 
@@ -192,7 +192,7 @@
     width: 22px;
     height: 22px;
     border-radius: 50%;
-    background-color: #244a6d;
+    background-color: #b918b1;
     color: #ffffff;
     font-size: 7px;
     font-weight: 600;
