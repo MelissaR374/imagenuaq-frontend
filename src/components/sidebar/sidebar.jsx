@@ -222,6 +222,7 @@ function Sidebar({ role = "admin", activeItem = "Proyectos", onNavigate }) {
   const [isClosed, setIsClosed] = useState(false);
 
   return (
+    /*operador ternario  condición ? expresion si es verdadera : expresion si es falsa  */
     <aside className={`sidebar ${isClosed ? "closed" : ""}`}>
       {/* LOGO */}
       <div className="sidebar-brand">
@@ -239,6 +240,7 @@ function Sidebar({ role = "admin", activeItem = "Proyectos", onNavigate }) {
 
       {/* MENÚ */}
       <nav className="sidebar-menu">
+        {/* section = sección actual, sectionIndex = índice de las secciones (0,1,2,3,4,...)*/}
         {menuSections.map((section, sectionIndex) => {
           const visibleItems = section.items.filter((item) =>
             item.roles.includes(role),
