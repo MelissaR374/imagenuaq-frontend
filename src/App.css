@@ -39,3 +39,44 @@ body {
   overflow-x: hidden;
   color: #ffff;
 }
+/* =========================
+   BARRA SUPERIOR
+   Mínimo para que se lea; reemplazable.
+========================= */
+
+.main-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-bottom: 24px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #17345b;
+}
+
+.main-user {
+  font-size: 14px;
+  color: #8290a1;
+}
+
+.main-logout {
+  padding: 7px 14px;
+  border: 1px solid #244a6d;
+  border-radius: 6px;
+  background: none;
+  color: #dce3eb;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.main-logout:hover {
+  border-color: #e66a4c;
+  color: #e66a4c;
+}
+
+.app-booting {
+  padding: 40px;
+  color: #8290a1;
+  font-family: "Poppins", sans-serif;
+}

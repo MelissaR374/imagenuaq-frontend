@@ -1,4 +1,4 @@
-import React, {useState} from "react";
+import { useState } from "react";
 import "./sidebar.css";
 
 import {
@@ -21,6 +21,7 @@ import {
   MdCurrencyExchange,
   MdAttachMoney,
   MdAssignmentInd,
+  MdBadge,
   MdMenu,
 } from "react-icons/md";
 
@@ -95,6 +96,12 @@ const menuSections = [
       {
         label: "Personas y carga",
         icon: MdPeople,
+        roles: ["admin"],
+      },
+      {
+        //ALTA Y BAJA DE CUENTAS, SOLO ADMIN
+        label: "Personal",
+        icon: MdBadge,
         roles: ["admin"],
       },
       {
