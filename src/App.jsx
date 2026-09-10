@@ -46,14 +46,16 @@ function App() {
   if (!usuario) return <Login onEntrar={setUsuario} />;
 
   // Pestaña de inicio según el rol, hasta que la persona elija otra.
-  const activa = pestana ?? (usuario.role === "admin" ? "Personal" : "Notificaciones");
+  const activa = pestana ?? (usuario.role === "admin" ? "Empleados" : "Notificaciones");
 
   return (
     <div className="app-container">
       <Sidebar
+        usuario = {usuario}
         role={ROLES[usuario.role] ?? "trabajador"}
         activeItem={activa}
         onNavigate={setPestana}
+        onLogout={cerrarSesion}
       />
 
       <main className="main-content">
@@ -66,7 +68,7 @@ function App() {
         </header>
 
         {/* Por ahora solo "Personal" tiene pantalla; las demás muestran su nombre. */}
-        {activa === "Personal" && usuario.role === "admin" ? (
+        {activa === "Empleados" && usuario.role === "admin" ? (
           <Users admin={usuario} />
         ) : (
           <h1>{activa}</h1>

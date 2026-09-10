@@ -177,7 +177,7 @@ function Users({ admin }) {
   return (
     <section className="users-panel">
       <header className="users-header">
-        <h1 className="users-title">Personal</h1>
+        <h1 className="users-title">Empleados</h1>
 
         <p className="users-count">
           {total} {total === 1 ? "persona" : "personas"}

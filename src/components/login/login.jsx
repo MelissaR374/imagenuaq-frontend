@@ -1,14 +1,19 @@
 // Tiene dos modos porque las cuentas las crea un administrador sin contraseña: la persona
 // recibe una invitación y la canjea aquí eligiendo la suya. Después ya entra normal.
 import { useState } from "react";
+import { MdVisibility, MdVisibilityOff } from "react-icons/md";
+
+import canelita from "../../assets/Canela_29.png"
 
 import * as api from "../../api/client.js";
 import "./login.css";
+import { use } from "react";
 
 function Login({ onEntrar }) {
   const [modo, setModo] = useState("entrar"); // "entrar" o "activar"
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [mostrarPassword, setMostrarPassword] = useState(false)
   const [invitacion, setInvitacion] = useState("");
   const [error, setError] = useState(null);
   const [enviando, setEnviando] = useState(false);
@@ -44,8 +49,19 @@ function Login({ onEntrar }) {
 
   return (
     <div className="login-page">
+      <div className="loginleft">
+        <header className="headerleft">UNIVERSIDAD AUTÓNOMA DE QUERÉTARO</header>
+
+        <div className="content-left">
+          <img src={canelita} alt="" className="canelita" />
+          <h1 className="loginleft-title">Imagen UAQ</h1>
+          <p className="loginleft-subtitle">Plataforma Institucional de Gestión de Proyectos y Producción Multimedios</p>
+        </div>
+
+
+      </div>
       <main className="login-panel">
-        <h1 className="login-title">Imagen UAQ</h1>
+        <h1 className="login-title">Iniciar Sesión</h1>
 
         <p className="login-subtitle">
           {activando
@@ -60,6 +76,9 @@ function Login({ onEntrar }) {
               <label className="login-label" htmlFor="login-invite">
                 Token de invitación
               </label>
+              <p className="login-hint">
+                Es el texto largo que aparece en el correo o mensaje de invitación.
+              </p>
 
               <textarea
                 className="login-input"
@@ -70,9 +89,7 @@ function Login({ onEntrar }) {
                 onChange={(event) => setInvitacion(event.target.value)}
               />
 
-              <p className="login-hint">
-                Es el texto largo que aparece en el correo o mensaje de invitación.
-              </p>
+              
             </div>
           ) : (
             <div className="login-field">
@@ -99,16 +116,25 @@ function Login({ onEntrar }) {
               {activando ? "Elige una contraseña" : "Contraseña"}
             </label>
 
-            <input
-              className="login-input"
-              id="login-password"
-              type="password"
-              required
-              autoComplete={activando ? "new-password" : "current-password"}
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-            />
+            <div className="password-container">
+                <input
+                className="login-input"
+                id="login-password"
+                type={mostrarPassword ? "text" : "password"}
+                required
+                autoComplete={activando ? "new-password" : "current-password"}
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+              />
 
+              <button
+                type = "button"
+                className="password-toggle"
+                onClick={() => setMostrarPassword(!mostrarPassword)}
+                aria-label={mostrarPassword ? "Ocultar contraseña" : "Mostrar contraseña"}>
+                {mostrarPassword ? <MdVisibilityOff/> : <MdVisibility/>}
+              </button>
+            </div>
             {activando && <p className="login-hint">Mínimo 8 caracteres.</p>}
           </div>
 
