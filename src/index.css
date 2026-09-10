@@ -9,8 +9,15 @@
   --sidebar-open: 235px;
   --sidebar-closed: 70px;
 
+  /* MODO CLARO */
   --background: #f5f7fa;
+  --surface: #ffffff;
+  --surface-secondary: #f8fafc;
   --text: #26364d;
+  --text-secondary: #68758a;
+  --text-muted: #8994a5;
+  --border: #e1e6ec;
+  --border-light: #edf0f4;
 }
 
 
@@ -33,7 +40,6 @@ html {
 body {
   width: 100%;
   min-height: 100vh;
-
   margin: 0;
   padding: 0;
 
@@ -41,6 +47,10 @@ body {
 
   background-color: var(--background);
   color: var(--text);
+
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
 
   overflow-x: hidden;
 }
