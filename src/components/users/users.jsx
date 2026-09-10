@@ -3,9 +3,13 @@
 //
 // Al crear una cuenta el servidor devuelve un token de invitación y no lo guarda: esa
 // respuesta es la única vez que se puede ver, por eso se muestra en una tarjeta aparte.
+// La tarjeta ofrece el enlace de activación, armado con VITE_FRONTEND_DOMAIN (ver
+// ../../config.js), y también el token suelto, porque un enlace largo no siempre sobrevive
+// al correo o a WhatsApp y la pantalla de entrada acepta pegarlo a mano.
 import { useEffect, useState } from "react";
 
 import * as api from "../../api/client.js";
+import { activationLink } from "../../config.js";
 import "./users.css";
 
 // Cuántas personas se muestran por página.
@@ -190,19 +194,49 @@ function Users({ admin }) {
           <h2 className="invite-title">Invitación para {invitacion.nombre}</h2>
 
           <p className="invite-note">
-            Este token se muestra una sola vez. Compártelo con la persona para que active su
+            Esto se muestra una sola vez. Manda el enlace a la persona para que active su
             cuenta y elija contraseña.
           </p>
 
-          <textarea className="invite-token" readOnly rows={3} value={invitacion.token} />
+          <label className="invite-label" htmlFor="invite-link">
+            Enlace de activación
+          </label>
+
+          <textarea
+            className="invite-link"
+            id="invite-link"
+            readOnly
+            rows={2}
+            value={activationLink(invitacion.token)}
+          />
+
+          <label className="invite-label" htmlFor="invite-token">
+            O solo el token, si el enlace no le llega completo
+          </label>
+
+          <textarea
+            className="invite-token"
+            id="invite-token"
+            readOnly
+            rows={3}
+            value={invitacion.token}
+          />
 
           <div className="invite-actions">
             <button
               className="invite-copy"
               type="button"
+              onClick={() => navigator.clipboard.writeText(activationLink(invitacion.token))}
+            >
+              Copiar enlace
+            </button>
+
+            <button
+              className="invite-copy-token"
+              type="button"
               onClick={() => navigator.clipboard.writeText(invitacion.token)}
             >
-              Copiar
+              Copiar token
             </button>
 
             <button

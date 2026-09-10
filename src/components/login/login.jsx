@@ -3,13 +3,18 @@
 import { useState } from "react";
 
 import * as api from "../../api/client.js";
+import { INVITE_PARAM } from "../../config.js";
 import "./login.css";
 
+function invitacionEnLaUrl() {
+  return new URLSearchParams(window.location.search).get(INVITE_PARAM) ?? "";
+}
+
 function Login({ onEntrar }) {
-  const [modo, setModo] = useState("entrar"); // "entrar" o "activar"
+  const [invitacion, setInvitacion] = useState(invitacionEnLaUrl);
+  const [modo, setModo] = useState(invitacion ? "activar" : "entrar"); // "entrar" o "activar"
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [invitacion, setInvitacion] = useState("");
   const [error, setError] = useState(null);
   const [enviando, setEnviando] = useState(false);
 

@@ -1,10 +1,6 @@
-// Todas las llamadas al backend pasan por aquí.
-//
-// La URL base es "/api": en desarrollo Vite la reenvía al servidor (ver vite.config.js) y
-// en producción nginx sirve las dos mitades desde el mismo origen, así que nunca hay CORS.
-// El token de sesión se guarda en localStorage y se manda en cada petición.
+import { API_URL } from "../config.js";
 
-const BASE = import.meta.env.VITE_API_URL ?? "/api";
+const BASE = API_URL;
 
 const TOKEN_KEY = "imagenuaq.token";
 

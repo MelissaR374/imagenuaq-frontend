@@ -9,10 +9,14 @@ export default defineConfig({
     babel({ presets: [reactCompilerPreset()] })
   ],
   server: {
-    // The API is called at /api, so the dev server has to stand in for the nginx that
-    // serves both halves from one origin in production. Same-origin means no CORS and no
-    // preflight in either environment, and it keeps the base URL identical in both -- see
-    // src/api/client.js. Point VITE_API_URL somewhere else if the API is not on 3000.
+    // Only used when VITE_API_URL is left as the bare path "/api": the dev server then
+    // stands in for the nginx that is meant to serve both halves from one origin in
+    // production, so the base URL is identical in both and CORS never applies. With
+    // VITE_API_URL set to an absolute URL -- the default in .env.example -- the browser
+    // talks to the backend directly and this block is dead weight. See src/config.js.
+    //
+    // `localhost` on purpose, not 127.0.0.1: the backend's HOST=localhost makes Node bind
+    // the IPv6 loopback only, and an IPv4 target gets an ECONNRESET through this proxy.
     proxy: {
       '/api': {
         target: 'http://localhost:3000',

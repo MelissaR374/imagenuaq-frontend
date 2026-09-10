@@ -13,6 +13,9 @@ dist-ssr
 *.local
 .env
 .env.*
+# Except the template: it carries no secrets and it is the only record of which variables
+# the build needs. `.env.*` above would otherwise swallow it.
+!.env.example
 
 
 # Editor directories and files

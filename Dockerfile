@@ -14,6 +14,15 @@ RUN npm ci
 
 COPY . .
 
+# .dockerignore excluye .env, y de todas formas Vite reemplaza estas variables al compilar:
+# lo que queda en dist/ es el valor que tenían aquí. Por eso entran como build args -- ver
+# .env.example y src/config.js. Sin ellas el bundle usa "/api" y el origen del navegador,
+# que es justo el arreglo que necesita un proxy inverso delante.
+ARG VITE_API_URL
+ARG VITE_FRONTEND_DOMAIN
+ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_FRONTEND_DOMAIN=$VITE_FRONTEND_DOMAIN
+
 RUN npm run build
 
 
