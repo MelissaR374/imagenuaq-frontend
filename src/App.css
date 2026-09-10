@@ -56,14 +56,14 @@ body {
 
 .main-user {
   font-size: 14px;
-  color: #8290a1;
+  color: black;
 }
 
 .main-logout {
   padding: 7px 14px;
   border: 1px solid #244a6d;
   border-radius: 6px;
-  background: none;
+  background: #244a6d;
   color: #dce3eb;
   font: inherit;
   font-size: 13px;
@@ -72,11 +72,16 @@ body {
 
 .main-logout:hover {
   border-color: #e66a4c;
-  color: #e66a4c;
+  background-color: #e66a4c;
+  color: black;
 }
 
 .app-booting {
   padding: 40px;
   color: #8290a1;
   font-family: "Poppins", sans-serif;
+}
+
+h1{
+  color: #17345b;
 }

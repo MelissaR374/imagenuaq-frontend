@@ -23,6 +23,7 @@
     box-shadow: none;
     outline: none;
     overflow: hidden;
+    transition: width 0 0.25s ease;
 }
 
 /* .sidebar::-webkit-scrollbar {

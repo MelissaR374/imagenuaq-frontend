@@ -7,7 +7,6 @@ import canelita from "../../assets/Canela_29.png"
 
 import * as api from "../../api/client.js";
 import "./login.css";
-import { use } from "react";
 
 function Login({ onEntrar }) {
   const [modo, setModo] = useState("entrar"); // "entrar" o "activar"
