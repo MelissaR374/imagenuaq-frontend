@@ -94,6 +94,7 @@
     color: var(--sidebar-text);
 }
 
+
 .sidebar-toggle svg {
     font-size: 20px;
 }
@@ -174,10 +175,10 @@
     color: var(--sidebar-text);
 }
 
-/* .sidebar-item.active {
-    background-color: #17345b;
-    color: #ffffff;
-} */
+.sidebar-item.active {
+    background-color: var(--sidebar-hover);
+    color: var(--sidebar-text)
+}
 
 
 /* =========================
@@ -288,6 +289,7 @@
 .logout-icon:hover {
     color: var(--sidebar-text);
 }
+
 
 /* =========================
    CLOSED SIDEBAR
