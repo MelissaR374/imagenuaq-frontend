@@ -3,7 +3,6 @@
 // La sesión se recupera preguntándole al servidor con GET /api/auth/me, no leyendo el
 // token: el token sigue pareciendo válido durante siete días aunque la cuenta ya no exista.
 import { useEffect, useState } from "react";
-
 import { MdLightMode, MdDarkMode } from "react-icons/md";
 
 import Login from "./components/login/login.jsx";
@@ -26,7 +25,23 @@ function App() {
   const [pestana, setPestana] = useState(null);
 
   //MODO OSCURO Y CLARO
-  const [modoOscuro, setModoOscuro] = useState(false);
+  const [modoOscuro, setModoOscuro] = useState(() => {
+    const savedTheme = localStorage.getItem("theme");
+    if (savedTheme) {
+      return savedTheme === "dark";
+    }
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
+  });
+  useEffect(() => {
+    const root = window.document.documentElement;
+    if (modoOscuro) {
+      root.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+    } else {
+      root.classList.remove("dark");
+      localStorage.setItem("theme", "light");
+    }
+  }, [modoOscuro]);
 
   // Si no hay token guardado no hay nada que verificar y se entra directo al login.
   const [verificando, setVerificando] = useState(() => Boolean(api.getToken()));
@@ -51,16 +66,17 @@ function App() {
   if (!usuario) return <Login onEntrar={setUsuario} />;
 
   // Pestaña de inicio según el rol, hasta que la persona elija otra.
-  const activa = pestana ?? (usuario.role === "admin" ? "Empleados" : "Notificaciones");
+  const activa =
+    pestana ?? (usuario.role === "admin" ? "Empleados" : "Notificaciones");
 
-  function cambiarTema(){
+  function cambiarTema() {
     setModoOscuro((actual) => !actual);
   }
 
   return (
     <div className={`app-container ${modoOscuro ? "dark-mode" : "light-mode"}`}>
       <Sidebar
-        usuario = {usuario}
+        usuario={usuario}
         role={ROLES[usuario.role] ?? "trabajador"}
         activeItem={activa}
         onNavigate={setPestana}
@@ -72,12 +88,13 @@ function App() {
           <span className="main-user">{usuario.fullName}</span>
 
           <div className="header-actions">
-
             <button
               className="theme-toggle"
               type="button"
               onClick={cambiarTema}
-              aria-label={modoOscuro ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+              aria-label={
+                modoOscuro ? "Cambiar a modo claro" : "Cambiar a modo oscuro"
+              }
             >
               <span className="theme-icon">
                 {modoOscuro ? <MdDarkMode /> : <MdLightMode />}
@@ -91,7 +108,6 @@ function App() {
             >
               Cerrar sesión
             </button>
-
           </div>
         </header>
 
