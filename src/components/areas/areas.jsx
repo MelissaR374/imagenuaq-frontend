@@ -3,7 +3,6 @@ import { Fragment, useEffect, useState } from "react";
 import * as api from "../../api/client.js";
 import "./areas.css";
 
-
 const PERSONAS_MAX = 50;
 
 // Los roles llegan del servidor en inglés; los mismos nombres que usa users.jsx.
@@ -32,7 +31,7 @@ function aplanar(nodos, padre = null, acumulado = []) {
   return acumulado;
 }
 
-// Las áreas que cuelgan de `area` (ella incluida): un área no puede ser su propia superior
+// Las áreas que cuelgan de area (ella incluida): un área no puede ser su propia superior
 // ni colgar de una de sus hijas, así que estas se sacan del <select> al editar.
 function descendientes(area) {
   const ids = new Set([area.id]);
@@ -61,12 +60,14 @@ function Areas() {
   const [abierta, setAbierta] = useState(null);
 
   // El formulario de "agregar integrante" del panel desplegado.
-  const [nuevoMiembro, setNuevoMiembro] = useState({ userId: "", isAreaLeader: false });
+  const [nuevoMiembro, setNuevoMiembro] = useState({
+    userId: "",
+    isAreaLeader: false,
+  });
 
   const [error, setError] = useState(null);
   const [errorForm, setErrorForm] = useState(null);
 
-  // Las personas se piden una sola vez, al abrir la pestaña.
   useEffect(() => {
     api
       .listUsers({ limit: PERSONAS_MAX })
@@ -74,7 +75,6 @@ function Areas() {
       .catch((err) => setError(err.message));
   }, []);
 
-  // La lista se vuelve a pedir cada vez que cambia `recarga`.
   useEffect(() => {
     let cancelado = false;
 
@@ -97,7 +97,6 @@ function Areas() {
     };
   }, [recarga]);
 
-  // Un solo manejador para todo el formulario: cada input tiene su `name`.
   function handleChange(event) {
     const { name, value } = event.target;
     setForm({ ...form, [name]: value });
@@ -108,7 +107,6 @@ function Areas() {
     setErrorForm(null);
     setGuardando(true);
 
-    // Omitir la clave y mandarla en null no es lo mismo para el servidor (ver client.js).
     const input = {
       name: form.name.trim(),
       description: form.description.trim() || null,
@@ -134,7 +132,8 @@ function Areas() {
       id: area.id,
       name: area.name,
       description: area.description ?? "",
-      parentAreaId: area.parentAreaId === null ? "raiz" : String(area.parentAreaId),
+      parentAreaId:
+        area.parentAreaId === null ? "raiz" : String(area.parentAreaId),
       parentOriginal: area.parentAreaId,
     });
   }
@@ -148,7 +147,8 @@ function Areas() {
     event.preventDefault();
     setError(null);
 
-    const padreNuevo = edicion.parentAreaId === "raiz" ? null : Number(edicion.parentAreaId);
+    const padreNuevo =
+      edicion.parentAreaId === "raiz" ? null : Number(edicion.parentAreaId);
 
     try {
       await api.updateArea(edicion.id, {
@@ -193,7 +193,10 @@ function Areas() {
 
   function handleNuevoMiembroChange(event) {
     const { name, type, value, checked } = event.target;
-    setNuevoMiembro({ ...nuevoMiembro, [name]: type === "checkbox" ? checked : value });
+    setNuevoMiembro({
+      ...nuevoMiembro,
+      [name]: type === "checkbox" ? checked : value,
+    });
   }
 
   async function handleAgregarMiembro(event, area) {
@@ -201,15 +204,17 @@ function Areas() {
     setError(null);
 
     try {
-      await api.setAreaMember(area.id, Number(nuevoMiembro.userId), nuevoMiembro.isAreaLeader);
+      await api.setAreaMember(
+        area.id,
+        Number(nuevoMiembro.userId),
+        nuevoMiembro.isAreaLeader,
+      );
       setNuevoMiembro({ userId: "", isAreaLeader: false });
       setRecarga(recarga + 1);
     } catch (err) {
       setError(err.message);
     }
   }
-
-  // Nombra o quita como responsable; la persona sigue en el área.
   async function handleResponsable(area, persona, isAreaLeader) {
     setError(null);
 
@@ -237,8 +242,9 @@ function Areas() {
     }
   }
 
-  // Al editar, el área no puede colgar de sí misma ni de una de sus hijas.
-  const enEdicion = edicion ? areas.find((area) => area.id === edicion.id) : null;
+  const enEdicion = edicion
+    ? areas.find((area) => area.id === edicion.id)
+    : null;
   const excluidas = enEdicion ? descendientes(enEdicion) : new Set();
 
   return (
@@ -331,8 +337,8 @@ function Areas() {
             ))}
           </select>
           <p className="area-form-hint">
-            La persona queda asignada al área como responsable. Después se pueden nombrar
-            más desde el panel de integrantes de cada área.
+            La persona queda asignada al área como responsable. Después se
+            pueden nombrar más desde el panel de integrantes de cada área.
           </p>
         </div>
 
@@ -413,7 +419,8 @@ function Areas() {
                 </td>
 
                 <td className="areas-cell-leaders">
-                  {area.leaders.map((persona) => persona.fullName).join(", ") || "—"}
+                  {area.leaders.map((persona) => persona.fullName).join(", ") ||
+                    "—"}
                 </td>
 
                 <td className="areas-cell-members">{area.memberCount}</td>
@@ -437,8 +444,6 @@ function Areas() {
                 </td>
               </tr>
             ) : (
-              // Un Fragment porque el panel de integrantes es una segunda <tr> de la misma
-              // área, y un <tbody> solo admite filas como hijas.
               <Fragment key={area.id}>
                 <tr
                   className={`areas-row ${abierta === area.id ? "open" : ""}`}
@@ -446,12 +451,18 @@ function Areas() {
                 >
                   <td className="areas-cell-name">{area.name}</td>
 
-                  <td className="areas-cell-description">{area.description ?? "—"}</td>
+                  <td className="areas-cell-description">
+                    {area.description ?? "—"}
+                  </td>
 
-                  <td className="areas-cell-parent">{area.parentName ?? "—"}</td>
+                  <td className="areas-cell-parent">
+                    {area.parentName ?? "—"}
+                  </td>
 
                   <td className="areas-cell-leaders">
-                    {area.leaders.map((persona) => persona.fullName).join(", ") || "—"}
+                    {area.leaders
+                      .map((persona) => persona.fullName)
+                      .join(", ") || "—"}
                   </td>
 
                   <td className="areas-cell-members">
@@ -498,7 +509,9 @@ function Areas() {
                 {abierta === area.id && (
                   <tr className="areas-members-row">
                     <td className="areas-members-panel" colSpan={6}>
-                      <h3 className="areas-members-title">Integrantes de {area.name}</h3>
+                      <h3 className="areas-members-title">
+                        Integrantes de {area.name}
+                      </h3>
 
                       {area.members.length === 0 && (
                         <p className="areas-members-empty">
@@ -512,16 +525,22 @@ function Areas() {
                             className={`areas-member ${persona.isAreaLeader ? "leader" : ""}`}
                             key={persona.id}
                           >
-                            <span className="areas-member-name">{persona.fullName}</span>
+                            <span className="areas-member-name">
+                              {persona.fullName}
+                            </span>
 
-                            <span className="areas-member-email">{persona.email}</span>
+                            <span className="areas-member-email">
+                              {persona.email}
+                            </span>
 
                             <span className="areas-member-role">
                               {ROLES_EN_ESPANOL[persona.role] ?? persona.role}
                             </span>
 
                             {persona.isAreaLeader && (
-                              <span className="areas-member-badge">Responsable</span>
+                              <span className="areas-member-badge">
+                                Responsable
+                              </span>
                             )}
 
                             <span className="areas-member-actions">
@@ -529,7 +548,11 @@ function Areas() {
                                 className="areas-action"
                                 type="button"
                                 onClick={() =>
-                                  handleResponsable(area, persona, !persona.isAreaLeader)
+                                  handleResponsable(
+                                    area,
+                                    persona,
+                                    !persona.isAreaLeader,
+                                  )
                                 }
                               >
                                 {persona.isAreaLeader
@@ -540,7 +563,9 @@ function Areas() {
                               <button
                                 className="areas-action areas-action-danger"
                                 type="button"
-                                onClick={() => handleQuitarMiembro(area, persona)}
+                                onClick={() =>
+                                  handleQuitarMiembro(area, persona)
+                                }
                               >
                                 Quitar del área
                               </button>
@@ -554,7 +579,10 @@ function Areas() {
                         className="areas-member-form"
                         onSubmit={(event) => handleAgregarMiembro(event, area)}
                       >
-                        <label className="areas-member-form-label" htmlFor="area-member-user">
+                        <label
+                          className="areas-member-form-label"
+                          htmlFor="area-member-user"
+                        >
                           Agregar a
                         </label>
 
@@ -573,7 +601,9 @@ function Areas() {
                           {personas
                             .filter(
                               (persona) =>
-                                !area.members.some((miembro) => miembro.id === persona.id),
+                                !area.members.some(
+                                  (miembro) => miembro.id === persona.id,
+                                ),
                             )
                             .map((persona) => (
                               <option key={persona.id} value={persona.id}>
@@ -591,11 +621,17 @@ function Areas() {
                           onChange={handleNuevoMiembroChange}
                         />
 
-                        <label className="areas-member-form-label" htmlFor="area-member-leader">
+                        <label
+                          className="areas-member-form-label"
+                          htmlFor="area-member-leader"
+                        >
                           Como responsable
                         </label>
 
-                        <button className="areas-member-form-submit" type="submit">
+                        <button
+                          className="areas-member-form-submit"
+                          type="submit"
+                        >
                           Agregar
                         </button>
                       </form>
