@@ -611,95 +611,133 @@ Busca el primer elemento que sea de este tipo dentro de su contenedor y que teng
     opacity: 0.55;
 }
 
-
-
-/* =========================================================
-   TARJETA DE INVITACIÓN
-   ========================================================= */
-
+/* Tarjeta de invitación */
 .invite-card {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
     margin-bottom: 18px;
-    padding: 18px;
+    padding: 20px 24px 24px;
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    border-radius: 9px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+    box-sizing: border-box;
     font-family: "Poppins", sans-serif;
+
     transition:
         background-color 0.3s ease,
         border-color 0.3s ease;
 }
 
 .invite-title {
-    margin: 0 0 7px;
+    margin: 0 0 1px;
     font-size: 18px;
+    font-weight: 700;
     color: var(--text);
 }
 
 .invite-note {
-    margin: 0 0 12px;
+    margin: 0 0 8px;
     font-size: 12px;
     line-height: 1.5;
     color: var(--text-muted);
 }
 
+/* Etiquetas: igual que las del formulario */
+.invite-label {
+    margin-top: 7px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+/* Enlace y token: mismos campos que los inputs del formulario, en monoespaciado
+   para que el token se pueda leer y seleccionar completo */
+.invite-link,
 .invite-token {
     width: 100%;
-    padding: 10px;
+    padding: 9px 11px;
     border: 1px solid var(--border);
     border-radius: 5px;
     background: var(--surface-secondary);
-    font-family: monospace;
-    font-size: 12px;
     color: var(--text);
-    box-sizing: border-box;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11px;
+    line-height: 1.5;
+    word-break: break-all;
+    outline: none;
     resize: none;
+    box-sizing: border-box;
+
     transition:
         background-color 0.3s ease,
         color 0.3s ease,
-        border-color 0.3s ease;
+        border-color 0.15s ease,
+        box-shadow 0.15s ease;
+}
+
+.invite-link:focus,
+.invite-token:focus {
+    border-color: #3b73b9;
+    box-shadow: 0 0 0 2px rgba(59, 115, 185, 0.08);
 }
 
 .invite-actions {
     display: flex;
+    flex-wrap: wrap;
     justify-content: flex-end;
     gap: 8px;
-    margin-top: 10px;
+    margin-top: 12px;
 }
 
 .invite-copy,
+.invite-copy-token,
 .invite-dismiss {
-    height: 30px;
-    padding: 0 14px;
+    height: 32px;
+    padding: 0 16px;
     border-radius: 5px;
     font-family: inherit;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
     cursor: pointer;
+
+    transition:
+        background-color 0.15s ease,
+        border-color 0.15s ease,
+        color 0.15s ease,
+        transform 0.1s ease;
 }
 
+.invite-copy:active,
+.invite-copy-token:active,
+.invite-dismiss:active {
+    transform: translateY(1px);
+}
+
+/* Copiar enlace: botón principal, igual que "Crear cuenta e invitar" */
 .invite-copy {
-    border: none;
-    background: #0d325d;
-    color: #ffffff;
-}
-
-.invite-copy:hover {
     border: none;
     background: #2864a8;
     color: #ffffff;
 }
 
-.invite-dismiss {
-    border: 1px solid #dfe5ec;
-    background: #ffffff;
-    color: #68758a;
+.invite-copy:hover {
+    background: #205895;
 }
 
+/* Copiar token y Listo: botones secundarios, como los de la paginación */
+.invite-copy-token,
+.invite-dismiss {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-secondary);
+}
+
+.invite-copy-token:hover,
 .invite-dismiss:hover {
-    border: 1px solid #dfe5ec;
-    background: #cdced7;
-    color: #68758a;
+    border-color: #3b73b9;
+    color: #3270b5;
 }
 
 
