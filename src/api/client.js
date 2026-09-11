@@ -92,3 +92,32 @@ export const listRoles = () => request("/roles");
 export const listAreas = () => request("/areas");
 
 export const listContractTypes = () => request("/contract-types");
+
+// --- Áreas ---
+
+// El organigrama completo: { roots: [...] }, cada nodo con parentAreaId, leaders y children.
+export const getOrgChart = () => request("/areas/orgchart");
+
+// Sin parentAreaId el servidor cuelga el área bajo Coordinación; con parentAreaId: null
+// la deja como raíz.
+export const createArea = (input) => request("/areas", { method: "POST", body: input });
+
+// Solo name y description; el padre se cambia con setAreaParent / clearAreaParent.
+export const updateArea = (id, changes) =>
+  request(`/areas/${id}`, { method: "PATCH", body: changes });
+
+// Falla con 409 mientras el área tenga gente asignada.
+export const deleteArea = (id) => request(`/areas/${id}`, { method: "DELETE" });
+
+export const setAreaParent = (id, parentAreaId) =>
+  request(`/areas/${id}/parent`, { method: "PUT", body: { parentAreaId } });
+
+export const clearAreaParent = (id) => request(`/areas/${id}/parent`, { method: "DELETE" });
+
+// Un upsert: agrega a la persona al área o, si ya está, cambia si la encabeza.
+export const setAreaMember = (areaId, userId, isAreaLeader) =>
+  request(`/areas/${areaId}/members/${userId}`, { method: "PUT", body: { isAreaLeader } });
+
+// Quita la pertenencia al área, no la cuenta.
+export const removeAreaMember = (areaId, userId) =>
+  request(`/areas/${areaId}/members/${userId}`, { method: "DELETE" });
