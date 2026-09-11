@@ -23,6 +23,7 @@ import {
   MdAssignmentInd,
   MdBadge,
   MdMenu,
+  MdContacts,
 } from "react-icons/md";
 
 const menuSections = [
@@ -30,6 +31,11 @@ const menuSections = [
     title: null,
     items: [
       //VISTAS GENERALES
+      {
+        label: "Organigrama",
+        icon: MdContacts,
+        roles: ["admin", "lider","finanzas","trabajador"]
+      },
       {
         label: "Notificaciones",
         icon: MdNotificationsNone,
@@ -45,6 +51,7 @@ const menuSections = [
         icon: MdChatBubbleOutline,
         roles: ["admin", "lider","finanzas","trabajador"]
       },
+      
 
       //VISTAS TRABAJADOR Y FINANZAS
       {
@@ -100,7 +107,7 @@ const menuSections = [
       },
       {
         //ALTA Y BAJA DE CUENTAS, SOLO ADMIN
-        label: "Personal",
+        label: "Empleados",
         icon: MdBadge,
         roles: ["admin"],
       },
@@ -219,7 +226,7 @@ const menuSections = [
   },
 ];
 
-function Sidebar({ role = "admin", activeItem = "Proyectos", onNavigate }) {
+function Sidebar({ usuario, role = "admin", activeItem = "Proyectos", onNavigate, onLogout}) {
   
   //CREAMOS EL ESTADO, al inicio es false
   /* isClosed = false -> menú abierto 
@@ -289,15 +296,16 @@ function Sidebar({ role = "admin", activeItem = "Proyectos", onNavigate }) {
 
       {/* USUARIO */}
       <div className="sidebar-user">
-        <div className="user-avatar">JL</div>
+        <div className="user-avatar">{usuario.fullName ?.trim().split(" ").slice(0, 2).map((parte) => parte[0]).join("").toUpperCase()}</div>
 
         <div className="user-info">
-          <span className="user-name">Juan López Pérez</span>
+          <span className="user-name" title= {usuario.fullName} >{usuario.fullName}</span>
 
-          <span className="user-role">Dirección - vista global</span>
+          <span className="user-role">{usuario.role}</span>
         </div>
 
-        <MdLogout className="logout-icon" />
+        <MdLogout className="logout-icon" onClick={onLogout}
+        title="Cerrar Sesión"/>
       </div>
     </aside>
   );

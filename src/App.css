@@ -1,82 +1,225 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
 
-/* Reset básico */
-* {
-  margin: 0;
-  padding: 0;
-  /* box-sizing: border-box; */
-}
+/* =========================================================
+   CONTENEDOR PRINCIPAL
+========================================================= */
 
-body {
-  margin: 0;
-  padding: 0;
-  font-family: "Poppins", sans-serif;
-  border-left: none;
-  border-right: none;}
-
-/* Contenedor principal */
 .app-container {
   display: flex;
   min-height: 100vh;
   width: 100%;
-  border-left: none;
-  border-right: none;
   overflow-x: hidden;
+
+  /* Variables modo claro */
+  --background: #f5f7fa;
+  --surface: #ffffff;
+  --surface-secondary: #f8fafc;
+
+  --text: #26364d;
+  --text-secondary: #68758a;
+  --text-muted: #8994a5;
+
+  --border: #e1e6ec;
+  --border-light: #edf0f4;
+
+  background-color: var(--background);
+  color: var(--text);
+
+  /*VARIABLES PARA LA SIDEBAR*/
+  --sidebar-background: #081a2e;
+  --sidebar-text: #ffffff;
+  --sidebar-text-muted: #8290a1;
+  --sidebar-hover: #102844;
+  --sidebar-border: rgba(255, 255, 255, 0.05);
+
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
 }
 
-/* =========================
+/* =========================================================
+   MODO OSCURO
+========================================================= */
+
+.app-container.dark-mode {
+  --background: #111827;
+  --surface: #1f2937;
+  --surface-secondary: #182333;
+
+  --text: #f3f4f6;
+  --text-secondary: #c3ccd8;
+  --text-muted: #9ca8b8;
+
+  --border: #374151;
+  --border-light: #303b4b;
+
+  /*SIDEBAR*/
+  --sidebar-background: #0b1220;
+  --sidebar-text: #f3f4f6;
+  --sidebar-text-muted: #8d99aa;
+  --sidebar-hover: #172235;
+  --sidebar-border: rgba(255, 255, 255, 0.06);
+
+}
+
+/* =========================================================
    CONTENIDO PRINCIPAL
-========================= */
+========================================================= */
 
 .main-content {
   font-family: "Poppins", sans-serif;
   flex: 1;
-  padding: 30px;
   min-height: 100vh;
+
+  padding: 30px;
+
   overflow-y: auto;
-  border-left: none;
-  border-right: none;
   overflow-x: hidden;
-  color: #ffff;
+
+  color: var(--text);
+
+  background-color: var(--background);
+
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
 }
-/* =========================
-   BARRA SUPERIOR
-   Mínimo para que se lea; reemplazable.
-========================= */
+
+/* =========================================================
+   HEADER
+========================================================= */
 
 .main-header {
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 12px;
+
   margin-bottom: 24px;
   padding-bottom: 12px;
-  border-bottom: 1px solid #17345b;
+
+  border-bottom: 1px solid var(--border);
+
+  background-color: var(--background);
+  color: var(--text);
+
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease,
+    border-color 0.3s ease;
 }
 
 .main-user {
   font-size: 14px;
-  color: #8290a1;
+  color: var(--text);
+
+  transition: color 0.3s ease;
 }
+
+/* =========================================================
+   BOTÓN CERRAR SESIÓN
+========================================================= */
 
 .main-logout {
   padding: 7px 14px;
+
   border: 1px solid #244a6d;
   border-radius: 6px;
-  background: none;
+
+  background: #244a6d;
   color: #dce3eb;
+
   font: inherit;
   font-size: 13px;
+
   cursor: pointer;
+
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
 }
 
 .main-logout:hover {
   border-color: #e66a4c;
-  color: #e66a4c;
+  background-color: #e66a4c;
+  color: #ffffff;
 }
+
+/* =========================================================
+   TEMA
+========================================================= */
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.theme-toggle {
+  width: 42px;
+  height: 42px;
+
+  border: none;
+  border-radius: 50%;
+
+  background: transparent;
+  color: var(--text);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  cursor: pointer;
+  overflow: hidden;
+
+  transition:
+    background-color 0.2s ease,
+    color 0.3s ease;
+}
+
+.theme-toggle:hover {
+  background-color: var(--surface);
+}
+
+.theme-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 24px;
+
+  transition:
+    transform 0.4s ease,
+    opacity 0.25s ease;
+}
+
+.theme-toggle:hover .theme-icon {
+  transform: rotate(25deg) scale(1.1);
+}
+
+.theme-toggle:active .theme-icon {
+  transform: rotate(180deg) scale(0.7);
+}
+
+/* =========================================================
+   BOOTING
+========================================================= */
 
 .app-booting {
   padding: 40px;
-  color: #8290a1;
+
+  color: var(--text-muted);
+
   font-family: "Poppins", sans-serif;
+}
+
+/* =========================================================
+   TITULOS
+========================================================= */
+
+.app-container h1 {
+  color: var(--text);
+
+  transition: color 0.3s ease;
 }

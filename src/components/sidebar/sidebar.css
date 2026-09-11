@@ -11,23 +11,25 @@
     left: 0;
     width: 235px;
     height: 100vh;
-    background-color: #081a2e;
-    color: #ffffff;
+    background-color: var(--sidebar-background);
+    color: var(--sidebar-text);
     padding: 18px 10px 10px;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
     font-family: "Poppins", sans-serif;
-    overflow-y:auto;
     z-index: 1000;
-    border-right: none;
-    box-shadow: none;
-    outline: none;
+    overflow: hidden;
+    transition: 
+        width 0.25s ease,
+        background-color 0.3s ease,
+        color 0.3s ease;
+    
 }
 
-.sidebar::-webkit-scrollbar {
+/* .sidebar::-webkit-scrollbar {
     display: none;
-}
+} */
 
 
 
@@ -41,6 +43,7 @@
     justify-content: space-between;
     gap: 10px;
     padding: 0 8px 20px;
+    flex-shrink: 0;
 }
 
 /* .brand-icon {
@@ -60,7 +63,8 @@
     font-size: 16px;
     font-weight: 700;
     letter-spacing: 0.2px;
-    color:#ffffff;
+    color:var(--sidebar-text);
+    transition: color 0.3s ease;
     
 }
 
@@ -73,7 +77,7 @@
     border: none;
     border-radius: 5px;
     background: transparent;
-    color: #8290a1;
+    color: var(--sidebar-text-muted);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -86,8 +90,8 @@
 }
 
 .sidebar-toggle:hover {
-    background-color: #102844;
-    color: #ffffff;
+    background-color: var(--sidebar-hover);
+    color: var(--sidebar-text);
 }
 
 .sidebar-toggle svg {
@@ -104,6 +108,13 @@
     flex-direction: column;
     gap: 18px;
     flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.sidebar-menu::-webkit-scrollbar {
+    display: none;
 }
 
 .sidebar-section {
@@ -120,9 +131,10 @@
     margin: 0 0 7px 8px;
     font-size: 14px;
     font-weight: 600;
-    color: #718094;
+    color: var(--sidebar-text-muted);
     letter-spacing: 0.7px;
     text-align: left;
+    transition: color 0.3s ease;
 }
 
 
@@ -142,7 +154,7 @@
     border: none;
     border-radius: 4px;
     background: transparent;
-    color: #8290a1;
+    color: var(--sidebar-text-muted);
     display: flex;
     align-items: center;
     gap: 8px;
@@ -153,13 +165,13 @@
     text-align: left;
     cursor: pointer;
     transition:
-        background-color 0.15s ease,
-        color 0.15s ease;
+        background-color 0.2s ease,
+        color 0.2s ease;
 }
 
 .sidebar-item:hover {
-    background-color: #102844;
-    color: #ffffff;
+    background-color: var(--sidebar-hover);
+    color: var(--sidebar-text);
 }
 
 /* .sidebar-item.active {
@@ -221,8 +233,9 @@
     align-items: center;
     gap: 10px;
     padding: 20px 6px 10px;
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    border-top: 1px solid var(--sidebar-border);
     margin-top: 10px;
+    flex-shrink: 0;
 }
 
 .user-avatar {
@@ -251,7 +264,7 @@
 .user-name {
     font-size: 12px;
     font-weight: 600;
-    color: #dce3eb;
+    color: var(--sidebar-text);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -259,7 +272,7 @@
 
 .user-role {
     font-size: 10px;
-    color: #728196;
+    color: var(--sidebar-text-muted);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -267,17 +280,36 @@
 
 .logout-icon {
     font-size: 18px;
-    color: #718094;
+    color: var(--sidebar-text-muted);
     cursor: pointer;
+    transition: color 0.2s ease;
 }
 
-
+.logout-icon:hover {
+    color: var(--sidebar-text);
+}
 
 /* =========================
    CLOSED SIDEBAR
 ========================= */
 .sidebar.closed {
     width: 70px;
+}
+
+/* CLOSED MENU */
+
+.sidebar.closed .sidebar-user {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+}
+
+.sidebar.closed .user-info {
+    display: none;
+}
+
+.sidebar.closed .logout-icon {
+    display: none;
 }
 
 /*BRAND*/
@@ -317,18 +349,3 @@
 }
 
 
-/* USER */
-
-.sidebar.closed .sidebar-user {
-    justify-content: center;
-    padding-left: 0;
-    padding-right: 0;
-}
-
-.sidebar.closed .user-info {
-    display: none;
-}
-
-.sidebar.closed .logout-icon {
-    display: none;
-}

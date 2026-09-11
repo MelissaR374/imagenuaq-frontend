@@ -4,6 +4,8 @@
 // token: el token sigue pareciendo válido durante siete días aunque la cuenta ya no exista.
 import { useEffect, useState } from "react";
 
+import { MdLightMode, MdDarkMode } from "react-icons/md";
+
 import Login from "./components/login/login.jsx";
 import Sidebar from "./components/sidebar/sidebar.jsx";
 import Users from "./components/users/users.jsx";
@@ -22,6 +24,9 @@ function App() {
   // Quién entró; null mientras nadie lo haya hecho.
   const [usuario, setUsuario] = useState(null);
   const [pestana, setPestana] = useState(null);
+
+  //MODO OSCURO Y CLARO
+  const [modoOscuro, setModoOscuro] = useState(false);
 
   // Si no hay token guardado no hay nada que verificar y se entra directo al login.
   const [verificando, setVerificando] = useState(() => Boolean(api.getToken()));
@@ -46,27 +51,52 @@ function App() {
   if (!usuario) return <Login onEntrar={setUsuario} />;
 
   // Pestaña de inicio según el rol, hasta que la persona elija otra.
-  const activa = pestana ?? (usuario.role === "admin" ? "Personal" : "Notificaciones");
+  const activa = pestana ?? (usuario.role === "admin" ? "Empleados" : "Notificaciones");
+
+  function cambiarTema(){
+    setModoOscuro((actual) => !actual);
+  }
 
   return (
-    <div className="app-container">
+    <div className={`app-container ${modoOscuro ? "dark-mode" : "light-mode"}`}>
       <Sidebar
+        usuario = {usuario}
         role={ROLES[usuario.role] ?? "trabajador"}
         activeItem={activa}
         onNavigate={setPestana}
+        onLogout={cerrarSesion}
       />
 
       <main className="main-content">
         <header className="main-header">
           <span className="main-user">{usuario.fullName}</span>
 
-          <button className="main-logout" type="button" onClick={cerrarSesion}>
-            Cerrar sesión
-          </button>
+          <div className="header-actions">
+
+            <button
+              className="theme-toggle"
+              type="button"
+              onClick={cambiarTema}
+              aria-label={modoOscuro ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+            >
+              <span className="theme-icon">
+                {modoOscuro ? <MdDarkMode /> : <MdLightMode />}
+              </span>
+            </button>
+
+            <button
+              className="main-logout"
+              type="button"
+              onClick={cerrarSesion}
+            >
+              Cerrar sesión
+            </button>
+
+          </div>
         </header>
 
         {/* Por ahora solo "Personal" tiene pantalla; las demás muestran su nombre. */}
-        {activa === "Personal" && usuario.role === "admin" ? (
+        {activa === "Empleados" && usuario.role === "admin" ? (
           <Users admin={usuario} />
         ) : (
           <h1>{activa}</h1>

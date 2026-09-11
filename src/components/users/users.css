@@ -1,0 +1,831 @@
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap");
+
+
+/* =========================================================
+   PÁGINA PERSONAL / USUARIOS
+   ========================================================= */
+
+.users-panel {
+    min-height: 100vh;
+    padding: 28px 32px 40px;
+    background: var(--background);
+    box-sizing: border-box;
+    font-family: "Poppins", sans-serif;
+    color: var(--text);
+    transition:
+        background-color 0.3s ease,
+        color 0.3s ease;
+}
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.users-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.users-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0 5px 0;
+
+    transition: color 0.3s ease;
+
+}
+
+.users-count {
+    margin: 0;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+
+/* =========================================================
+   TARJETA DEL FORMULARIO
+   ========================================================= */
+
+.user-form {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 12px;
+    row-gap: 13px;
+    padding: 20px 24px 24px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+    box-sizing: border-box;
+    font-family: "Poppins", sans-serif;
+
+    transition:
+        background-color 0.3s ease,
+        border-color 0.3s ease;
+}
+
+
+/*TITULO: "Dar de alta a una persona"*/
+.user-form-title {
+    grid-column: 1 / -1;
+    margin: 0 0 1px;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+/* =========================================================
+   CAMPOS
+   ========================================================= */
+
+.user-form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+
+/*
+  Orden del JSX:
+
+  1 Nombre
+  2 Correo
+  3 Rol
+  4 Contrato
+  5 Área
+  6 Responsable
+  7 Cumpleaños
+  8 Error
+  9 Botón
+*/
+
+/*.user-form-field:nth-of-type()
+Busca el primer elemento que sea de este tipo dentro de su contenedor y que tenga .user-form-field*/
+
+/* Nombre */
+.user-form-field:nth-of-type(1) {
+    grid-column: 1;
+    grid-row: 2;
+}
+
+/* Correo */
+.user-form-field:nth-of-type(2) {
+    grid-column: 2;
+    grid-row: 2;
+}
+
+/* Rol */
+.user-form-field:nth-of-type(3) {
+    grid-column: 1;
+    grid-row: 3;
+}
+
+/* Contrato */
+.user-form-field:nth-of-type(4) {
+    grid-column: 2;
+    grid-row: 3 / span 2; 
+    /*Empieza en la fila 3 y ocupa 2 filas*/
+}
+
+/* Área */
+.user-form-field:nth-of-type(5) {
+    grid-column: 1;
+    grid-row: 4;
+    margin-top: 30px;
+}
+
+/* Checkbox */
+.user-form-field:nth-of-type(6) {
+    grid-column: 1;
+    grid-row: 5;
+}
+
+/* Cumpleaños */
+.user-form-field:nth-of-type(7) {
+    grid-column: 2;
+    grid-row: 4;
+    margin-top: 30px;
+
+}
+
+
+/* =========================================================
+   LABELS
+   ========================================================= */
+
+.user-form-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    
+}
+
+.user-form-label::after {
+    content: "";
+}
+
+
+/* =========================================================
+   INPUTS Y SELECTS
+   ========================================================= */
+
+.user-form-input,
+.user-form-select {
+    width: 100%;
+    height: 36px;
+
+    padding: 0 11px;
+
+    border: 1px solid var(--border);
+    border-radius: 5px;
+
+    background: var(--surface-secondary);
+    color: var(--text);
+
+    font-family: inherit;
+    font-size: 11px;
+
+    outline: none;
+    box-sizing: border-box;
+
+    transition:
+        background-color 0.3s ease,
+        color 0.3s ease,
+        border-color 0.15s ease,
+        box-shadow 0.15s ease;
+}
+
+.user-form-input::placeholder {
+    color: var(--text-muted);
+}
+
+.user-form-input:focus,
+.user-form-select:focus {
+    border-color: #3b73b9;
+    box-shadow: 0 0 0 2px rgba(59, 115, 185, 0.08);
+}
+
+/* Select */
+
+.user-form-select {
+    appearance: auto;
+    cursor: pointer;
+}
+
+
+/* =========================================================
+   TEXTO DE AYUDA
+   ========================================================= */
+
+.user-form-hint {
+    margin: -1px 3px 0;
+    font-size: 10px;
+    line-height: 1.3;
+    color: #9aa5b5;
+}
+
+
+/* =========================================================
+   CHECKBOX
+   ========================================================= */
+
+.user-form-field-check {
+    flex-direction: row;
+    align-items: center;
+    gap: 7px;
+
+    padding-top: 3px;
+}
+
+.user-form-check {
+    width: 13px;
+    height: 13px;
+
+    margin: 0;
+
+    border: 1px solid #b9c3d0;
+    border-radius: 2px;
+
+    cursor: pointer;
+}
+
+.user-form-check:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.user-form-field-check .user-form-label {
+    cursor: pointer;
+}
+
+
+/* =========================================================
+   ERROR
+   ========================================================= */
+
+.user-form-error {
+    grid-column: 1 / -1;
+
+    margin: 0;
+
+    font-size: 10px;
+    color: #d9534f;
+}
+
+.user-form-error:empty {
+    display: none;
+}
+
+
+/* =========================================================
+   BOTÓN CREAR
+   ========================================================= */
+
+.user-form-submit {
+    grid-column: 2;
+    grid-row: 5;
+    justify-self: start;
+    height: 32px;
+    min-width: 140px;
+    padding: 0 16px;
+    border: none;
+    border-radius: 5px;
+    background: #2864a8;
+    color: #ffffff;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+        background 0.15s ease,
+        transform 0.1s ease;
+}
+
+.user-form-submit:hover {
+    background: #205895;
+}
+
+.user-form-submit:active {
+    transform: translateY(1px);
+}
+
+.user-form-submit:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+
+/* =========================================================
+   FILTROS
+   ========================================================= */
+
+.users-filters {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 34px 0 18px;
+    font-family: "Poppins", sans-serif;
+}
+
+.users-filter {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.users-filter-label {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-left: 5px;
+}
+
+.users-filter-select {
+    height: 27px;
+
+    padding: 0 9px;
+
+    border: 1px solid var(--border);
+    border-radius: 5px;
+
+    background: var(--surface);
+    color: var(--text);
+
+    font-family: inherit;
+    font-size: 10px;
+
+    outline: none;
+    cursor: pointer;
+
+    transition:
+        background-color 0.3s ease,
+        color 0.3s ease,
+        border-color 0.3s ease;
+}
+
+.users-filter-select:focus {
+    border-color: #3b73b9;
+}
+
+.users-filter-check {
+    gap: 6px;
+    margin-left: 3px;
+}
+
+.users-filter-checkbox {
+    width: 13px;
+    height: 13px;
+
+    margin: 0;
+
+    cursor: pointer;
+}
+
+
+/* =========================================================
+   ERROR GENERAL
+   ========================================================= */
+
+.users-error {
+    margin: 10px 0;
+    font-size: 11px;
+    color: #d9534f;
+    font-family: "Poppins", sans-serif;
+}
+
+.users-error:empty {
+    display: none;
+}
+
+
+/* =========================================================
+   TABLA
+   ========================================================= */
+
+.users-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 9px 9px 0 0;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+    font-family: "Poppins", sans-serif;
+
+    transition:
+        background-color 0.3s ease,
+        border-color 0.3s ease;
+}
+
+
+/* Encabezados */
+
+.users-table thead {
+    background: var(--surface);
+}
+
+.users-table th {
+    height: 32px;
+    padding: 0 18px;
+    border-bottom: 1px solid var(--border-light);
+    text-align: center;
+    font-size: 14px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+}
+
+
+/* Celdas */
+
+.users-table td {
+    height: 40px;
+    padding: 0 18px;
+    border-bottom: 1px solid var(--border-light);
+    font-size: 12px;
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+.users-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+
+/* =========================================================
+   CELDAS ESPECÍFICAS
+   ========================================================= */
+
+.users-cell-name {
+    font-weight: 600;
+    color: var(--text) !important;
+}
+
+.users-cell-email {
+    color: var(--text) !important;
+}
+
+.users-cell-role {
+    white-space: nowrap;
+}
+
+.users-cell-areas {
+    color: var(--text) !important;
+}
+
+.users-cell-actions {
+    text-align: right;
+    white-space: nowrap;
+}
+
+
+/* =========================================================
+   BADGE DEL ROL
+   ========================================================= */
+
+.users-cell-role {
+    position: relative;
+}
+
+.users-cell-role {
+    color: #3270b5 !important;
+    font-weight: 600;
+    font-family: "Poppins", sans-serif;
+}
+
+
+/* =========================================================
+   BOTONES DE ACCIONES
+   ========================================================= */
+
+.users-action {
+    padding: 0;
+    border: none;
+    background: transparent;
+    font-family: inherit;
+    font-size: 10px;
+    font-weight: 600;
+    color: #3270b5;
+    cursor: pointer;
+}
+
+.users-action:hover {
+    text-decoration: underline;
+}
+
+.users-action-danger {
+    margin-left: 12px;
+    color: #e45c5c;
+}
+
+.users-action:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.users-action:disabled:hover {
+    text-decoration: none;
+}
+
+
+/* =========================================================
+   PAGINACIÓN
+   ========================================================= */
+
+.users-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 12px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 9px 9px;
+    font-family: "Poppins", sans-serif;
+
+    transition:
+        background-color 0.3s ease,
+        border-color 0.3s ease;
+}
+
+.users-page-prev,
+.users-page-next {
+    height: 25px;
+    padding: 0 10px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    background: var(--surface);
+    color: var(--text-secondary);
+    font-family: inherit;
+    font-size: 10px;
+    cursor: pointer;
+
+    transition: 
+    background-color 0.3s ease,
+    color 0.3s ease,
+    border-color 0.3s ease;
+}
+
+.users-page-prev:hover:not(:disabled),
+.users-page-next:hover:not(:disabled) {
+    border-color: #c9d4e1;
+    color: #4d6078;
+}
+
+.users-page-prev:disabled,
+.users-page-next:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.users-page-range {
+    font-size: 10px;
+    color: var(--text-muted);
+}
+
+
+/* =========================================================
+   ESTADOS
+   ========================================================= */
+
+.users-loading,
+.users-empty {
+    margin: 20px 0;
+    text-align: center;
+    font-size: 11px;
+    color: #8994a5;
+    font-family: "Poppins", sans-serif;
+}
+
+
+/* Usuarios dados de baja */
+
+.users-row.deleted {
+    opacity: 0.55;
+}
+
+
+
+/* =========================================================
+   TARJETA DE INVITACIÓN
+   ========================================================= */
+
+.invite-card {
+    margin-bottom: 18px;
+    padding: 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    font-family: "Poppins", sans-serif;
+    transition:
+        background-color 0.3s ease,
+        border-color 0.3s ease;
+}
+
+.invite-title {
+    margin: 0 0 7px;
+    font-size: 18px;
+    color: var(--text);
+}
+
+.invite-note {
+    margin: 0 0 12px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text-muted);
+}
+
+.invite-token {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    background: var(--surface-secondary);
+    font-family: monospace;
+    font-size: 12px;
+    color: var(--text);
+    box-sizing: border-box;
+    resize: none;
+    transition:
+        background-color 0.3s ease,
+        color 0.3s ease,
+        border-color 0.3s ease;
+}
+
+.invite-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.invite-copy,
+.invite-dismiss {
+    height: 30px;
+    padding: 0 14px;
+    border-radius: 5px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.invite-copy {
+    border: none;
+    background: #0d325d;
+    color: #ffffff;
+}
+
+.invite-copy:hover {
+    border: none;
+    background: #2864a8;
+    color: #ffffff;
+}
+
+.invite-dismiss {
+    border: 1px solid #dfe5ec;
+    background: #ffffff;
+    color: #68758a;
+}
+
+.invite-dismiss:hover {
+    border: 1px solid #dfe5ec;
+    background: #cdced7;
+    color: #68758a;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 900px) {
+
+    .users-panel {
+        padding: 22px 20px 30px;
+    }
+
+    .user-form {
+        grid-template-columns: 1fr;
+    }
+
+    .user-form-field:nth-of-type(1),
+    .user-form-field:nth-of-type(2),
+    .user-form-field:nth-of-type(3),
+    .user-form-field:nth-of-type(4),
+    .user-form-field:nth-of-type(5),
+    .user-form-field:nth-of-type(6),
+    .user-form-field:nth-of-type(7) {
+        grid-column: 1;
+        grid-row: auto;
+    }
+
+    .user-form-submit {
+        grid-column: 1;
+        grid-row: auto;
+    }
+
+    .users-table {
+        display: block;
+        overflow-x: auto;
+    }
+}
+
+@media (max-width: 800px) {
+
+    .users-panel {
+        padding: 20px;
+    }
+
+    .user-form {
+        grid-template-columns: 1fr;
+    }
+
+    .user-form-field:nth-of-type(1),
+    .user-form-field:nth-of-type(2),
+    .user-form-field:nth-of-type(3),
+    .user-form-field:nth-of-type(4),
+    .user-form-field:nth-of-type(5),
+    .user-form-field:nth-of-type(6),
+    .user-form-field:nth-of-type(7) {
+        grid-column: 1;
+        grid-row: auto;
+    }
+
+    .user-form-submit {
+        grid-column: 1;
+        grid-row: auto;
+    }
+
+    .users-table {
+        display: block;
+        width: 100%;
+        overflow-x: auto;
+    }
+}
+
+
+@media (max-width: 600px) {
+
+    .users-panel {
+        padding: 18px 14px 25px;
+    }
+
+    .users-title {
+        font-size: 20px;
+    }
+
+    .users-filters {
+        flex-wrap: wrap;
+    }
+
+    .user-form {
+        padding: 17px;
+    }
+
+    .users-table th,
+    .users-table td {
+        padding: 0 12px;
+    }
+}
+
+@media (max-width: 500px) {
+
+    .users-panel {
+        padding: 15px;
+    }
+
+    .users-title {
+        font-size: 22px;
+    }
+
+    .user-form {
+        padding: 16px;
+    }
+
+    .users-filters {
+        flex-wrap: wrap;
+    }
+
+    .users-table {
+        font-size: 9px;
+    }
+
+    .users-table th,
+    .users-table td {
+        padding: 0 10px;
+        white-space: nowrap;
+    }
+
+    .user-form-submit {
+        width: 100%;
+    }
+}

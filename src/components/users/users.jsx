@@ -59,6 +59,8 @@ function Users({ admin }) {
   // El formulario de alta
   const [form, setForm] = useState(FORMULARIO_VACIO);
   const [invitacion, setInvitacion] = useState(null);
+  // Qué se acaba de copiar al portapapeles ("enlace" o "token"), para avisarlo un momento.
+  const [copiado, setCopiado] = useState(null);
   const [guardando, setGuardando] = useState(false);
 
   const [error, setError] = useState(null);
@@ -178,10 +180,25 @@ function Users({ admin }) {
   const desde = total === 0 ? 0 : offset + 1;
   const hasta = Math.min(offset + PAGE, total);
 
+  async function handleCopiar(cual) {
+    const texto = cual === "enlace" ? activationLink(invitacion.token) : invitacion.token;
+
+    try {
+      await navigator.clipboard.writeText(texto);
+      setCopiado(cual);
+
+      setTimeout(() => {
+        setCopiado(null);
+      }, 2000);
+    } catch {
+      setError(`No se pudo copiar el ${cual}.`);
+    }
+  }
+
   return (
     <section className="users-panel">
       <header className="users-header">
-        <h1 className="users-title">Personal</h1>
+        <h1 className="users-title">Empleados</h1>
 
         <p className="users-count">
           {total} {total === 1 ? "persona" : "personas"}
@@ -226,17 +243,17 @@ function Users({ admin }) {
             <button
               className="invite-copy"
               type="button"
-              onClick={() => navigator.clipboard.writeText(activationLink(invitacion.token))}
+              onClick={() => handleCopiar("enlace")}
             >
-              Copiar enlace
+              {copiado === "enlace" ? "Copiado" : "Copiar enlace"}
             </button>
 
             <button
               className="invite-copy-token"
               type="button"
-              onClick={() => navigator.clipboard.writeText(invitacion.token)}
+              onClick={() => handleCopiar("token")}
             >
-              Copiar token
+              {copiado === "token" ? "Copiado" : "Copiar token"}
             </button>
 
             <button
@@ -332,10 +349,11 @@ function Users({ admin }) {
               </option>
             ))}
           </select>
-
           <p className="user-form-hint">
             Determina los días de permiso a los que la persona tiene derecho.
           </p>
+
+          
         </div>
 
         <div className="user-form-field">
