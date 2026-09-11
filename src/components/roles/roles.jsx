@@ -1,16 +1,14 @@
 import { Fragment, useEffect, useState } from "react";
 
 import * as api from "../../api/client.js";
+import "./roles.css";
 
-// Los mismos límites que el servidor: se ponen en los inputs para no mandar algo que va a
+// El mismo límite que el servidor: se pone en el input para no mandar algo que va a
 // rechazar.
 const ROL_NOMBRE_MAX = 50;
-const PERMISO_CODIGO_MAX = 100;
-const PERMISO_ETIQUETA_MAX = 200;
 
-// Los formularios vacíos: sirven para empezar y para limpiarlos después de registrar.
-const FORMULARIO_ROL_VACIO = { name: "", description: "" };
-const FORMULARIO_PERMISO_VACIO = { code: "", label: "", description: "" };
+// El formulario vacío: sirve para empezar y para limpiarlo después de registrar un rol.
+const FORMULARIO_VACIO = { name: "", description: "" };
 
 function Roles() {
   const [roles, setRoles] = useState([]);
@@ -20,8 +18,8 @@ function Roles() {
   // Sube de uno en uno para volver a pedir las listas después de crear, editar o borrar.
   const [recarga, setRecarga] = useState(0);
 
-  // El formulario de alta de rol
-  const [form, setForm] = useState(FORMULARIO_ROL_VACIO);
+  // El formulario de alta
+  const [form, setForm] = useState(FORMULARIO_VACIO);
   const [guardando, setGuardando] = useState(false);
   const [errorForm, setErrorForm] = useState(null);
 
@@ -34,13 +32,6 @@ function Roles() {
   const [seleccion, setSeleccion] = useState([]);
   const [cargandoPermisos, setCargandoPermisos] = useState(false);
   const [guardandoPermisos, setGuardandoPermisos] = useState(false);
-
-  // El formulario de alta de permiso
-  const [formPermiso, setFormPermiso] = useState(FORMULARIO_PERMISO_VACIO);
-  const [guardandoPermiso, setGuardandoPermiso] = useState(false);
-  const [errorPermiso, setErrorPermiso] = useState(null);
-
-  const [edicionPermiso, setEdicionPermiso] = useState(null);
 
   const [error, setError] = useState(null);
 
@@ -83,7 +74,7 @@ function Roles() {
         name: form.name.trim(),
         description: form.description.trim() || null,
       });
-      setForm(FORMULARIO_ROL_VACIO);
+      setForm(FORMULARIO_VACIO);
       setRecarga(recarga + 1);
     } catch (err) {
       setErrorForm(err.message);
@@ -184,81 +175,6 @@ function Roles() {
     }
   }
 
-  // --- Catálogo de permisos ---
-
-  function handlePermisoChange(event) {
-    const { name, value } = event.target;
-    setFormPermiso({ ...formPermiso, [name]: value });
-  }
-
-  async function handleCrearPermiso(event) {
-    event.preventDefault();
-    setErrorPermiso(null);
-    setGuardandoPermiso(true);
-
-    try {
-      await api.createPermission({
-        code: formPermiso.code.trim(),
-        label: formPermiso.label.trim(),
-        description: formPermiso.description.trim() || null,
-      });
-      setFormPermiso(FORMULARIO_PERMISO_VACIO);
-      setRecarga(recarga + 1);
-    } catch (err) {
-      setErrorPermiso(err.message);
-    } finally {
-      setGuardandoPermiso(false);
-    }
-  }
-
-  function handleEditarPermiso(permiso) {
-    setError(null);
-    setEdicionPermiso({
-      id: permiso.id,
-      code: permiso.code,
-      label: permiso.label,
-      description: permiso.description ?? "",
-    });
-  }
-
-  function handleEdicionPermisoChange(event) {
-    const { name, value } = event.target;
-    setEdicionPermiso({ ...edicionPermiso, [name]: value });
-  }
-
-  async function handleGuardarPermiso(event) {
-    event.preventDefault();
-    setError(null);
-
-    try {
-      await api.updatePermission(edicionPermiso.id, {
-        code: edicionPermiso.code.trim(),
-        label: edicionPermiso.label.trim(),
-        description: edicionPermiso.description.trim() || null,
-      });
-      setEdicionPermiso(null);
-      setRecarga(recarga + 1);
-    } catch (err) {
-      setError(err.message);
-    }
-  }
-
-  async function handleBorrarPermiso(permiso) {
-    const seguro = window.confirm(
-      `¿Eliminar el permiso ${permiso.code}? Se le quita a todos los roles que lo tienen.`,
-    );
-    if (!seguro) return;
-
-    setError(null);
-
-    try {
-      await api.deletePermission(permiso.id);
-      setRecarga(recarga + 1);
-    } catch (err) {
-      setError(err.message);
-    }
-  }
-
   return (
     <section className="roles-panel">
       <header className="roles-header">
@@ -269,7 +185,7 @@ function Roles() {
         </p>
       </header>
 
-      {/* FORMULARIO DE ALTA DE ROL */}
+      {/* FORMULARIO DE ALTA */}
       <form className="role-form" onSubmit={handleCrear}>
         <h2 className="role-form-title">Registrar un rol</h2>
 
@@ -318,7 +234,7 @@ function Roles() {
         {error}
       </p>
 
-      {/* TABLA DE ROLES */}
+      {/* TABLA */}
       <table className="roles-table">
         <thead>
           <tr>
@@ -408,11 +324,18 @@ function Roles() {
                     </button>
                   </td>
 
+                  {/* El rol admin no se edita ni se borra: es el que administra este
+                      catálogo, y el servidor también lo rechaza. */}
                   <td className="roles-cell-actions">
                     <button
                       className="roles-action"
                       type="button"
-                      disabled={edicion !== null}
+                      disabled={edicion !== null || rol.name === "admin"}
+                      title={
+                        rol.name === "admin"
+                          ? "El rol admin no se puede editar."
+                          : undefined
+                      }
                       onClick={() => handleEditar(rol)}
                     >
                       Editar
@@ -423,7 +346,12 @@ function Roles() {
                     <button
                       className="roles-action roles-action-danger"
                       type="button"
-                      disabled={edicion !== null}
+                      disabled={edicion !== null || rol.name === "admin"}
+                      title={
+                        rol.name === "admin"
+                          ? "El rol admin no se puede eliminar."
+                          : undefined
+                      }
                       onClick={() => handleBorrar(rol)}
                     >
                       Eliminar
@@ -492,21 +420,25 @@ function Roles() {
                           </p>
                         )}
 
-                        <button
-                          className="roles-grants-submit"
-                          type="submit"
-                          disabled={cargandoPermisos || guardandoPermisos}
-                        >
-                          {guardandoPermisos ? "Guardando..." : "Guardar permisos"}
-                        </button>
+                        <div className="roles-grants-actions">
+                          <button
+                            className="roles-grants-submit"
+                            type="submit"
+                            disabled={cargandoPermisos || guardandoPermisos}
+                          >
+                            {guardandoPermisos
+                              ? "Guardando..."
+                              : "Guardar permisos"}
+                          </button>
 
-                        <button
-                          className="roles-action"
-                          type="button"
-                          onClick={() => handleDesplegar(rol)}
-                        >
-                          Cancelar
-                        </button>
+                          <button
+                            className="roles-grants-cancel"
+                            type="button"
+                            onClick={() => handleDesplegar(rol)}
+                          >
+                            Cancelar
+                          </button>
+                        </div>
                       </form>
                     </td>
                   </tr>
@@ -523,7 +455,9 @@ function Roles() {
         <p className="roles-empty">Todavía no hay roles registrados.</p>
       )}
 
-      {/* CATÁLOGO DE PERMISOS */}
+      {/* CATÁLOGO DE PERMISOS: solo lectura. Los códigos los define el sistema, porque cada
+          uno es lo que una ruta del servidor compara para dejar pasar o no; aquí se listan
+          para saber qué significa cada casilla del panel de arriba. */}
       <section className="permissions-panel">
         <header className="permissions-header">
           <h2 className="permissions-title">Catálogo de permisos</h2>
@@ -533,189 +467,29 @@ function Roles() {
           </p>
         </header>
 
-        {/* FORMULARIO DE ALTA DE PERMISO */}
-        <form className="permission-form" onSubmit={handleCrearPermiso}>
-          <h3 className="permission-form-title">Registrar un permiso</h3>
-
-          <div className="permission-form-field">
-            <label className="permission-form-label" htmlFor="permission-code">
-              Código
-            </label>
-
-            <input
-              className="permission-form-input"
-              id="permission-code"
-              name="code"
-              type="text"
-              required
-              maxLength={PERMISO_CODIGO_MAX}
-              placeholder="proyecto.editar"
-              value={formPermiso.code}
-              onChange={handlePermisoChange}
-            />
-
-            <p className="permission-form-hint">
-              En minúsculas y separado por puntos, p. ej. project.write. Es el
-              nombre con el que el servidor lo reconoce.
-            </p>
-          </div>
-
-          <div className="permission-form-field">
-            <label
-              className="permission-form-label"
-              htmlFor="permission-label"
-            >
-              Etiqueta
-            </label>
-
-            <input
-              className="permission-form-input"
-              id="permission-label"
-              name="label"
-              type="text"
-              required
-              maxLength={PERMISO_ETIQUETA_MAX}
-              value={formPermiso.label}
-              onChange={handlePermisoChange}
-            />
-          </div>
-
-          <div className="permission-form-field">
-            <label
-              className="permission-form-label"
-              htmlFor="permission-description"
-            >
-              Descripción (opcional)
-            </label>
-
-            <textarea
-              className="permission-form-textarea"
-              id="permission-description"
-              name="description"
-              rows={2}
-              value={formPermiso.description}
-              onChange={handlePermisoChange}
-            />
-          </div>
-
-          <p className="permission-form-error" role="alert">
-            {errorPermiso}
-          </p>
-
-          <button
-            className="permission-form-submit"
-            type="submit"
-            disabled={guardandoPermiso}
-          >
-            {guardandoPermiso ? "Registrando..." : "Registrar permiso"}
-          </button>
-        </form>
-
-        {/* TABLA DE PERMISOS */}
         <table className="permissions-table">
           <thead>
             <tr>
               <th>Código</th>
               <th>Etiqueta</th>
               <th>Descripción</th>
-              <th>Acciones</th>
             </tr>
           </thead>
 
           <tbody>
-            {permisos.map((permiso) =>
-              edicionPermiso && edicionPermiso.id === permiso.id ? (
-                <tr className="permissions-row editing" key={permiso.id}>
-                  <td className="permissions-cell-code">
-                    <input
-                      className="permissions-edit-input"
-                      name="code"
-                      type="text"
-                      required
-                      maxLength={PERMISO_CODIGO_MAX}
-                      form={`permission-edit-${permiso.id}`}
-                      value={edicionPermiso.code}
-                      onChange={handleEdicionPermisoChange}
-                    />
-                  </td>
+            {permisos.map((permiso) => (
+              <tr className="permissions-row" key={permiso.id}>
+                <td className="permissions-cell-code">
+                  <code>{permiso.code}</code>
+                </td>
 
-                  <td className="permissions-cell-label">
-                    <input
-                      className="permissions-edit-input"
-                      name="label"
-                      type="text"
-                      required
-                      maxLength={PERMISO_ETIQUETA_MAX}
-                      form={`permission-edit-${permiso.id}`}
-                      value={edicionPermiso.label}
-                      onChange={handleEdicionPermisoChange}
-                    />
-                  </td>
+                <td className="permissions-cell-label">{permiso.label}</td>
 
-                  <td className="permissions-cell-description">
-                    <input
-                      className="permissions-edit-input"
-                      name="description"
-                      type="text"
-                      form={`permission-edit-${permiso.id}`}
-                      value={edicionPermiso.description}
-                      onChange={handleEdicionPermisoChange}
-                    />
-                  </td>
-
-                  <td className="permissions-cell-actions">
-                    <form
-                      id={`permission-edit-${permiso.id}`}
-                      onSubmit={handleGuardarPermiso}
-                    >
-                      <button className="roles-action" type="submit">
-                        Guardar
-                      </button>
-
-                      <button
-                        className="roles-action"
-                        type="button"
-                        onClick={() => setEdicionPermiso(null)}
-                      >
-                        Cancelar
-                      </button>
-                    </form>
-                  </td>
-                </tr>
-              ) : (
-                <tr className="permissions-row" key={permiso.id}>
-                  <td className="permissions-cell-code">
-                    <code>{permiso.code}</code>
-                  </td>
-
-                  <td className="permissions-cell-label">{permiso.label}</td>
-
-                  <td className="permissions-cell-description">
-                    {permiso.description ?? "—"}
-                  </td>
-
-                  <td className="permissions-cell-actions">
-                    <button
-                      className="roles-action"
-                      type="button"
-                      disabled={edicionPermiso !== null}
-                      onClick={() => handleEditarPermiso(permiso)}
-                    >
-                      Editar
-                    </button>
-
-                    <button
-                      className="roles-action roles-action-danger"
-                      type="button"
-                      disabled={edicionPermiso !== null}
-                      onClick={() => handleBorrarPermiso(permiso)}
-                    >
-                      Eliminar
-                    </button>
-                  </td>
-                </tr>
-              ),
-            )}
+                <td className="permissions-cell-description">
+                  {permiso.description ?? "—"}
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
 

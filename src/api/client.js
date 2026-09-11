@@ -143,13 +143,3 @@ export const getRolePermissions = (id) => request(`/roles/${id}/permissions`);
 // Reemplaza todos los permisos del rol por la lista de códigos que se manda.
 export const setRolePermissions = (id, codes) =>
   request(`/roles/${id}/permissions`, { method: "PUT", body: { permissions: codes } });
-
-export const createPermission = (input) =>
-  request("/roles/permissions", { method: "POST", body: input });
-
-export const updatePermission = (id, changes) =>
-  request(`/roles/permissions/${id}`, { method: "PATCH", body: changes });
-
-// Al borrar un permiso se le quita a todos los roles que lo tenían.
-export const deletePermission = (id) =>
-  request(`/roles/permissions/${id}`, { method: "DELETE" });
