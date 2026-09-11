@@ -24,6 +24,7 @@ import {
   MdBadge,
   MdMenu,
   MdContacts,
+  MdAdminPanelSettings,
 } from "react-icons/md";
 
 const menuSections = [
@@ -130,6 +131,12 @@ const menuSections = [
       {
         label: "Áreas y usuarios",
         icon: MdBusiness,
+        roles: ["admin"],
+      },
+      {
+        //ROLES Y SUS PERMISOS, SOLO ADMIN
+        label: "Roles y permisos",
+        icon: MdAdminPanelSettings,
         roles: ["admin"],
       },
       {

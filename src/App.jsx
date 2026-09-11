@@ -9,6 +9,7 @@ import Login from "./components/login/login.jsx";
 import Sidebar from "./components/sidebar/sidebar.jsx";
 import Users from "./components/users/users.jsx";
 import Areas from "./components/areas/areas.jsx";
+import Roles from "./components/roles/roles.jsx";
 import * as api from "./api/client.js";
 import "./App.css";
 
@@ -112,12 +113,14 @@ function App() {
           </div>
         </header>
 
-        {/* Por ahora solo "Empleados" y "Áreas y usuarios" tienen pantalla, y las dos son
-            de administración; las demás muestran su nombre. */}
+        {/* Por ahora solo "Empleados", "Áreas y usuarios" y "Roles y permisos" tienen
+            pantalla, y las tres son de administración; las demás muestran su nombre. */}
         {activa === "Empleados" && usuario.role === "admin" ? (
           <Users admin={usuario} />
         ) : activa === "Áreas y usuarios" && usuario.role === "admin" ? (
           <Areas />
+        ) : activa === "Roles y permisos" && usuario.role === "admin" ? (
+          <Roles />
         ) : (
           <h1>{activa}</h1>
         )}

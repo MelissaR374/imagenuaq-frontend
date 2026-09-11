@@ -89,6 +89,9 @@ export const reinviteUser = (id) => request(`/users/${id}/invite`, { method: "PO
 
 export const listRoles = () => request("/roles");
 
+// El catálogo completo de permisos, no los de un rol en particular.
+export const listPermissions = () => request("/roles/permissions");
+
 export const listAreas = () => request("/areas");
 
 export const listContractTypes = () => request("/contract-types");
@@ -121,3 +124,32 @@ export const setAreaMember = (areaId, userId, isAreaLeader) =>
 // Quita la pertenencia al área, no la cuenta.
 export const removeAreaMember = (areaId, userId) =>
   request(`/areas/${areaId}/members/${userId}`, { method: "DELETE" });
+
+// --- Roles y permisos ---
+
+export const createRole = (input) => request("/roles", { method: "POST", body: input });
+
+// Renombrar un rol saca a quienes lo tienen hasta que vuelvan a entrar: el servidor compara
+// el nombre que trae la sesión con el de la tabla.
+export const updateRole = (id, changes) =>
+  request(`/roles/${id}`, { method: "PATCH", body: changes });
+
+// Falla con 409 mientras alguien tenga el rol.
+export const deleteRole = (id) => request(`/roles/${id}`, { method: "DELETE" });
+
+// Lo que un rol puede hacer: { permissions: [...] }, cada uno con code y label.
+export const getRolePermissions = (id) => request(`/roles/${id}/permissions`);
+
+// Reemplaza todos los permisos del rol por la lista de códigos que se manda.
+export const setRolePermissions = (id, codes) =>
+  request(`/roles/${id}/permissions`, { method: "PUT", body: { permissions: codes } });
+
+export const createPermission = (input) =>
+  request("/roles/permissions", { method: "POST", body: input });
+
+export const updatePermission = (id, changes) =>
+  request(`/roles/permissions/${id}`, { method: "PATCH", body: changes });
+
+// Al borrar un permiso se le quita a todos los roles que lo tenían.
+export const deletePermission = (id) =>
+  request(`/roles/permissions/${id}`, { method: "DELETE" });
