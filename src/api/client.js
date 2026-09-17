@@ -143,3 +143,34 @@ export const getRolePermissions = (id) => request(`/roles/${id}/permissions`);
 // Reemplaza todos los permisos del rol por la lista de códigos que se manda.
 export const setRolePermissions = (id, codes) =>
   request(`/roles/${id}/permissions`, { method: "PUT", body: { permissions: codes } });
+
+// --- Cuentas Microsoft ---
+
+// Devuelve { url }: a dónde mandar al navegador para iniciar sesión con Microsoft. Al
+// terminar, Microsoft regresa al servidor y éste vuelve aquí con ?microsoft=connected.
+export const connectMicrosoft = () => request("/microsoft/connect", { method: "POST" });
+
+// Las cuentas propias; un administrador ve las de todos. Nunca trae el token.
+export const listMicrosoftAccounts = () => request("/microsoft/accounts");
+
+// Retira el acceso. La cuenta queda marcada como revocada, no se borra.
+export const revokeMicrosoftAccount = (id) =>
+  request(`/microsoft/accounts/${id}`, { method: "DELETE" });
+
+// --- Hojas de cálculo ---
+
+export const listSpreadsheets = () => request("/spreadsheets");
+
+// Lo que hay detrás de un enlace compartido, visto con esa cuenta: driveId, itemId, nombre
+// y las tablas y hojas del libro, para elegir una y registrarla.
+export const resolveSpreadsheet = (accountId, url) =>
+  request(`/spreadsheets/resolve?${new URLSearchParams({ accountId, url })}`);
+
+// Registra { accountId, name, driveId, itemId, tableName, webUrl }. No consulta Microsoft.
+export const registerSpreadsheet = (input) =>
+  request("/spreadsheets", { method: "POST", body: input });
+
+// La fila de encabezados, leída en vivo. Falla con 409 si la cuenta hay que reconectarla.
+export const previewSpreadsheet = (id) => request(`/spreadsheets/${id}/preview`);
+
+export const deleteSpreadsheet = (id) => request(`/spreadsheets/${id}`, { method: "DELETE" });

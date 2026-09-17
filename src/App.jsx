@@ -10,7 +10,9 @@ import Sidebar from "./components/sidebar/sidebar.jsx";
 import Users from "./components/users/users.jsx";
 import Areas from "./components/areas/areas.jsx";
 import Roles from "./components/roles/roles.jsx";
+import Spreadsheets from "./components/spreadsheets/spreadsheets.jsx";
 import * as api from "./api/client.js";
+import { MICROSOFT_PARAM } from "./config.js";
 import "./App.css";
 
 // El menú usa nombres de rol en español y el servidor los manda en inglés.
@@ -24,7 +26,12 @@ const ROLES = {
 function App() {
   // Quién entró; null mientras nadie lo haya hecho.
   const [usuario, setUsuario] = useState(null);
-  const [pestana, setPestana] = useState(null);
+  // Si venimos de iniciar sesión con Microsoft, abrir directo la pestaña que lo pidió.
+  const [pestana, setPestana] = useState(() =>
+    new URLSearchParams(window.location.search).has(MICROSOFT_PARAM)
+      ? "Formatos de solicitud"
+      : null,
+  );
 
   //MODO OSCURO Y CLARO
   const [modoOscuro, setModoOscuro] = useState(() => {
@@ -113,14 +120,17 @@ function App() {
           </div>
         </header>
 
-        {/* Por ahora solo "Empleados", "Áreas y usuarios" y "Roles y permisos" tienen
-            pantalla, y las tres son de administración; las demás muestran su nombre. */}
+        {/* Por ahora solo "Empleados", "Áreas y usuarios", "Roles y permisos" y "Formatos
+            de solicitud" tienen pantalla, y las cuatro son de administración; las demás
+            muestran su nombre. */}
         {activa === "Empleados" && usuario.role === "admin" ? (
           <Users admin={usuario} />
         ) : activa === "Áreas y usuarios" && usuario.role === "admin" ? (
           <Areas />
         ) : activa === "Roles y permisos" && usuario.role === "admin" ? (
           <Roles />
+        ) : activa === "Formatos de solicitud" && usuario.role === "admin" ? (
+          <Spreadsheets />
         ) : (
           <h1>{activa}</h1>
         )}

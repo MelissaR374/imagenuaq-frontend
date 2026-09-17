@@ -26,6 +26,10 @@ export const FRONTEND_DOMAIN = (
 // Nombre del parámetro donde viaja la invitación en el enlace de activación.
 export const INVITE_PARAM = "invite";
 
+// Nombre del parámetro con el que el servidor regresa aquí después de iniciar sesión con
+// Microsoft: "connected", o "error" acompañado de reason y description.
+export const MICROSOFT_PARAM = "microsoft";
+
 /**
  * El enlace que se le manda a alguien recién invitado para que active su cuenta. Lo abre en
  * esta misma aplicación con el token ya puesto; ver components/login/login.jsx.
