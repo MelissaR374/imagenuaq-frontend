@@ -3,7 +3,13 @@ services:
   #contenedor 1
   frontend:
     #Construye la imagen usando los archivos en esta carpeta ( . es la carpeta actual)
-    build: .
+    build:
+      context: .
+      #Estas dos las inserta Vite al compilar, no las lee nginx despues: cambiarlas es
+      #reconstruir la imagen. Ver .env.example y src/config.js
+      args:
+        VITE_API_URL: ${VITE_API_URL}
+        VITE_FRONTEND_DOMAIN: ${VITE_FRONTEND_DOMAIN}
     container_name: frontend #el contenedor se llama asi
     restart: unless-stopped #Si el contenedor se cae o docker se reincia, vuelve a levantarlo automaticamente
     networks:

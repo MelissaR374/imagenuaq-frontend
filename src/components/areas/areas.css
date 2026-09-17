@@ -1,0 +1,643 @@
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap");
+
+.areas-panel {
+  min-height: 100vh;
+  padding: 28px 32px 40px;
+  background: var(--background);
+  box-sizing: border-box;
+  font-family: "Poppins", sans-serif;
+  color: var(--text);
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
+}
+
+.areas-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.areas-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 5px 0;
+  transition: color 0.3s ease;
+}
+
+.areas-count {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.area-form {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 12px;
+  row-gap: 13px;
+  padding: 20px 24px 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  box-sizing: border-box;
+  font-family: "Poppins", sans-serif;
+
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease;
+}
+
+/* TÍTULO: "Registrar un área" */
+.area-form-title {
+  grid-column: 1 / -1;
+  margin: 0 0 1px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.area-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* Nombre */
+.area-form-field:nth-of-type(1) {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+/* Descripción: a la derecha, ocupa dos filas para que el textarea tenga alto */
+.area-form-field:nth-of-type(2) {
+  grid-column: 2;
+  grid-row: 2 / span 2;
+}
+
+/* Área superior */
+.area-form-field:nth-of-type(3) {
+  grid-column: 1;
+  grid-row: 3;
+}
+
+/* Responsable */
+.area-form-field:nth-of-type(4) {
+  grid-column: 1;
+  grid-row: 4;
+}
+
+.area-form-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.area-form-input,
+.area-form-select,
+.area-form-textarea {
+  width: 100%;
+  padding: 0 11px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface-secondary);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 11px;
+  outline: none;
+  box-sizing: border-box;
+
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.area-form-input,
+.area-form-select {
+  height: 36px;
+}
+
+.area-form-textarea {
+  flex: 1;
+  min-height: 85px;
+  padding: 9px 11px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.area-form-input::placeholder,
+.area-form-textarea::placeholder {
+  color: var(--text-muted);
+}
+
+.area-form-input:focus,
+.area-form-select:focus,
+.area-form-textarea:focus {
+  border-color: #3b73b9;
+  box-shadow: 0 0 0 2px rgba(59, 115, 185, 0.08);
+}
+
+.area-form-select {
+  appearance: auto;
+  cursor: pointer;
+}
+
+.area-form-hint {
+  margin: -1px 3px 0;
+  font-size: 10px;
+  line-height: 1.3;
+  color: var(--text-muted);
+}
+
+.area-form-error {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 10px;
+  color: #d9534f;
+}
+
+.area-form-error:empty {
+  display: none;
+}
+
+.area-form-submit {
+  grid-column: 2;
+  grid-row: 4;
+  justify-self: start;
+  align-self: end;
+  height: 32px;
+  min-width: 140px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 5px;
+  background: #2864a8;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    transform 0.1s ease;
+}
+
+.area-form-submit:hover {
+  background: #205895;
+}
+
+.area-form-submit:active {
+  transform: translateY(1px);
+}
+
+.area-form-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.areas-error {
+  margin: 10px 0;
+  font-size: 11px;
+  color: #d9534f;
+  font-family: "Poppins", sans-serif;
+}
+
+.areas-error:empty {
+  display: none;
+}
+
+.areas-table {
+  width: 100%;
+  margin-top: 34px;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  font-family: "Poppins", sans-serif;
+
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease;
+}
+
+/* Encabezados */
+
+.areas-table thead {
+  background: var(--surface);
+}
+
+.areas-table th {
+  height: 32px;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--border-light);
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+/* Nombre y descripción van a la izquierda: la sangría por nivel y los textos largos
+   no se leen centrados */
+.areas-table th:nth-child(1),
+.areas-table th:nth-child(2) {
+  text-align: left;
+}
+
+/* Celdas */
+
+.areas-table td {
+  height: 40px;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--border-light);
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.areas-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.areas-cell-name {
+  font-weight: 600;
+  color: var(--text) !important;
+  text-align: left !important;
+  white-space: nowrap;
+}
+
+.areas-cell-description {
+  max-width: 260px;
+  color: var(--text) !important;
+  text-align: left !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.areas-cell-parent {
+  white-space: nowrap;
+}
+
+.areas-cell-leaders {
+  color: #3270b5 !important;
+  font-weight: 600;
+}
+
+.areas-cell-actions {
+  text-align: right;
+  white-space: nowrap;
+}
+/* Sangría*/
+.areas-row[data-depth="1"] .areas-cell-name {
+  padding-left: 38px;
+}
+.areas-row[data-depth="2"] .areas-cell-name {
+  padding-left: 58px;
+}
+.areas-row[data-depth="3"] .areas-cell-name {
+  padding-left: 78px;
+}
+.areas-row[data-depth="4"] .areas-cell-name {
+  padding-left: 98px;
+}
+
+/* La fila desplegada se funde con su panel */
+.areas-row.open td {
+  background: var(--surface-secondary);
+  border-bottom-color: transparent;
+}
+
+.areas-row.editing td {
+  background: var(--surface-secondary);
+}
+
+.areas-edit-input,
+.areas-edit-select {
+  width: 100%;
+  height: 30px;
+  padding: 0 9px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 11px;
+  outline: none;
+  box-sizing: border-box;
+
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.areas-edit-input:focus,
+.areas-edit-select:focus {
+  border-color: #3b73b9;
+  box-shadow: 0 0 0 2px rgba(59, 115, 185, 0.08);
+}
+
+.areas-edit-select {
+  appearance: auto;
+  cursor: pointer;
+}
+
+.areas-cell-actions form {
+  display: inline;
+}
+
+.areas-action {
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  color: #3270b5;
+  cursor: pointer;
+}
+
+.areas-action:hover {
+  text-decoration: underline;
+}
+
+.areas-action + .areas-action {
+  margin-left: 12px;
+}
+
+.areas-action-danger {
+  color: #e45c5c;
+}
+
+.areas-action:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.areas-action:disabled:hover {
+  text-decoration: none;
+}
+
+.areas-members-toggle {
+  min-width: 46px;
+  height: 24px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.areas-members-toggle:hover,
+.areas-members-toggle[aria-expanded="true"] {
+  border-color: #3b73b9;
+  color: #3270b5;
+}
+
+.areas-members-row td {
+  height: auto;
+  padding: 0;
+}
+
+.areas-members-panel {
+  padding: 14px 24px 18px !important;
+  background: var(--surface-secondary);
+  text-align: left !important;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.areas-members-title {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.areas-members-empty {
+  margin: 0 0 12px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.areas-members-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 0 14px;
+  padding: 0;
+  list-style: none;
+}
+
+/* Una persona: nombre, correo, rol, insignia y botones en una línea */
+.areas-member {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  padding: 8px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 11px;
+
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease;
+}
+
+.areas-member.leader {
+  border-color: #3b73b9;
+}
+
+.areas-member-name {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.areas-member-email {
+  color: var(--text-muted);
+}
+
+.areas-member-role {
+  color: var(--text-secondary);
+}
+
+.areas-member-badge {
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(59, 115, 185, 0.12);
+  color: #3270b5;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.areas-member-actions {
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.areas-member-form {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.areas-member-form-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.areas-member-form-select {
+  flex: 1;
+  min-width: 220px;
+  max-width: 380px;
+  height: 30px;
+  padding: 0 9px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 11px;
+  outline: none;
+  cursor: pointer;
+
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease,
+    border-color 0.15s ease;
+}
+
+.areas-member-form-select:focus {
+  border-color: #3b73b9;
+}
+
+.areas-member-form-check {
+  width: 13px;
+  height: 13px;
+  margin: 0 0 0 4px;
+  cursor: pointer;
+}
+
+.areas-member-form-submit {
+  height: 30px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 5px;
+  background: #2864a8;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    transform 0.1s ease;
+}
+
+.areas-member-form-submit:hover {
+  background: #205895;
+}
+
+.areas-member-form-submit:active {
+  transform: translateY(1px);
+}
+
+.areas-loading,
+.areas-empty {
+  margin: 20px 0;
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: "Poppins", sans-serif;
+}
+
+@media (max-width: 900px) {
+  .areas-panel {
+    padding: 22px 20px 30px;
+  }
+
+  .area-form {
+    grid-template-columns: 1fr;
+  }
+
+  .area-form-field:nth-of-type(1),
+  .area-form-field:nth-of-type(2),
+  .area-form-field:nth-of-type(3),
+  .area-form-field:nth-of-type(4) {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .area-form-submit {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .areas-table {
+    display: block;
+    overflow-x: auto;
+  }
+
+  .areas-member-actions {
+    margin-left: 0;
+    width: 100%;
+  }
+}
+
+@media (max-width: 600px) {
+  .areas-panel {
+    padding: 18px 14px 25px;
+  }
+
+  .areas-title {
+    font-size: 20px;
+  }
+
+  .area-form {
+    padding: 17px;
+  }
+
+  .areas-table th,
+  .areas-table td {
+    padding: 0 12px;
+  }
+
+  .areas-members-panel {
+    padding: 12px 14px 16px !important;
+  }
+
+  .areas-member-form-select {
+    min-width: 0;
+    max-width: none;
+    width: 100%;
+  }
+
+  .area-form-submit,
+  .areas-member-form-submit {
+    width: 100%;
+  }
+}
