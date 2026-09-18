@@ -144,6 +144,19 @@ export const getRolePermissions = (id) => request(`/roles/${id}/permissions`);
 export const setRolePermissions = (id, codes) =>
   request(`/roles/${id}/permissions`, { method: "PUT", body: { permissions: codes } });
 
+// --- Registro de aplicación de Azure (solo admin) ---
+
+// Qué registro usa el servidor: { source, tenantId, clientId, hasSecret, redirectUri, ... }.
+// Nunca trae el secreto, sólo si hay uno.
+export const getMicrosoftApp = () => request("/microsoft/app");
+
+// Guarda { tenantId, clientId, clientSecret }. El secreto se puede omitir si ya hay uno.
+export const setMicrosoftApp = (input) =>
+  request("/microsoft/app", { method: "PUT", body: input });
+
+// Olvida el registro guardado; si .env tiene uno, vuelve a aplicar ése.
+export const clearMicrosoftApp = () => request("/microsoft/app", { method: "DELETE" });
+
 // --- Cuentas Microsoft ---
 
 // Devuelve { url }: a dónde mandar al navegador para iniciar sesión con Microsoft. Al

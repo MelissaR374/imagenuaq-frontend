@@ -25,6 +25,7 @@ import {
   MdMenu,
   MdContacts,
   MdAdminPanelSettings,
+  MdSwapHoriz,
 } from "react-icons/md";
 
 const menuSections = [
@@ -140,8 +141,15 @@ const menuSections = [
         roles: ["admin"],
       },
       {
+        //CUENTAS MICROSOFT Y LIBROS DE EXCEL REGISTRADOS, SOLO ADMIN
         label: "Formatos de solicitud",
         icon: MdDescription,
+        roles: ["admin"],
+      },
+      {
+        //ESQUEMAS Y MAPEO DE LOS LIBROS A PROYECTOS; TODAVÍA SIN PANTALLA
+        label: "Migración de datos",
+        icon: MdSwapHoriz,
         roles: ["admin"],
       },
     ],

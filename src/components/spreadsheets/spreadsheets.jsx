@@ -22,6 +22,10 @@ function resultadoEnLaUrl() {
 // El formulario de registro vacío: sirve para empezar y para limpiarlo al terminar.
 const FORMULARIO_VACIO = { accountId: "", url: "", tableName: "", name: "" };
 
+// El formulario del registro de aplicación de Azure. El secreto siempre empieza vacío:
+// el servidor nunca lo devuelve, y vacío significa "conservar el que ya está".
+const APP_VACIA = { tenantId: "common", clientId: "", clientSecret: "" };
+
 function Spreadsheets() {
   const [cuentas, setCuentas] = useState([]);
   const [libros, setLibros] = useState([]);
@@ -45,6 +49,13 @@ function Spreadsheets() {
   const [vista, setVista] = useState(null);
   const [cargandoVista, setCargandoVista] = useState(false);
 
+  // El registro de aplicación de Azure: lo que hay y el formulario para cambiarlo.
+  const [app, setApp] = useState(null);
+  const [formApp, setFormApp] = useState(APP_VACIA);
+  const [editandoApp, setEditandoApp] = useState(false);
+  const [guardandoApp, setGuardandoApp] = useState(false);
+  const [errorApp, setErrorApp] = useState(null);
+
   // Limpia la URL una vez leído el resultado, para que recargar no lo repita.
   useEffect(() => {
     if (!aviso) return;
@@ -55,9 +66,14 @@ function Spreadsheets() {
   useEffect(() => {
     let cancelado = false;
 
-    Promise.all([api.listMicrosoftAccounts(), api.listSpreadsheets()])
-      .then(([datosCuentas, datosLibros]) => {
+    Promise.all([
+      api.getMicrosoftApp(),
+      api.listMicrosoftAccounts(),
+      api.listSpreadsheets(),
+    ])
+      .then(([datosApp, datosCuentas, datosLibros]) => {
         if (cancelado) return;
+        setApp(datosApp.app);
         setCuentas(datosCuentas.accounts);
         setLibros(datosLibros.sheets);
         setError(null);
@@ -73,6 +89,61 @@ function Spreadsheets() {
       cancelado = true;
     };
   }, [recarga]);
+
+  // --- Registro de aplicación ---
+
+  function handleEditarApp() {
+    setErrorApp(null);
+    setFormApp({
+      tenantId: app?.tenantId ?? "common",
+      clientId: app?.clientId ?? "",
+      clientSecret: "",
+    });
+    setEditandoApp(true);
+  }
+
+  function handleAppChange(event) {
+    const { name, value } = event.target;
+    setFormApp({ ...formApp, [name]: value });
+  }
+
+  async function handleGuardarApp(event) {
+    event.preventDefault();
+    setErrorApp(null);
+    setGuardandoApp(true);
+
+    try {
+      const datos = await api.setMicrosoftApp({
+        tenantId: formApp.tenantId.trim() || "common",
+        clientId: formApp.clientId.trim(),
+        // Vacío = conservar el secreto guardado; el servidor pide uno la primera vez.
+        clientSecret: formApp.clientSecret.trim() || undefined,
+      });
+      setApp(datos.app);
+      setEditandoApp(false);
+      setFormApp(APP_VACIA);
+    } catch (err) {
+      setErrorApp(err.message);
+    } finally {
+      setGuardandoApp(false);
+    }
+  }
+
+  async function handleOlvidarApp() {
+    const seguro = window.confirm(
+      "¿Olvidar el registro guardado? Si el servidor tiene uno en .env se usará ése; si no, nadie podrá conectar cuentas hasta guardar otro.",
+    );
+    if (!seguro) return;
+
+    setErrorApp(null);
+
+    try {
+      const datos = await api.clearMicrosoftApp();
+      setApp(datos.app);
+    } catch (err) {
+      setErrorApp(err.message);
+    }
+  }
 
   // --- Cuentas ---
 
@@ -232,6 +303,132 @@ function Spreadsheets() {
       )}
 
       {error && <p className="spreadsheets-error">{error}</p>}
+
+      {/* Registro de aplicación de Azure: con qué credenciales se inicia sesión en
+          Microsoft. El registro se crea en el portal de Entra; aquí se guardan sus datos. */}
+      <section className="spreadsheets-app">
+        <header className="spreadsheets-app-header">
+          <h2 className="spreadsheets-subtitle">Registro de aplicación de Azure</h2>
+          {!editandoApp && (
+            <button
+              className="spreadsheets-app-edit"
+              type="button"
+              onClick={handleEditarApp}
+            >
+              {app?.source ? "Cambiar" : "Configurar"}
+            </button>
+          )}
+        </header>
+
+        {app && !editandoApp && (
+          <dl className="spreadsheets-app-summary">
+            <dt>Estado</dt>
+            <dd>
+              {app.source === "database"
+                ? "Guardado desde esta pantalla"
+                : app.source === "env"
+                  ? "Tomado del archivo .env del servidor"
+                  : "Sin configurar: nadie puede conectar cuentas todavía"}
+            </dd>
+            <dt>Tenant</dt>
+            <dd>{app.tenantId ?? "—"}</dd>
+            <dt>Client ID</dt>
+            <dd>{app.clientId ?? "—"}</dd>
+            <dt>Secreto</dt>
+            <dd>{app.hasSecret ? "Guardado" : "Falta"}</dd>
+            <dt>URI de redirección</dt>
+            <dd>
+              <code>{app.redirectUri}</code>
+            </dd>
+            {app.updatedAt && (
+              <>
+                <dt>Última modificación</dt>
+                <dd>
+                  {new Date(app.updatedAt).toLocaleString()}
+                  {app.updatedByName ? ` por ${app.updatedByName}` : ""}
+                </dd>
+              </>
+            )}
+          </dl>
+        )}
+
+        {app?.source === "database" && !editandoApp && (
+          <button
+            className="spreadsheets-app-clear"
+            type="button"
+            onClick={handleOlvidarApp}
+          >
+            Olvidar registro guardado
+          </button>
+        )}
+
+        {editandoApp && (
+          <form className="spreadsheets-app-form" onSubmit={handleGuardarApp}>
+            <p className="spreadsheets-app-help">
+              En el portal de Entra (Aplicaciones → Registros de aplicaciones) registra la
+              aplicación con una URI de redirección de tipo Web igual a{" "}
+              <code>{app?.redirectUri}</code>, crea un secreto de cliente y agrega los
+              permisos delegados de Graph <code>offline_access</code>,{" "}
+              <code>User.Read</code> y <code>Files.Read.All</code>. Copia aquí sus datos.
+            </p>
+
+            <label className="spreadsheets-field">
+              Tenant
+              <input
+                type="text"
+                name="tenantId"
+                value={formApp.tenantId}
+                onChange={handleAppChange}
+                placeholder="common"
+                maxLength={64}
+              />
+            </label>
+
+            <label className="spreadsheets-field">
+              Application (client) ID
+              <input
+                type="text"
+                name="clientId"
+                value={formApp.clientId}
+                onChange={handleAppChange}
+                maxLength={64}
+                required
+              />
+            </label>
+
+            <label className="spreadsheets-field">
+              Secreto de cliente
+              <input
+                type="password"
+                name="clientSecret"
+                value={formApp.clientSecret}
+                onChange={handleAppChange}
+                placeholder={app?.hasSecret ? "Vacío conserva el actual" : ""}
+                autoComplete="new-password"
+              />
+            </label>
+
+            <div className="spreadsheets-form-actions">
+              <button
+                className="spreadsheets-app-save"
+                type="submit"
+                disabled={guardandoApp}
+              >
+                {guardandoApp ? "Guardando..." : "Guardar"}
+              </button>
+              <button
+                className="spreadsheets-cancel"
+                type="button"
+                onClick={() => setEditandoApp(false)}
+              >
+                Cancelar
+              </button>
+            </div>
+          </form>
+        )}
+
+        {errorApp && <p className="spreadsheets-form-error">{errorApp}</p>}
+      </section>
 
       {/* Cuentas conectadas */}
       <section className="spreadsheets-accounts">
