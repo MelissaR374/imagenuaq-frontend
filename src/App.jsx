@@ -11,6 +11,7 @@ import Users from "./components/users/users.jsx";
 import Areas from "./components/areas/areas.jsx";
 import Roles from "./components/roles/roles.jsx";
 import Spreadsheets from "./components/spreadsheets/spreadsheets.jsx";
+import Profile from "./components/profile/profile.jsx";
 import * as api from "./api/client.js";
 import { MICROSOFT_PARAM } from "./config.js";
 import "./App.css";
@@ -22,6 +23,15 @@ const ROLES = {
   finance: "finanzas",
   worker: "trabajador",
 };
+
+// El cambio de foto como actualizador de estado: libera el object URL anterior y crea el
+// del Blob nuevo, o deja null para quitarla.
+function reemplazarFoto(blob) {
+  return (anterior) => {
+    if (anterior) URL.revokeObjectURL(anterior);
+    return blob ? URL.createObjectURL(blob) : null;
+  };
+}
 
 function App() {
   // Quién entró; null mientras nadie lo haya hecho.
@@ -52,6 +62,10 @@ function App() {
     }
   }, [modoOscuro]);
 
+  // La foto de perfil como object URL, o null si no hay. Vive aquí porque la barra
+  // lateral y la pestaña "Mi perfil" la muestran las dos.
+  const [foto, setFoto] = useState(null);
+
   // Si no hay token guardado no hay nada que verificar y se entra directo al login.
   const [verificando, setVerificando] = useState(() => Boolean(api.getToken()));
 
@@ -65,8 +79,41 @@ function App() {
       .finally(() => setVerificando(false));
   }, []);
 
+  // Al entrar alguien se pide su foto una vez (no cada vez que edita su nombre); 404
+  // significa que no tiene.
+  const usuarioId = usuario?.id ?? null;
+
+  useEffect(() => {
+    if (usuarioId === null) return;
+
+    let cancelado = false;
+
+    api
+      .getPicture(usuarioId)
+      .then((blob) => {
+        if (!cancelado) setFoto(reemplazarFoto(blob));
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelado = true;
+    };
+  }, [usuarioId]);
+
+  // Lo que la pestaña "Mi perfil" llama al subir o quitar la foto.
+  function cambiarFoto(blob) {
+    setFoto(reemplazarFoto(blob));
+  }
+
+  // La pestaña "Mi perfil" avisa cuando cambian los datos, para que el nombre del
+  // encabezado y de la barra lateral se actualicen sin volver a entrar.
+  function actualizarUsuario(datos) {
+    setUsuario({ ...usuario, fullName: datos.fullName, email: datos.email });
+  }
+
   function cerrarSesion() {
     api.clearToken();
+    cambiarFoto(null);
     setUsuario(null);
     setPestana(null);
   }
@@ -86,6 +133,7 @@ function App() {
     <div className={`app-container ${modoOscuro ? "dark-mode" : "light-mode"}`}>
       <Sidebar
         usuario={usuario}
+        foto={foto}
         role={ROLES[usuario.role] ?? "trabajador"}
         activeItem={activa}
         onNavigate={setPestana}
@@ -94,7 +142,14 @@ function App() {
 
       <main className="main-content">
         <header className="main-header">
-          <span className="main-user">{usuario.fullName}</span>
+          {/* El nombre abre "Mi perfil", igual que el usuario de la barra lateral. */}
+          <button
+            className="main-user"
+            type="button"
+            onClick={() => setPestana("Mi perfil")}
+          >
+            {usuario.fullName}
+          </button>
 
           <div className="header-actions">
             <button
@@ -120,10 +175,16 @@ function App() {
           </div>
         </header>
 
-        {/* Por ahora solo "Empleados", "Áreas y usuarios", "Roles y permisos" y "Formatos
-            de solicitud" tienen pantalla, y las cuatro son de administración; las demás
-            muestran su nombre. */}
-        {activa === "Empleados" && usuario.role === "admin" ? (
+        {/* Por ahora solo "Mi perfil", "Empleados", "Áreas y usuarios", "Roles y permisos"
+            y "Formatos de solicitud" tienen pantalla; las demás muestran su nombre. */}
+        {activa === "Mi perfil" ? (
+          <Profile
+            usuario={usuario}
+            foto={foto}
+            onActualizar={actualizarUsuario}
+            onFoto={cambiarFoto}
+          />
+        ) : activa === "Empleados" && usuario.role === "admin" ? (
           <Users admin={usuario} />
         ) : activa === "Áreas y usuarios" && usuario.role === "admin" ? (
           <Areas />

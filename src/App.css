@@ -71,7 +71,7 @@
   flex: 1;
   min-height: 100vh;
 
-  padding: 30px;
+  padding: 10px;
 
   overflow-y: auto;
   overflow-x: hidden;
@@ -109,11 +109,28 @@
     border-color 0.3s ease;
 }
 
+/* Es un botón: abre "Mi perfil". */
 .main-user {
-  font-size: 14px;
+  padding: 6px 10px;
+
+  border: none;
+  border-radius: 6px;
+
+  background: transparent;
   color: var(--text);
 
-  transition: color 0.3s ease;
+  font: inherit;
+  font-size: 14px;
+
+  cursor: pointer;
+
+  transition:
+    background-color 0.2s ease,
+    color 0.3s ease;
+}
+
+.main-user:hover {
+  background-color: var(--surface);
 }
 
 /* =========================================================

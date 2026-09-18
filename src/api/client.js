@@ -64,6 +64,57 @@ export const activate = (token, password) =>
 // Quién dice el servidor que eres con el token guardado.
 export const session = () => request("/auth/me");
 
+// --- Mi perfil ---
+//
+// Lo que cada quien puede cambiar de su propio registro. El servidor toma el id de la
+// sesión, nunca de la URL, así que no hay forma de llegar al registro de alguien más.
+
+// El registro propio completo, con cumpleaños y tipo de contrato: { user }.
+export const getProfile = () => request("/auth/me/profile");
+
+// Solo fullName, email y birthday; cualquier otra llave el servidor la ignora.
+export const updateProfile = (changes) =>
+  request("/auth/me", { method: "PATCH", body: changes });
+
+// Pide la contraseña actual antes de cambiarla. Las demás sesiones abiertas siguen vivas.
+export const changePassword = (currentPassword, newPassword) =>
+  request("/auth/me/password", { method: "PUT", body: { currentPassword, newPassword } });
+
+// La foto de perfil de alguien como Blob, o null si no tiene. Va aparte de request()
+// porque la respuesta es una imagen, no JSON, y una etiqueta <img> no puede mandar el
+// token: hay que pedirla con fetch y mostrarla con URL.createObjectURL.
+export async function getPicture(userId) {
+  const response = await fetch(`${BASE}/users/${userId}/picture`, {
+    headers: { Authorization: `Bearer ${getToken()}` },
+  });
+
+  if (response.status === 404) return null;
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new ApiError(data?.error?.message ?? `Error ${response.status}.`, response.status);
+  }
+
+  return response.blob();
+}
+
+// Sube la foto propia tal cual, sin multipart: el cuerpo es el archivo y el tipo va en el
+// encabezado. Acepta PNG, JPEG o WebP de hasta 2 MB; lo demás el servidor lo rechaza.
+export async function setMyPicture(file) {
+  const response = await fetch(`${BASE}/auth/me/picture`, {
+    method: "PUT",
+    headers: { Authorization: `Bearer ${getToken()}`, "Content-Type": file.type },
+    body: file,
+  });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new ApiError(data?.error?.message ?? `Error ${response.status}.`, response.status);
+  }
+}
+
+export const clearMyPicture = () => request("/auth/me/picture", { method: "DELETE" });
+
 // --- Usuarios ---
 
 export const listUsers = (params = {}) => {
