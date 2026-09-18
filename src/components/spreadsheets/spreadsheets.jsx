@@ -5,6 +5,7 @@ import { Fragment, useEffect, useState } from "react";
 
 import * as api from "../../api/client.js";
 import { MICROSOFT_PARAM } from "../../config.js";
+import "./spreadsheets.css";
 
 // Lo que dejó el servidor en la URL al volver de Microsoft, o null si no venimos de ahí.
 function resultadoEnLaUrl() {
@@ -17,6 +18,17 @@ function resultadoEnLaUrl() {
     reason: params.get("reason"),
     description: params.get("description"),
   };
+}
+
+// La letra de columna de Excel para un índice base cero: 0 → A, 25 → Z, 26 → AA.
+function letraDeColumna(indice) {
+  let letra = "";
+  let n = indice;
+  while (n >= 0) {
+    letra = String.fromCharCode(65 + (n % 26)) + letra;
+    n = Math.floor(n / 26) - 1;
+  }
+  return letra;
 }
 
 // El formulario de registro vacío: sirve para empezar y para limpiarlo al terminar.
@@ -45,7 +57,7 @@ function Spreadsheets() {
   const [guardando, setGuardando] = useState(false);
   const [errorForm, setErrorForm] = useState(null);
 
-  // Los encabezados desplegados: { id, kind, name, headers } o null.
+  // Los encabezados desplegados y unas filas de muestra: { id, kind, name, headers, rows } o null.
   const [vista, setVista] = useState(null);
   const [cargandoVista, setCargandoVista] = useState(false);
 
@@ -250,6 +262,7 @@ function Spreadsheets() {
         kind: datos.kind,
         name: datos.name,
         headers: datos.headers,
+        rows: datos.rows,
       });
     } catch (err) {
       setError(err.message);
@@ -278,8 +291,14 @@ function Spreadsheets() {
   if (cargando) return <p className="spreadsheets-loading">Cargando...</p>;
 
   return (
-    <section className="spreadsheets">
-      <h1 className="spreadsheets-title">Formatos de solicitud</h1>
+    <section className="spreadsheets-panel">
+      <header className="spreadsheets-header">
+        <h1 className="spreadsheets-title">Formatos de solicitud</h1>
+        <p className="spreadsheets-count">
+          {libros.length} libro{libros.length === 1 ? "" : "s"} registrado
+          {libros.length === 1 ? "" : "s"}
+        </p>
+      </header>
 
       {aviso && (
         <p
@@ -287,11 +306,13 @@ function Spreadsheets() {
             aviso.ok ? "spreadsheets-notice" : "spreadsheets-notice-error"
           }
         >
-          {aviso.ok
-            ? "Cuenta de Microsoft conectada."
-            : `No se pudo conectar la cuenta (${aviso.reason ?? "error"}${
-                aviso.description ? `: ${aviso.description}` : ""
-              }).`}
+          <span>
+            {aviso.ok
+              ? "Cuenta de Microsoft conectada."
+              : `No se pudo conectar la cuenta (${aviso.reason ?? "error"}${
+                  aviso.description ? `: ${aviso.description}` : ""
+                }).`}
+          </span>
           <button
             className="spreadsheets-notice-close"
             type="button"
@@ -304,11 +325,12 @@ function Spreadsheets() {
 
       {error && <p className="spreadsheets-error">{error}</p>}
 
-      {/* Registro de aplicación de Azure: con qué credenciales se inicia sesión en
-          Microsoft. El registro se crea en el portal de Entra; aquí se guardan sus datos. */}
+      {/* Registro de aplicación de Azure */}
       <section className="spreadsheets-app">
-        <header className="spreadsheets-app-header">
-          <h2 className="spreadsheets-subtitle">Registro de aplicación de Azure</h2>
+        <header className="spreadsheets-section-header">
+          <h2 className="spreadsheets-subtitle">
+            Registro de aplicación de Azure
+          </h2>
           {!editandoApp && (
             <button
               className="spreadsheets-app-edit"
@@ -322,32 +344,42 @@ function Spreadsheets() {
 
         {app && !editandoApp && (
           <dl className="spreadsheets-app-summary">
-            <dt>Estado</dt>
-            <dd>
-              {app.source === "database"
-                ? "Guardado desde esta pantalla"
-                : app.source === "env"
-                  ? "Tomado del archivo .env del servidor"
-                  : "Sin configurar: nadie puede conectar cuentas todavía"}
-            </dd>
-            <dt>Tenant</dt>
-            <dd>{app.tenantId ?? "—"}</dd>
-            <dt>Client ID</dt>
-            <dd>{app.clientId ?? "—"}</dd>
-            <dt>Secreto</dt>
-            <dd>{app.hasSecret ? "Guardado" : "Falta"}</dd>
-            <dt>URI de redirección</dt>
-            <dd>
-              <code>{app.redirectUri}</code>
-            </dd>
+            <div className="spreadsheets-app-summary-row">
+              <dt>Estado</dt>
+              <dd>
+                {app.source === "database"
+                  ? "Guardado desde esta pantalla"
+                  : app.source === "env"
+                    ? "Tomado del archivo .env del servidor"
+                    : "Sin configurar: nadie puede conectar cuentas todavía"}
+              </dd>
+            </div>
+            <div className="spreadsheets-app-summary-row">
+              <dt>Tenant</dt>
+              <dd>{app.tenantId ?? "—"}</dd>
+            </div>
+            <div className="spreadsheets-app-summary-row">
+              <dt>Client ID</dt>
+              <dd>{app.clientId ?? "—"}</dd>
+            </div>
+            <div className="spreadsheets-app-summary-row">
+              <dt>Secreto</dt>
+              <dd>{app.hasSecret ? "Guardado" : "Falta"}</dd>
+            </div>
+            <div className="spreadsheets-app-summary-row">
+              <dt>URI de redirección</dt>
+              <dd>
+                <code>{app.redirectUri}</code>
+              </dd>
+            </div>
             {app.updatedAt && (
-              <>
+              <div className="spreadsheets-app-summary-row">
                 <dt>Última modificación</dt>
                 <dd>
                   {new Date(app.updatedAt).toLocaleString()}
                   {app.updatedByName ? ` por ${app.updatedByName}` : ""}
                 </dd>
-              </>
+              </div>
             )}
           </dl>
         )}
@@ -365,48 +397,51 @@ function Spreadsheets() {
         {editandoApp && (
           <form className="spreadsheets-app-form" onSubmit={handleGuardarApp}>
             <p className="spreadsheets-app-help">
-              En el portal de Entra (Aplicaciones → Registros de aplicaciones) registra la
-              aplicación con una URI de redirección de tipo Web igual a{" "}
-              <code>{app?.redirectUri}</code>, crea un secreto de cliente y agrega los
-              permisos delegados de Graph <code>offline_access</code>,{" "}
-              <code>User.Read</code> y <code>Files.Read.All</code>. Copia aquí sus datos.
+              En el portal de Entra (Aplicaciones → Registros de aplicaciones)
+              registra la aplicación con una URI de redirección de tipo Web
+              igual a <code>{app?.redirectUri}</code>, crea un secreto de
+              cliente y agrega los permisos delegados de Graph{" "}
+              <code>offline_access</code>, <code>User.Read</code> y{" "}
+              <code>Files.Read.All</code>. Copia aquí sus datos.
             </p>
 
-            <label className="spreadsheets-field">
-              Tenant
-              <input
-                type="text"
-                name="tenantId"
-                value={formApp.tenantId}
-                onChange={handleAppChange}
-                placeholder="common"
-                maxLength={64}
-              />
-            </label>
+            <div className="spreadsheets-form-grid">
+              <label className="spreadsheets-field">
+                Tenant
+                <input
+                  type="text"
+                  name="tenantId"
+                  value={formApp.tenantId}
+                  onChange={handleAppChange}
+                  placeholder="common"
+                  maxLength={64}
+                />
+              </label>
 
-            <label className="spreadsheets-field">
-              Application (client) ID
-              <input
-                type="text"
-                name="clientId"
-                value={formApp.clientId}
-                onChange={handleAppChange}
-                maxLength={64}
-                required
-              />
-            </label>
+              <label className="spreadsheets-field">
+                Application (client) ID
+                <input
+                  type="text"
+                  name="clientId"
+                  value={formApp.clientId}
+                  onChange={handleAppChange}
+                  maxLength={64}
+                  required
+                />
+              </label>
 
-            <label className="spreadsheets-field">
-              Secreto de cliente
-              <input
-                type="password"
-                name="clientSecret"
-                value={formApp.clientSecret}
-                onChange={handleAppChange}
-                placeholder={app?.hasSecret ? "Vacío conserva el actual" : ""}
-                autoComplete="new-password"
-              />
-            </label>
+              <label className="spreadsheets-field spreadsheets-field--full">
+                Secreto de cliente
+                <input
+                  type="password"
+                  name="clientSecret"
+                  value={formApp.clientSecret}
+                  onChange={handleAppChange}
+                  placeholder={app?.hasSecret ? "Vacío conserva el actual" : ""}
+                  autoComplete="new-password"
+                />
+              </label>
+            </div>
 
             <div className="spreadsheets-form-actions">
               <button
@@ -432,7 +467,7 @@ function Spreadsheets() {
 
       {/* Cuentas conectadas */}
       <section className="spreadsheets-accounts">
-        <header className="spreadsheets-accounts-header">
+        <header className="spreadsheets-section-header">
           <h2 className="spreadsheets-subtitle">Cuentas Microsoft</h2>
           <button
             className="spreadsheets-connect"
@@ -448,84 +483,96 @@ function Spreadsheets() {
             No hay cuentas conectadas. Conecta una para poder registrar libros.
           </p>
         ) : (
-          <table className="spreadsheets-table">
-            <thead>
-              <tr>
-                <th>Cuenta</th>
-                <th>Nombre</th>
-                <th>Conectada por</th>
-                <th>Desde</th>
-                <th>Último uso</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {cuentas.map((cuenta) => (
-                <tr key={cuenta.id} className="spreadsheets-account">
-                  <td>{cuenta.email}</td>
-                  <td>{cuenta.displayName}</td>
-                  <td>{cuenta.userFullName}</td>
-                  <td>{new Date(cuenta.connectedAt).toLocaleDateString()}</td>
-                  <td>
-                    {cuenta.lastUsedAt
-                      ? new Date(cuenta.lastUsedAt).toLocaleDateString()
-                      : "—"}
-                  </td>
-                  <td>
-                    <button
-                      className="spreadsheets-disconnect"
-                      type="button"
-                      onClick={() => handleDesconectar(cuenta)}
-                    >
-                      Desconectar
-                    </button>
-                  </td>
+          <div className="spreadsheets-table-wrap">
+            <table className="spreadsheets-table">
+              <thead>
+                <tr>
+                  <th>Cuenta</th>
+                  <th>Nombre</th>
+                  <th>Conectada por</th>
+                  <th>Desde</th>
+                  <th>Último uso</th>
+                  <th></th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {cuentas.map((cuenta) => (
+                  <tr key={cuenta.id} className="spreadsheets-account">
+                    <td className="spreadsheets-cell-strong">{cuenta.email}</td>
+                    <td>{cuenta.displayName}</td>
+                    <td>{cuenta.userFullName}</td>
+                    <td>{new Date(cuenta.connectedAt).toLocaleDateString()}</td>
+                    <td>
+                      {cuenta.lastUsedAt
+                        ? new Date(cuenta.lastUsedAt).toLocaleDateString()
+                        : "—"}
+                    </td>
+                    <td className="spreadsheets-cell-actions">
+                      <button
+                        className="spreadsheets-action spreadsheets-action-danger"
+                        type="button"
+                        onClick={() => handleDesconectar(cuenta)}
+                      >
+                        Desconectar
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
 
       {/* Registro de un libro nuevo */}
       <section className="spreadsheets-register">
         <h2 className="spreadsheets-subtitle">Registrar libro</h2>
+        <p>
+          Registrar una hoja de cálculo conectada a un formulario para poder ser
+          utilizada dentro del sistema
+        </p>
 
-        {cuentas.length === 0 ? null : (
+        {cuentas.length === 0 ? (
+          <p className="spreadsheets-empty">
+            Conecta una cuenta Microsoft para poder registrar libros.
+          </p>
+        ) : (
           <form
             className="spreadsheets-form"
             onSubmit={libro ? handleRegistrar : handleBuscar}
           >
-            <label className="spreadsheets-field">
-              Cuenta
-              <select
-                name="accountId"
-                value={form.accountId}
-                onChange={handleChange}
-                required
-                disabled={Boolean(libro)}
-              >
-                <option value="">Elige una cuenta</option>
-                {cuentas.map((cuenta) => (
-                  <option key={cuenta.id} value={cuenta.id}>
-                    {cuenta.email}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <div className="spreadsheets-form-grid">
+              <label className="spreadsheets-field">
+                Cuenta
+                <select
+                  name="accountId"
+                  value={form.accountId}
+                  onChange={handleChange}
+                  required
+                  disabled={Boolean(libro)}
+                >
+                  <option value="">Elige una cuenta</option>
+                  {cuentas.map((cuenta) => (
+                    <option key={cuenta.id} value={cuenta.id}>
+                      {cuenta.email}
+                    </option>
+                  ))}
+                </select>
+              </label>
 
-            <label className="spreadsheets-field">
-              Enlace al libro
-              <input
-                type="url"
-                name="url"
-                value={form.url}
-                onChange={handleChange}
-                placeholder="https://uaq-my.sharepoint.com/..."
-                required
-                disabled={Boolean(libro)}
-              />
-            </label>
+              <label className="spreadsheets-field">
+                Enlace al libro
+                <input
+                  type="url"
+                  name="url"
+                  value={form.url}
+                  onChange={handleChange}
+                  placeholder="https://uaq-my.sharepoint.com/..."
+                  required
+                  disabled={Boolean(libro)}
+                />
+              </label>
+            </div>
 
             {!libro && (
               <button
@@ -543,43 +590,45 @@ function Spreadsheets() {
                   Libro encontrado: <strong>{libro.name}</strong>
                 </p>
 
-                <label className="spreadsheets-field">
-                  Tabla u hoja
-                  <select
-                    name="tableName"
-                    value={form.tableName}
-                    onChange={handleChange}
-                  >
-                    {libro.tables.length > 0 && (
-                      <optgroup label="Tablas">
-                        {libro.tables.map((tabla) => (
-                          <option key={`t-${tabla.id}`} value={tabla.name}>
-                            {tabla.name}
+                <div className="spreadsheets-form-grid">
+                  <label className="spreadsheets-field">
+                    Tabla u hoja
+                    <select
+                      name="tableName"
+                      value={form.tableName}
+                      onChange={handleChange}
+                    >
+                      {libro.tables.length > 0 && (
+                        <optgroup label="Tablas">
+                          {libro.tables.map((tabla) => (
+                            <option key={`t-${tabla.id}`} value={tabla.name}>
+                              {tabla.name}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
+                      <optgroup label="Hojas">
+                        {libro.worksheets.map((hoja) => (
+                          <option key={`w-${hoja.id}`} value={hoja.name}>
+                            {hoja.name}
                           </option>
                         ))}
                       </optgroup>
-                    )}
-                    <optgroup label="Hojas">
-                      {libro.worksheets.map((hoja) => (
-                        <option key={`w-${hoja.id}`} value={hoja.name}>
-                          {hoja.name}
-                        </option>
-                      ))}
-                    </optgroup>
-                  </select>
-                </label>
+                    </select>
+                  </label>
 
-                <label className="spreadsheets-field">
-                  Nombre
-                  <input
-                    type="text"
-                    name="name"
-                    value={form.name}
-                    onChange={handleChange}
-                    maxLength={300}
-                    required
-                  />
-                </label>
+                  <label className="spreadsheets-field">
+                    Nombre
+                    <input
+                      type="text"
+                      name="name"
+                      value={form.name}
+                      onChange={handleChange}
+                      maxLength={300}
+                      required
+                    />
+                  </label>
+                </div>
 
                 <div className="spreadsheets-form-actions">
                   <button
@@ -616,81 +665,155 @@ function Spreadsheets() {
             Todavía no hay libros registrados.
           </p>
         ) : (
-          <table className="spreadsheets-table">
-            <thead>
-              <tr>
-                <th>Nombre</th>
-                <th>Tabla</th>
-                <th>Cuenta</th>
-                <th>Registró</th>
-                <th>Formato</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {libros.map((hoja) => (
-                <Fragment key={hoja.id}>
-                  <tr className="spreadsheets-sheet">
-                    <td>
-                      {hoja.webUrl ? (
-                        <a href={hoja.webUrl} target="_blank" rel="noreferrer">
-                          {hoja.name}
-                        </a>
-                      ) : (
-                        hoja.name
-                      )}
-                    </td>
-                    <td>{hoja.tableName ?? "(primera)"}</td>
-                    <td>
-                      {hoja.accountEmail}
-                      {hoja.accountRevoked && (
-                        <span className="spreadsheets-revoked">
-                          {" "}
-                          (desconectada)
+          <div className="spreadsheets-table-wrap">
+            <table className="spreadsheets-table spreadsheets-table--books">
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Tabla</th>
+                  <th>Cuenta</th>
+                  <th>Registró</th>
+                  <th>Formato</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {libros.map((hoja) => (
+                  <Fragment key={hoja.id}>
+                    <tr className="spreadsheets-sheet">
+                      <td className="spreadsheets-cell-strong">
+                        {hoja.webUrl ? (
+                          <a
+                            href={hoja.webUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            {hoja.name}
+                          </a>
+                        ) : (
+                          hoja.name
+                        )}
+                      </td>
+                      <td>
+                        <span className="spreadsheets-tag">
+                          {hoja.tableName ?? "(primera)"}
                         </span>
-                      )}
-                    </td>
-                    <td>{hoja.registeredByName ?? "—"}</td>
-                    <td>{hoja.mapped ? "Mapeado" : "Sin mapear"}</td>
-                    <td>
-                      <button
-                        className="spreadsheets-preview"
-                        type="button"
-                        onClick={() => handleVer(hoja)}
-                        disabled={cargandoVista}
-                      >
-                        {vista?.id === hoja.id ? "Ocultar" : "Ver encabezados"}
-                      </button>
-                      <button
-                        className="spreadsheets-delete"
-                        type="button"
-                        onClick={() => handleEliminar(hoja)}
-                      >
-                        Eliminar
-                      </button>
-                    </td>
-                  </tr>
-
-                  {vista?.id === hoja.id && (
-                    <tr className="spreadsheets-headers">
-                      <td colSpan={6}>
-                        <p className="spreadsheets-headers-title">
-                          Encabezados de{" "}
-                          {vista.kind === "table" ? "la tabla" : "la hoja"}{" "}
-                          {vista.name}:
-                        </p>
-                        <ol className="spreadsheets-headers-list">
-                          {vista.headers.map((encabezado, i) => (
-                            <li key={i}>{String(encabezado) || "(vacío)"}</li>
-                          ))}
-                        </ol>
+                      </td>
+                      <td>
+                        {hoja.accountEmail}
+                        {hoja.accountRevoked && (
+                          <span className="spreadsheets-revoked">
+                            {" "}
+                            (desconectada)
+                          </span>
+                        )}
+                      </td>
+                      <td>{hoja.registeredByName ?? "—"}</td>
+                      <td>
+                        <span
+                          className={
+                            hoja.mapped
+                              ? "spreadsheets-badge spreadsheets-badge--ok"
+                              : "spreadsheets-badge spreadsheets-badge--pending"
+                          }
+                        >
+                          {hoja.mapped ? "Mapeado" : "Sin mapear"}
+                        </span>
+                      </td>
+                      <td className="spreadsheets-cell-actions">
+                        <button
+                          className="spreadsheets-action"
+                          type="button"
+                          onClick={() => handleVer(hoja)}
+                          disabled={cargandoVista}
+                        >
+                          {vista?.id === hoja.id
+                            ? "Ocultar"
+                            : "Ver encabezados"}
+                        </button>
+                        <button
+                          className="spreadsheets-action spreadsheets-action-danger"
+                          type="button"
+                          onClick={() => handleEliminar(hoja)}
+                        >
+                          Eliminar
+                        </button>
                       </td>
                     </tr>
-                  )}
-                </Fragment>
-              ))}
-            </tbody>
-          </table>
+
+                    {/* Los encabezados como fila 1 de la hoja y debajo las filas de muestra */}
+                    {vista?.id === hoja.id && (
+                      <tr className="spreadsheets-headers-row">
+                        <td colSpan={6}>
+                          <div className="sheet-preview">
+                            <div className="sheet-preview-head">
+                              <span className="sheet-preview-label">
+                                {vista.kind === "table" ? "Tabla" : "Hoja"}
+                              </span>
+                              <span className="sheet-preview-name">
+                                {vista.name}
+                              </span>
+                              <span className="sheet-preview-count">
+                                {vista.headers.length} columna
+                                {vista.headers.length === 1 ? "" : "s"} ·{" "}
+                                {vista.rows.length} fila
+                                {vista.rows.length === 1 ? "" : "s"} de muestra
+                              </span>
+                            </div>
+                            <div className="sheet-preview-scroll">
+                              <table className="sheet-preview-grid">
+                                <thead>
+                                  <tr>
+                                    <th className="sheet-preview-corner"></th>
+                                    {vista.headers.map((_, i) => (
+                                      <th key={i} className="sheet-preview-col">
+                                        {letraDeColumna(i)}
+                                      </th>
+                                    ))}
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  <tr>
+                                    <th className="sheet-preview-row">1</th>
+                                    {vista.headers.map((encabezado, i) => (
+                                      <td
+                                        key={i}
+                                        className="sheet-preview-cell sheet-preview-cell--header"
+                                      >
+                                        {String(encabezado) || "(vacío)"}
+                                      </td>
+                                    ))}
+                                  </tr>
+                                  {vista.rows.map((fila, r) => (
+                                    <tr key={r}>
+                                      <th className="sheet-preview-row">
+                                        {r + 2}
+                                      </th>
+                                      {/* Se recorren los encabezados para que cada fila tenga las mismas celdas */}
+                                      {vista.headers.map((_, c) => (
+                                        <td
+                                          key={c}
+                                          className="sheet-preview-cell"
+                                        >
+                                          {fila[c] == null
+                                            ? ""
+                                            : String(fila[c])}
+                                        </td>
+                                      ))}
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
     </section>
