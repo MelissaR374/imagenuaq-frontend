@@ -25,6 +25,7 @@ import {
   MdMenu,
   MdContacts,
   MdAdminPanelSettings,
+  MdSwapHoriz,
 } from "react-icons/md";
 
 const menuSections = [
@@ -140,8 +141,15 @@ const menuSections = [
         roles: ["admin"],
       },
       {
-        label: "Formatos de solicitud",
+        //CUENTAS MICROSOFT Y LIBROS DE EXCEL REGISTRADOS, SOLO ADMIN
+        label: "Registro Formatos de solicitud",
         icon: MdDescription,
+        roles: ["admin"],
+      },
+      {
+        //ESQUEMAS Y MAPEO DE LOS LIBROS A PROYECTOS; TODAVÍA SIN PANTALLA
+        label: "Configuración de formatos de solicitud",
+        icon: MdSwapHoriz,
         roles: ["admin"],
       },
     ],
@@ -233,7 +241,8 @@ const menuSections = [
   },
 ];
 
-function Sidebar({ usuario, role = "admin", activeItem = "Proyectos", onNavigate, onLogout}) {
+// `foto` es el object URL de la foto de perfil, o null para mostrar las iniciales.
+function Sidebar({ usuario, foto = null, role = "admin", activeItem = "Proyectos", onNavigate, onLogout}) {
   
   //CREAMOS EL ESTADO, al inicio es false
   /* isClosed = false -> menú abierto 
@@ -301,15 +310,28 @@ function Sidebar({ usuario, role = "admin", activeItem = "Proyectos", onNavigate
         })}
       </nav>
 
-      {/* USUARIO */}
-      <div className="sidebar-user">
-        <div className="user-avatar">{usuario.fullName ?.trim().split(" ").slice(0, 2).map((parte) => parte[0]).join("").toUpperCase()}</div>
+      {/* USUARIO: hacer clic abre "Mi perfil" */}
+      <div className={`sidebar-user ${activeItem === "Mi perfil" ? "active" : ""}`}>
+        <button
+          className="user-profile"
+          type="button"
+          title="Mi perfil"
+          onClick={() => onNavigate && onNavigate("Mi perfil")}
+        >
+          <div className="user-avatar">
+            {foto ? (
+              <img className="user-avatar-image" src={foto} alt="" />
+            ) : (
+              usuario.fullName ?.trim().split(" ").slice(0, 2).map((parte) => parte[0]).join("").toUpperCase()
+            )}
+          </div>
 
-        <div className="user-info">
-          <span className="user-name" title= {usuario.fullName} >{usuario.fullName}</span>
+          <div className="user-info">
+            <span className="user-name" title= {usuario.fullName} >{usuario.fullName}</span>
 
-          <span className="user-role">{usuario.role}</span>
-        </div>
+            <span className="user-role">{usuario.role}</span>
+          </div>
+        </button>
 
         <MdLogout className="logout-icon" onClick={onLogout}
         title="Cerrar Sesión"/>

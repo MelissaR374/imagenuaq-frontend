@@ -64,6 +64,57 @@ export const activate = (token, password) =>
 // Quién dice el servidor que eres con el token guardado.
 export const session = () => request("/auth/me");
 
+// --- Mi perfil ---
+//
+// Lo que cada quien puede cambiar de su propio registro. El servidor toma el id de la
+// sesión, nunca de la URL, así que no hay forma de llegar al registro de alguien más.
+
+// El registro propio completo, con cumpleaños y tipo de contrato: { user }.
+export const getProfile = () => request("/auth/me/profile");
+
+// Solo fullName, email y birthday; cualquier otra llave el servidor la ignora.
+export const updateProfile = (changes) =>
+  request("/auth/me", { method: "PATCH", body: changes });
+
+// Pide la contraseña actual antes de cambiarla. Las demás sesiones abiertas siguen vivas.
+export const changePassword = (currentPassword, newPassword) =>
+  request("/auth/me/password", { method: "PUT", body: { currentPassword, newPassword } });
+
+// La foto de perfil de alguien como Blob, o null si no tiene. Va aparte de request()
+// porque la respuesta es una imagen, no JSON, y una etiqueta <img> no puede mandar el
+// token: hay que pedirla con fetch y mostrarla con URL.createObjectURL.
+export async function getPicture(userId) {
+  const response = await fetch(`${BASE}/users/${userId}/picture`, {
+    headers: { Authorization: `Bearer ${getToken()}` },
+  });
+
+  if (response.status === 404) return null;
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new ApiError(data?.error?.message ?? `Error ${response.status}.`, response.status);
+  }
+
+  return response.blob();
+}
+
+// Sube la foto propia tal cual, sin multipart: el cuerpo es el archivo y el tipo va en el
+// encabezado. Acepta PNG, JPEG o WebP de hasta 2 MB; lo demás el servidor lo rechaza.
+export async function setMyPicture(file) {
+  const response = await fetch(`${BASE}/auth/me/picture`, {
+    method: "PUT",
+    headers: { Authorization: `Bearer ${getToken()}`, "Content-Type": file.type },
+    body: file,
+  });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new ApiError(data?.error?.message ?? `Error ${response.status}.`, response.status);
+  }
+}
+
+export const clearMyPicture = () => request("/auth/me/picture", { method: "DELETE" });
+
 // --- Usuarios ---
 
 export const listUsers = (params = {}) => {
@@ -143,3 +194,47 @@ export const getRolePermissions = (id) => request(`/roles/${id}/permissions`);
 // Reemplaza todos los permisos del rol por la lista de códigos que se manda.
 export const setRolePermissions = (id, codes) =>
   request(`/roles/${id}/permissions`, { method: "PUT", body: { permissions: codes } });
+
+// --- Registro de aplicación de Azure (solo admin) ---
+
+// Qué registro usa el servidor: { source, tenantId, clientId, hasSecret, redirectUri, ... }.
+// Nunca trae el secreto, sólo si hay uno.
+export const getMicrosoftApp = () => request("/microsoft/app");
+
+// Guarda { tenantId, clientId, clientSecret }. El secreto se puede omitir si ya hay uno.
+export const setMicrosoftApp = (input) =>
+  request("/microsoft/app", { method: "PUT", body: input });
+
+// Olvida el registro guardado; si .env tiene uno, vuelve a aplicar ése.
+export const clearMicrosoftApp = () => request("/microsoft/app", { method: "DELETE" });
+
+// --- Cuentas Microsoft ---
+
+// Devuelve { url }: a dónde mandar al navegador para iniciar sesión con Microsoft. Al
+// terminar, Microsoft regresa al servidor y éste vuelve aquí con ?microsoft=connected.
+export const connectMicrosoft = () => request("/microsoft/connect", { method: "POST" });
+
+// Las cuentas propias; un administrador ve las de todos. Nunca trae el token.
+export const listMicrosoftAccounts = () => request("/microsoft/accounts");
+
+// Retira el acceso. La cuenta queda marcada como revocada, no se borra.
+export const revokeMicrosoftAccount = (id) =>
+  request(`/microsoft/accounts/${id}`, { method: "DELETE" });
+
+// --- Hojas de cálculo ---
+
+export const listSpreadsheets = () => request("/spreadsheets");
+
+// Lo que hay detrás de un enlace compartido, visto con esa cuenta: driveId, itemId, nombre
+// y las tablas y hojas del libro, para elegir una y registrarla.
+export const resolveSpreadsheet = (accountId, url) =>
+  request(`/spreadsheets/resolve?${new URLSearchParams({ accountId, url })}`);
+
+// Registra { accountId, name, driveId, itemId, tableName, webUrl }. No consulta Microsoft.
+export const registerSpreadsheet = (input) =>
+  request("/spreadsheets", { method: "POST", body: input });
+
+// La fila de encabezados, leída en vivo. Falla con 409 si la cuenta hay que reconectarla.
+export const previewSpreadsheet = (id) => request(`/spreadsheets/${id}/preview`);
+
+export const deleteSpreadsheet = (id) => request(`/spreadsheets/${id}`, { method: "DELETE" });
