@@ -12,6 +12,7 @@ import Areas from "./components/areas/areas.jsx";
 import Roles from "./components/roles/roles.jsx";
 import Spreadsheets from "./components/spreadsheets/spreadsheets.jsx";
 import Profile from "./components/profile/profile.jsx";
+
 import * as api from "./api/client.js";
 import { MICROSOFT_PARAM } from "./config.js";
 import "./App.css";

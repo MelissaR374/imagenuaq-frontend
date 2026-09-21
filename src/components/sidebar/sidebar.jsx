@@ -142,7 +142,7 @@ const menuSections = [
       },
       {
         //CUENTAS MICROSOFT Y LIBROS DE EXCEL REGISTRADOS, SOLO ADMIN
-        label: "Registro Formatos de solicitud",
+        label: "Formatos de solicitud",
         icon: MdDescription,
         roles: ["admin"],
       },
