@@ -270,6 +270,11 @@ export const updateSchema = (id, changes) =>
 
 export const deleteSchema = (id) => request(`/schemas/${id}`, { method: "DELETE" });
 
+// El vocabulario de claves: cada clave publicada alguna vez, con su definición más reciente y
+// en qué formatos vive. Una clave significa una sola cosa en todo el sistema, así que el
+// constructor de formatos la reusa en vez de redefinirla.
+export const listFieldKeys = () => request("/schemas/field-keys");
+
 // El catálogo de tipos de campo. Es de solo lectura: cada tipo es una regla de conversión
 // que el servidor implementa.
 export const listDataTypes = () => request("/data-types");

@@ -13,6 +13,7 @@ import "./schemas.css";
 function Schemas() {
   const [formatos, setFormatos] = useState([]);
   const [tipos, setTipos] = useState([]);
+  const [vocabulario, setVocabulario] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
   const [aviso, setAviso] = useState(null);
@@ -31,10 +32,15 @@ function Schemas() {
 
     async function cargar() {
       try {
-        const [formatosRes, tiposRes] = await Promise.all([api.listSchemas(), api.listDataTypes()]);
+        const [formatosRes, tiposRes, clavesRes] = await Promise.all([
+          api.listSchemas(),
+          api.listDataTypes(),
+          api.listFieldKeys(),
+        ]);
         if (cancelado) return;
         setFormatos(formatosRes.schemas);
         setTipos(tiposRes.dataTypes);
+        setVocabulario(clavesRes.fieldKeys);
       } catch (fallo) {
         if (!cancelado) setError(fallo.message);
       } finally {
@@ -49,8 +55,12 @@ function Schemas() {
   }, []);
 
   async function recargar() {
-    const { schemas } = await api.listSchemas();
+    const [{ schemas }, { fieldKeys }] = await Promise.all([
+      api.listSchemas(),
+      api.listFieldKeys(),
+    ]);
     setFormatos(schemas);
+    setVocabulario(fieldKeys);
   }
 
   function abrir(modo, formato = null) {
@@ -230,6 +240,7 @@ function Schemas() {
 
           <SchemaEditor
             tipos={tipos}
+            vocabulario={vocabulario}
             titulo="Campos del formato"
             onGuardar={crear}
             onCancelar={() => setPanel(null)}
@@ -248,6 +259,7 @@ function Schemas() {
           </p>
           <SchemaEditor
             tipos={tipos}
+            vocabulario={vocabulario}
             inicial={panel.formato.fields ?? undefined}
             titulo={`Campos del formato (quedará como versión ${(panel.formato.version ?? 0) + 1})`}
             onGuardar={publicarVersion}

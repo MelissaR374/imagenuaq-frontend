@@ -163,7 +163,7 @@ const menuSections = [
   },
 
   {
-    title: "VISTA DE SOLO LECTURA",
+    title: "DATOS",
     items: [
       {
         label: "Facturación",

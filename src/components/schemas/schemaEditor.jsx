@@ -8,6 +8,12 @@ import "./schemaEditor.css";
 // El `code` es la llave con la que el valor se guarda y con la que después lo leen la
 // etiqueta, la orden de impresión y facturación, así que es snake_case y único entre ambas
 // secciones. El servidor lo valida igual; aquí solo se avisa antes de mandarlo.
+//
+// **Una clave que ya existe se reusa, no se redefine.** El selector ofrece el vocabulario
+// (`GET /api/schemas/field-keys`): al elegir una clave ya publicada, el nombre y el tipo se
+// llenan solos y quedan bloqueados, porque el valor se guarda bajo esa clave en todo el sistema
+// y si aquí fuera de otro tipo, el proyecto acabaría con dos cosas distintas bajo un nombre. El
+// servidor rechaza publicarla con otro tipo, así que el bloqueo es lo que evita el viaje.
 const SECCIONES = [
   { clave: "deliverables", titulo: "Entregables", ayuda: "Lo que el área tiene que producir" },
   { clave: "information", titulo: "Información", ayuda: "Lo que el solicitante declara" },
@@ -26,7 +32,18 @@ function codigoSugerido(nombre) {
     .slice(0, 100);
 }
 
-function SchemaEditor({ tipos, inicial, titulo, onGuardar, onCancelar, error, guardando }) {
+function SchemaEditor({
+  tipos,
+  vocabulario = [],
+  inicial,
+  titulo,
+  onGuardar,
+  onCancelar,
+  error,
+  guardando,
+}) {
+  // La clave a su definición publicada, para saber cuándo un campo está reusando una.
+  const publicadas = new Map(vocabulario.map((una) => [una.key, una]));
   const [campos, setCampos] = useState(
     inicial ?? { deliverables: [{ ...CAMPO_VACIO }], information: [] },
   );
@@ -101,6 +118,7 @@ function SchemaEditor({ tipos, inicial, titulo, onGuardar, onCancelar, error, gu
                     <input
                       className="schema-input"
                       value={campo.name}
+                      readOnly={publicadas.has(campo.code)}
                       onChange={(evento) => {
                         const name = evento.target.value;
                         // La clave se propone del nombre mientras nadie la haya tecleado.
@@ -114,16 +132,36 @@ function SchemaEditor({ tipos, inicial, titulo, onGuardar, onCancelar, error, gu
                     <input
                       className={`schema-input ${repetidos.has(campo.code) ? "schema-input-bad" : ""}`}
                       value={campo.code}
-                      onChange={(evento) =>
-                        cambiarCampo(seccion.clave, indice, { code: evento.target.value })
-                      }
+                      list="schema-vocabulario"
+                      onChange={(evento) => {
+                        const code = evento.target.value;
+                        const publicada = publicadas.get(code);
+                        // Al caer en una clave que ya existe, su definición manda.
+                        cambiarCampo(
+                          seccion.clave,
+                          indice,
+                          publicada
+                            ? {
+                                code,
+                                name: publicada.name,
+                                type: publicada.type,
+                                note: publicada.note ?? "",
+                              }
+                            : { code },
+                        );
+                      }}
                       required
                     />
+                    {publicadas.has(campo.code) ? (
+                      <p className="schema-reused">
+                      </p>
+                    ) : null}
                   </td>
                   <td>
                     <select
                       className="schema-input"
                       value={campo.type}
+                      disabled={publicadas.has(campo.code)}
                       onChange={(evento) =>
                         cambiarCampo(seccion.clave, indice, { type: evento.target.value })
                       }
@@ -180,6 +218,21 @@ function SchemaEditor({ tipos, inicial, titulo, onGuardar, onCancelar, error, gu
           </button>
         </fieldset>
       ))}
+
+      {/* El vocabulario completo: una clave elegida de aquí se reusa con su definición. */}
+      <datalist id="schema-vocabulario">
+        {vocabulario.map((una) => (
+          <option value={una.key} key={una.key}>
+            {una.name} ({una.type})
+          </option>
+        ))}
+      </datalist>
+
+      <p className="schema-editor-help">
+        Las claves con fondo bloqueado ya existen en otro formato: se reusan con su nombre y su
+        tipo, porque el valor se guarda bajo esa clave en todo el sistema. Si necesitas algo
+        distinto, usa otra clave.
+      </p>
 
       {repetidos.size > 0 ? (
         <p className="schema-editor-error">

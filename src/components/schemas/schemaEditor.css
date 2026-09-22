@@ -56,3 +56,18 @@
 .schema-editor-error {
   margin: 0.5rem 0;
 }
+
+.schema-reused {
+  margin: 0.15rem 0 0;
+  font-size: 0.8em;
+}
+
+.schema-editor-help {
+  margin: 0.5rem 0;
+  font-size: 0.9em;
+}
+
+.schema-input[readonly],
+.schema-input:disabled {
+  opacity: 0.7;
+}
