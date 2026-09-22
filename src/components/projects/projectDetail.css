@@ -1,0 +1,142 @@
+/* Solo acomodo: el diseño lo revisa quien lleva el CSS. */
+
+.project-detail {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  border: 1px solid;
+}
+
+.project-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.project-detail-title,
+.project-detail-subtitle {
+  margin: 0 0 0.5rem;
+}
+
+.project-detail-subtitle {
+  margin-top: 1.25rem;
+}
+
+.project-detail-facts {
+  display: grid;
+  grid-template-columns: 12rem 1fr;
+  gap: 0.35rem 1rem;
+  margin: 0.75rem 0;
+}
+
+.project-detail-facts dt {
+  font-weight: bold;
+}
+
+.project-detail-facts dd {
+  margin: 0;
+}
+
+.project-stages,
+.project-values {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 0.5rem;
+}
+
+.project-stages th,
+.project-stages td,
+.project-values th,
+.project-values td {
+  padding: 0.3rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.project-cell-center {
+  text-align: center;
+}
+
+.project-stage-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.project-stage-blocked,
+.project-approval {
+  margin: 0.15rem 0;
+  font-size: 0.9em;
+}
+
+.project-value-key {
+  font-family: monospace;
+}
+
+.project-value-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.25rem;
+}
+
+.project-detail-panel {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid;
+  max-width: 34rem;
+}
+
+.project-detail-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.project-detail-actions,
+.project-detail-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.project-detail-error,
+.project-detail-help {
+  margin: 0.5rem 0;
+}
+
+.project-detail-help {
+  font-size: 0.9em;
+}
+
+.project-requests {
+  margin: 0.25rem 0;
+  padding-left: 1.25rem;
+}
+
+.project-stage-io {
+  margin: 0.15rem 0;
+  font-size: 0.85em;
+}
+
+.project-output-missing {
+  font-weight: bold;
+}
+
+.project-output-done {
+  opacity: 0.8;
+}
+
+.project-stage-io {
+  margin: 0.15rem 0;
+  font-size: 0.85em;
+}
+
+.project-output-missing {
+  font-weight: bold;
+}
+
+.project-output-done {
+  opacity: 0.8;
+}

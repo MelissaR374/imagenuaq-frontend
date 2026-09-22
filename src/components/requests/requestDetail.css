@@ -1,0 +1,78 @@
+/* Solo acomodo: el diseño lo revisa quien lleva el CSS. */
+
+.request-detail {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  border: 1px solid;
+}
+
+.request-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.request-detail-title,
+.request-detail-subtitle {
+  margin: 0 0 0.5rem;
+}
+
+.request-detail-facts {
+  display: grid;
+  grid-template-columns: 12rem 1fr;
+  gap: 0.35rem 1rem;
+  margin: 0.75rem 0;
+}
+
+.request-detail-facts dt {
+  font-weight: bold;
+}
+
+.request-detail-facts dd {
+  margin: 0;
+}
+
+.request-detail-data {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.request-detail-data th,
+.request-detail-data td {
+  padding: 0.3rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.request-detail-raw,
+.request-detail-conflicts,
+.request-detail-convert {
+  margin-top: 0.75rem;
+}
+
+.request-detail-convert {
+  padding: 0.75rem;
+  border: 1px solid;
+  max-width: 40rem;
+}
+
+.request-detail-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.request-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.request-detail-error,
+.request-detail-help,
+.request-detail-converted {
+  margin: 0.5rem 0;
+}

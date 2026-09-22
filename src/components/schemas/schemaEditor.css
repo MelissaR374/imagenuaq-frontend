@@ -1,0 +1,58 @@
+/* Solo acomodo: el diseño lo revisa quien lleva el CSS. */
+
+.schema-editor {
+  margin-top: 0.75rem;
+}
+
+.schema-editor-title {
+  margin: 0 0 0.5rem;
+}
+
+.schema-section {
+  margin-bottom: 1rem;
+  padding: 0.5rem;
+}
+
+.schema-section-help {
+  font-weight: normal;
+  font-size: 0.9em;
+}
+
+.schema-fields {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.schema-fields th,
+.schema-fields td {
+  padding: 0.25rem;
+  text-align: left;
+}
+
+.schema-cell-center {
+  text-align: center;
+}
+
+.schema-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.3rem;
+}
+
+.schema-input-bad {
+  outline: 2px solid;
+}
+
+.schema-add {
+  margin-top: 0.5rem;
+}
+
+.schema-editor-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.schema-editor-error {
+  margin: 0.5rem 0;
+}

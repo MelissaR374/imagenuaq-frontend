@@ -1,0 +1,61 @@
+/* Solo acomodo: el diseño lo revisa quien lleva el CSS. */
+
+.inbox {
+  padding: 1rem;
+}
+
+.inbox-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.inbox-title {
+  margin: 0;
+}
+
+.inbox-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.inbox-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.inbox-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.inbox-table th,
+.inbox-table td {
+  padding: 0.4rem;
+  text-align: left;
+}
+
+.inbox-cell-center {
+  text-align: center;
+}
+
+.inbox-folio {
+  font-family: monospace;
+  white-space: nowrap;
+}
+
+.inbox-badge {
+  font-size: 0.8em;
+}
+
+.inbox-error,
+.inbox-empty,
+.inbox-loading {
+  margin: 0.5rem 0;
+}

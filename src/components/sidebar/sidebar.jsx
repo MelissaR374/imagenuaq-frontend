@@ -26,6 +26,7 @@ import {
   MdContacts,
   MdAdminPanelSettings,
   MdSwapHoriz,
+  MdSchema,
 } from "react-icons/md";
 
 const menuSections = [
@@ -147,7 +148,13 @@ const menuSections = [
         roles: ["admin"],
       },
       {
-        //ESQUEMAS Y MAPEO DE LOS LIBROS A PROYECTOS; TODAVÍA SIN PANTALLA
+        //LOS ESQUEMAS: QUÉ DATOS LLEVA UN PROYECTO Y DE QUÉ TIPO SON
+        label: "Esquemas de datos",
+        icon: MdSchema,
+        roles: ["admin"],
+      },
+      {
+        //MAPEO DE LAS COLUMNAS DE LOS LIBROS A LOS ESQUEMAS; TODAVÍA SIN PANTALLA
         label: "Configuración de formatos de solicitud",
         icon: MdSwapHoriz,
         roles: ["admin"],

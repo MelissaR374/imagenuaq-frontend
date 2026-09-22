@@ -1,0 +1,33 @@
+/* Solo acomodo: el diseño lo revisa quien lleva el CSS. */
+
+.request-form {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  border: 1px solid;
+  max-width: 40rem;
+}
+
+.request-form-title {
+  margin: 0 0 0.5rem;
+}
+
+.request-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.request-form-fields {
+  margin: 0.75rem 0;
+  padding: 0.5rem;
+}
+
+.request-form-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.request-form-error {
+  margin: 0.5rem 0;
+}

@@ -1,0 +1,64 @@
+/* Solo acomodo: el diseño lo revisa quien lleva el CSS. */
+
+.schemas {
+  padding: 1rem;
+}
+
+.schemas-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.schemas-title {
+  margin: 0;
+}
+
+.schemas-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.schemas-table th,
+.schemas-table td {
+  padding: 0.4rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.schemas-code {
+  font-family: monospace;
+}
+
+.schemas-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.schemas-versions,
+.schemas-panel {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  border: 1px solid;
+}
+
+.schemas-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
+  max-width: 28rem;
+}
+
+.schemas-panel-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.schemas-error,
+.schemas-notice {
+  margin: 0.5rem 0;
+}

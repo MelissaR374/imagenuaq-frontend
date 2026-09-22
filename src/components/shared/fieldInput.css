@@ -1,0 +1,30 @@
+/* Solo acomodo: el diseño lo revisa quien lleva el CSS. */
+
+.field-input {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.field-input-boolean .field-label {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.field-label {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.field-control {
+  padding: 0.4rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.field-note {
+  margin: 0;
+  font-size: 0.85em;
+}

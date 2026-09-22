@@ -11,6 +11,9 @@ import Users from "./components/users/users.jsx";
 import Areas from "./components/areas/areas.jsx";
 import Roles from "./components/roles/roles.jsx";
 import Spreadsheets from "./components/spreadsheets/spreadsheets.jsx";
+import Schemas from "./components/schemas/schemas.jsx";
+import Inbox from "./components/requests/inbox.jsx";
+import Projects from "./components/projects/projects.jsx";
 import Profile from "./components/profile/profile.jsx";
 
 import * as api from "./api/client.js";
@@ -176,8 +179,11 @@ function App() {
           </div>
         </header>
 
-        {/* Por ahora solo "Mi perfil", "Empleados", "Áreas y usuarios", "Roles y permisos"
-            y "Formatos de solicitud" tienen pantalla; las demás muestran su nombre. */}
+        {/* Las pestañas con pantalla: "Mi perfil", "Empleados", "Áreas y usuarios",
+            "Roles y permisos", "Formatos de solicitud" (libros de Excel), "Esquemas de datos"
+            (qué datos lleva un proyecto), "Bandeja de solicitudes" y "Proyectos". Las demás
+            muestran su nombre; "Configuración de formatos de solicitud" espera el mapeo de
+            columnas. */}
         {activa === "Mi perfil" ? (
           <Profile
             usuario={usuario}
@@ -193,6 +199,12 @@ function App() {
           <Roles />
         ) : activa === "Formatos de solicitud" && usuario.role === "admin" ? (
           <Spreadsheets />
+        ) : activa === "Esquemas de datos" && usuario.role === "admin" ? (
+          <Schemas />
+        ) : activa === "Bandeja de solicitudes" && usuario.role === "admin" ? (
+          <Inbox />
+        ) : activa === "Proyectos" && usuario.role === "admin" ? (
+          <Projects usuario={usuario} />
         ) : (
           <h1>{activa}</h1>
         )}

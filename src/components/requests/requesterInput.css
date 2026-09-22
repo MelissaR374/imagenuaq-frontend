@@ -1,0 +1,11 @@
+/* Solo acomodo: el diseño lo revisa quien lleva el CSS. */
+
+.requester-input {
+  display: inline-flex;
+  min-width: 18rem;
+}
+
+.requester-control {
+  padding: 0.4rem;
+  width: 100%;
+}
