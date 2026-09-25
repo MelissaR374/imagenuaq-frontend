@@ -3,13 +3,14 @@
 // cumpleaños y contraseña. Los estilos van en profile.css.
 //
 // Lo que no se puede cambiar aquí (rol, área, tipo de contrato) se muestra pero no se
-// edita: son decisiones de coordinación y se cambian desde "Empleados". El servidor de
-// todos modos ignora esas llaves si llegaran.
+// edita: son decisiones de coordinación y se cambian desde "Empleados". El servidor de todos modos ignora esas llaves si llegaran.
 //
 // La foto no se pone directo en un <img src="/api/..."> porque esa etiqueta no puede mandar
 // el token; se pide con fetch y se muestra con un object URL, que vive en App.jsx para que
 // la barra lateral la comparta.
 import { useEffect, useState } from "react";
+
+import { MdVisibility, MdVisibilityOff } from "react-icons/md";
 
 import * as api from "../../api/client.js";
 import "./profile.css";
@@ -40,6 +41,11 @@ function Profile({ usuario, foto, onActualizar, onFoto }) {
   const [cambiando, setCambiando] = useState(false);
   const [errorContrasena, setErrorContrasena] = useState(null);
   const [contrasenaCambiada, setContrasenaCambiada] = useState(false);
+  const [mostrarPassword, setMostrarPassword] = useState({
+    actual: false,
+    nueva: false,
+    confirmacion: false,
+  });
 
   // La foto
   const [subiendo, setSubiendo] = useState(false);
@@ -312,58 +318,88 @@ function Profile({ usuario, foto, onActualizar, onFoto }) {
       {/* CONTRASEÑA */}
       <form className="profile-form profile-form-password" onSubmit={handleCambiarContrasena}>
         <h2 className="profile-form-title">Cambiar contraseña</h2>
-
+        
+        {/* CONTRASEÑA ACTUAL */}
         <div className="profile-form-field">
           <label className="profile-form-label" htmlFor="profile-password-current">
             Contraseña actual
           </label>
 
-          <input
-            className="profile-form-input"
-            id="profile-password-current"
-            name="actual"
-            type="password"
-            required
-            autoComplete="current-password"
-            value={contrasena.actual}
-            onChange={handleChangeContrasena}
-          />
+          <div className="password-container">
+            <input
+              className="profile-form-input"
+              id="profile-password-current"
+              name="actual"
+              type={mostrarPassword.actual ? "text" : "password"} required
+              autoComplete="current-password"
+              value={contrasena.actual}
+              onChange={handleChangeContrasena}
+            />
+
+            <button
+              type="button"
+              className="password-toggle"
+              onClick={() => setMostrarPassword({ ...mostrarPassword, actual: !mostrarPassword.actual, }) } aria-label={ mostrarPassword.actual ? "Ocultar contraseña actual" : "Mostrar contraseña actual" }
+            >
+              {mostrarPassword.actual ? <MdVisibilityOff/> : <MdVisibility/>}
+            </button>
+          </div>
         </div>
 
+        {/*CONTRASEÑA NUEVA */}
         <div className="profile-form-field">
           <label className="profile-form-label" htmlFor="profile-password-new">
             Contraseña nueva
           </label>
 
-          <input
-            className="profile-form-input"
-            id="profile-password-new"
-            name="nueva"
-            type="password"
-            required
-            minLength={8}
-            autoComplete="new-password"
-            value={contrasena.nueva}
-            onChange={handleChangeContrasena}
-          />
+          <div className="password-container">
+            <input
+              className="profile-form-input"
+              id="profile-password-new"
+              name="nueva"
+              type={mostrarPassword.nueva ? "text" : "password"} required
+              minLength={8}
+              autoComplete="new-password"
+              value={contrasena.nueva}
+              onChange={handleChangeContrasena}
+            />
+            <button 
+              type="button" 
+              className="password-toggle" 
+              onClick={() => setMostrarPassword({ ...mostrarPassword, nueva: !mostrarPassword.nueva, }) } 
+              aria-label={ mostrarPassword.nueva ? "Ocultar contraseña nueva" : "Mostrar contraseña nueva" } 
+            >
+              {mostrarPassword.nueva ? <MdVisibilityOff/> : <MdVisibility/>}
+            </button>
+          </div>
         </div>
 
+        {/*CONFIRMAR CONTRASEÑA */}
         <div className="profile-form-field">
           <label className="profile-form-label" htmlFor="profile-password-confirm">
             Confirmar contraseña nueva
           </label>
 
-          <input
-            className="profile-form-input"
-            id="profile-password-confirm"
-            name="confirmacion"
-            type="password"
-            required
-            minLength={8}
-            autoComplete="new-password"
-            value={contrasena.confirmacion}
-            onChange={handleChangeContrasena}
-          />
+          <div className="password-container">
+            <input
+              className="profile-form-input"
+              id="profile-password-confirm"
+              name="confirmacion"
+              type={mostrarPassword.confirmacion ? "text" : "password"} required
+              minLength={8}
+              autoComplete="new-password"
+              value={contrasena.confirmacion}
+              onChange={handleChangeContrasena}
+            />
+            <button 
+              type="button" 
+              className="password-toggle" 
+              onClick={() => setMostrarPassword({ ...mostrarPassword, confirmacion: !mostrarPassword.confirmacion, }) } 
+              aria-label={ mostrarPassword.confirmacion ? "Ocultar confirmación de contraseña" : "Mostrar confirmación de contraseña" } 
+            >
+              {mostrarPassword.confirmacion ? <MdVisibilityOff/> : <MdVisibility/>}
+            </button>
+          </div>
         </div>
 
         <p className="profile-form-error" role="alert">

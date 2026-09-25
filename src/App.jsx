@@ -12,6 +12,7 @@ import Areas from "./components/areas/areas.jsx";
 import Roles from "./components/roles/roles.jsx";
 import Spreadsheets from "./components/spreadsheets/spreadsheets.jsx";
 import Profile from "./components/profile/profile.jsx";
+import Notifications from "./components/notifications/notifications.jsx";
 
 import * as api from "./api/client.js";
 import { MICROSOFT_PARAM } from "./config.js";
@@ -178,7 +179,9 @@ function App() {
 
         {/* Por ahora solo "Mi perfil", "Empleados", "Áreas y usuarios", "Roles y permisos"
             y "Formatos de solicitud" tienen pantalla; las demás muestran su nombre. */}
-        {activa === "Mi perfil" ? (
+        {activa === "Notificaciones" ? (
+          <Notifications />
+        ) : activa === "Mi perfil" ? (
           <Profile
             usuario={usuario}
             foto={foto}

@@ -1,0 +1,514 @@
+/* =========================================================
+   PÁGINA DE NOTIFICACIONES
+========================================================= */
+
+.notifications-page {
+    width: 100%;
+    max-width: 1180px;
+
+    margin: 0 auto;
+    padding: 10px 24px 50px;
+
+    color: var(--text);
+}
+
+
+/* =========================================================
+   ENCABEZADO
+========================================================= */
+
+.notifications-heading {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+
+    gap: 30px;
+    margin-bottom: 18px;
+}
+
+
+.notifications-kicker {
+    display: block;
+
+    margin-bottom: 4px;
+
+    color: var(--text-muted);
+
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+}
+
+
+.notifications-heading h1 {
+    margin: 0;
+
+    color: var(--text);
+
+    font-size: 25px;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+
+/* =========================================================
+   ACCIONES
+========================================================= */
+
+.notifications-actions {
+    display: flex;
+    align-items: center;
+
+    gap: 12px;
+}
+
+
+.notifications-search {
+    width: 188px;
+    height: 36px;
+
+    display: flex;
+    align-items: center;
+
+    gap: 8px;
+
+    padding: 0 11px;
+
+    border: 1px solid var(--border);
+    border-radius: 6px;
+
+    background: var(--surface);
+
+    transition:
+        border-color 0.2s ease,
+        background-color 0.3s ease;
+}
+
+
+.notifications-search:focus-within {
+    border-color: #477fb4;
+}
+
+
+.notifications-search svg {
+    flex-shrink: 0;
+
+    color: var(--text-muted);
+
+    font-size: 16px;
+}
+
+
+.notifications-search input {
+    width: 100%;
+
+    border: none;
+    outline: none;
+
+    background: transparent;
+
+    color: var(--text);
+
+    font-family: inherit;
+    font-size: 11px;
+}
+
+
+.notifications-search input::placeholder {
+    color: var(--text-muted);
+}
+
+
+/* =========================================================
+   MARCAR TODO
+========================================================= */
+
+.mark-all-button {
+    height: 36px;
+
+    padding: 0 13px;
+
+    border: 1px solid var(--border);
+    border-radius: 6px;
+
+    background: var(--surface);
+    color: var(--text-secondary);
+
+    font-family: inherit;
+    font-size: 11px;
+
+    cursor: pointer;
+
+    transition:
+        background-color 0.2s ease,
+        border-color 0.2s ease,
+        color 0.2s ease;
+}
+
+
+.mark-all-button:hover:not(:disabled) {
+    border-color: #477fb4;
+
+    color: #477fb4;
+}
+
+
+.mark-all-button:disabled {
+    opacity: 0.55;
+
+    cursor: default;
+}
+
+
+/* =========================================================
+   FILTROS
+========================================================= */
+
+.notifications-filters {
+    display: flex;
+    align-items: center;
+
+    gap: 20px;
+
+    margin-bottom: 10px;
+
+    border-bottom: 1px solid var(--border);
+}
+
+
+.notifications-filters button {
+    position: relative;
+
+    padding: 0 0 10px;
+
+    border: none;
+
+    background: transparent;
+    color: var(--text-muted);
+
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 500;
+
+    cursor: pointer;
+
+    transition: color 0.2s ease;
+}
+
+
+.notifications-filters button:hover {
+    color: var(--text);
+}
+
+
+.notifications-filters button.active {
+    color: var(--text);
+
+    font-weight: 600;
+}
+
+
+.notifications-filters button.active::after {
+    content: "";
+
+    position: absolute;
+
+    right: 0;
+    bottom: -1px;
+    left: 0;
+
+    height: 2px;
+
+    background: #356fa8;
+
+    border-radius: 2px;
+}
+
+
+.notifications-filters span {
+    margin-left: 3px;
+
+    font-size: 10px;
+    font-weight: 400;
+}
+
+
+/* =========================================================
+   GRUPOS
+========================================================= */
+
+.notification-group {
+    margin-top: 16px;
+}
+
+
+.notification-group-title {
+    margin-bottom: 8px;
+
+    color: var(--text-muted);
+
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+}
+
+
+/* =========================================================
+   NOTIFICACIÓN
+========================================================= */
+
+.notification-item {
+    display: flex;
+    align-items: center;
+
+    min-height: 64px;
+
+    padding: 9px 4px 9px 13px;
+
+    border-bottom: 2px solid var(--border-light);
+
+    background: transparent;
+
+    transition:
+        background-color 0.2s ease,
+        border-color 0.3s ease;
+}
+
+
+.notification-item:hover {
+    background-color: var(--surface-secondary);
+    cursor: pointer;
+    transform: scale(1.05);
+}
+
+
+/*
+ * Las no leídas tienen la línea azul de la imagen.
+ */
+
+.notification-item.unread {
+    border-left: 3px solid #356fa8;
+
+    padding-left: 10px;
+}
+
+
+/* =========================================================
+   ICONOS
+========================================================= */
+
+.notification-icon {
+    width: 26px;
+    height: 26px;
+
+    flex-shrink: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    margin-right: 12px;
+
+    font-size: 17px;
+}
+
+
+/* Alerta */
+
+.notification-icon.alerta {
+    color: #c37b35;
+}
+
+
+/* Mensaje */
+
+.notification-icon.mensaje {
+    color: #667d96;
+}
+
+
+/* Proyecto */
+
+.notification-icon.proyecto {
+    color: #655e96;
+}
+
+
+/* Genérico */
+
+.notification-icon.generico {
+    color: #718095;
+}
+
+.notification-icon.birthday{
+    color: rgb(235, 141, 221);
+}
+
+/* =========================================================
+   CONTENIDO
+========================================================= */
+
+.notification-content {
+    min-width: 0;
+
+    flex: 1;
+}
+
+
+.notification-title-row {
+    display: flex;
+    align-items: center;
+
+    gap: 7px;
+}
+
+
+.notification-title-row h3 {
+    margin: 0;
+
+    color: var(--text);
+
+    font-size: 11px;
+    font-weight: 600;
+
+    line-height: 1.4;
+}
+
+
+.notification-content p {
+    margin: 2px 0 0;
+
+    color: var(--text-muted);
+
+    font-size: 9.5px;
+
+    line-height: 1.45;
+}
+
+
+.notification-time {
+    color: var(--text-muted);
+}
+
+
+.unread-dot {
+    width: 5px;
+    height: 5px;
+
+    flex-shrink: 0;
+
+    border-radius: 50%;
+
+    background: #356fa8;
+}
+
+
+/* =========================================================
+   SIN RESULTADOS
+========================================================= */
+
+.notifications-empty {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+
+    padding: 70px 20px;
+
+    color: var(--text-muted);
+
+    text-align: center;
+}
+
+
+.notifications-empty svg {
+    margin-bottom: 10px;
+
+    color: #4c9a69;
+
+    font-size: 30px;
+}
+
+
+.notifications-empty h3 {
+    margin: 0 0 4px;
+
+    color: var(--text);
+
+    font-size: 14px;
+}
+
+
+.notifications-empty p {
+    margin: 0;
+
+    font-size: 11px;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 850px) {
+    .notifications-heading {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+
+    .notifications-actions {
+        width: 100%;
+    }
+
+
+    .notifications-search {
+        flex: 1;
+    }
+}
+
+
+@media (max-width: 600px) {
+    .notifications-page {
+        padding: 8px 12px 35px;
+    }
+
+
+    .notifications-actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+
+    .notifications-search {
+        width: auto;
+    }
+
+
+    .mark-all-button {
+        width: 100%;
+    }
+
+
+    .notifications-filters {
+        gap: 14px;
+
+        overflow-x: auto;
+
+        white-space: nowrap;
+    }
+
+
+    .notification-item {
+        align-items: flex-start;
+    }
+
+
+    .notification-icon {
+        margin-top: 2px;
+    }
+
+
+    .open-notification {
+        margin-left: 8px;
+    }
+}

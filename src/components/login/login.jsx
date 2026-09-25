@@ -4,6 +4,7 @@ import { useState } from "react";
 import { MdVisibility, MdVisibilityOff } from "react-icons/md";
 
 import canelita from "../../assets/Canela_29.png"
+import imagenuaq from "../../assets/Imagenuaq.png"
 
 import * as api from "../../api/client.js";
 import { INVITE_PARAM } from "../../config.js";
@@ -19,6 +20,7 @@ function Login({ onEntrar }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [mostrarPassword, setMostrarPassword] = useState(false);
+  const [mostrarCanelita, setMostrarCanelita] = useState(false);
   const [error, setError] = useState(null);
   const [enviando, setEnviando] = useState(false);
 
@@ -57,7 +59,29 @@ function Login({ onEntrar }) {
         <header className="headerleft">UNIVERSIDAD AUTÓNOMA DE QUERÉTARO</header>
 
         <div className="content-left">
-          <img src={canelita} alt="" className="canelita" />
+          <div
+            className={`easter-egg ${mostrarCanelita ? "easter-egg-active" : ""}`}
+            onClick={() => setMostrarCanelita(!mostrarCanelita)}
+            role="button"
+            tabIndex={0}
+            aria-label="Imagen decorativa"
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                setMostrarCanelita(!mostrarCanelita);
+              }
+            }}
+          >
+            <div className="easter-egg-inner">
+              <div className="easter-egg-front">
+                <img src={imagenuaq} alt="" />
+              </div>
+
+              <div className="easter-egg-back">
+                <img src={canelita} alt="Canelita" />
+              </div>
+            </div>
+          </div>
+
           <h1 className="loginleft-title">Imagen UAQ</h1>
           <p className="loginleft-subtitle">Plataforma Institucional de Gestión de Proyectos y Producción Multimedios</p>
         </div>
@@ -121,7 +145,7 @@ function Login({ onEntrar }) {
             </label>
 
             <div className="password-container">
-                <input
+              <input
                 className="login-input"
                 id="login-password"
                 type={mostrarPassword ? "text" : "password"}
