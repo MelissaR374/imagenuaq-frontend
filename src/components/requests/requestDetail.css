@@ -182,7 +182,14 @@
   cursor: not-allowed;
 }
 
-/* Guardar el solicitante: acción de texto, porque corrige un campo y no cierra nada. */
+/* El título es una frase, no un nombre: se le da el ancho de la columna en lugar del mínimo. */
+.request-detail-facts dd > .request-detail-title-input {
+  width: 100%;
+  max-width: 52ch;
+  font-size: 12px;
+}
+
+/* Guardar el título o el solicitante: acción de texto, porque corrige un campo y no cierra nada. */
 .request-detail-facts dd > button {
   padding: 0;
   border: none;

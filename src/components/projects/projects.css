@@ -1,62 +1,307 @@
-/* Solo acomodo: el diseño lo revisa quien lleva el CSS. */
+/* =========================================================
+   TABLERO DE PROYECTOS
+   Mismos tokens que el resto del sistema: Poppins, radios
+   5/6/9/10, una sola sombra, azul para la acción, ámbar para
+   lo que pide atención sin ser un error.
+
+   La llave va monoespaciada, que es cómo este sistema marca un
+   identificador (`inbox.css`, `roles.css`, `users.css`).
+
+   La tabla es ancha --- nueve columnas --- y no se apila en
+   pantallas angostas: se desplaza. Un proyecto se lee
+   comparándolo con el de arriba, y apilarlo pierde eso.
+   ========================================================= */
 
 .projects {
-  padding: 1rem;
+  padding: 28px 32px 40px;
+  background: var(--background);
+  color: var(--text);
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
 }
+
+/* =========================================================
+   ENCABEZADO
+   ========================================================= */
 
 .projects-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 1rem;
+  gap: 12px;
+  margin-bottom: 18px;
 }
 
 .projects-title {
   margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text);
 }
 
 .projects-header-actions {
   display: flex;
-  gap: 0.5rem;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: auto;
 }
+
+/* «Nuevo proyecto» es la acción de la pantalla; el catálogo es un ajuste, así que va en hueco. */
+.projects-header-actions > button {
+  height: 32px;
+  padding: 0 16px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.1s ease;
+}
+
+.projects-header-actions > button:hover {
+  border-color: #3b73b9;
+  color: #3270b5;
+}
+
+.projects-header-actions > button:first-child {
+  min-width: 140px;
+  border-color: transparent;
+  background: #2864a8;
+  color: #ffffff;
+}
+
+.projects-header-actions > button:first-child:hover {
+  border-color: transparent;
+  background: #205895;
+  color: #ffffff;
+}
+
+.projects-header-actions > button:active {
+  transform: translateY(1px);
+}
+
+/* =========================================================
+   AVISOS
+   ========================================================= */
+
+.projects-error {
+  max-width: 82ch;
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border: 1px solid rgba(217, 83, 79, 0.35);
+  border-radius: 6px;
+  background: rgba(217, 83, 79, 0.08);
+  font-size: 12px;
+  color: #b23c38;
+}
+
+.projects-loading,
+.projects-empty {
+  margin: 12px 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* =========================================================
+   FILTROS
+   Son ocho, así que van en una tarjeta: agrupados se leen como
+   una sola herramienta y no como ocho controles sueltos sobre
+   el fondo.
+   ========================================================= */
 
 .projects-filters {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
 }
 
 .projects-filter {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 5px;
+  min-width: 0;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
 }
+
+.projects-filter > input,
+.projects-filter > select {
+  height: 32px;
+  min-width: 150px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface-secondary);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 11px;
+  outline: none;
+  box-sizing: border-box;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.projects-filter > input::placeholder {
+  color: var(--text-muted);
+}
+
+.projects-filter > input:focus,
+.projects-filter > select:focus {
+  border-color: #3b73b9;
+  box-shadow: 0 0 0 2px rgba(59, 115, 185, 0.08);
+}
+
+/* Limpiar: el único botón suelto entre los filtros, así que se alinea con ellos. */
+.projects-filters > button {
+  height: 32px;
+  padding: 0 16px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.projects-filters > button:hover {
+  border-color: #3b73b9;
+  color: #3270b5;
+}
+
+/* =========================================================
+   LA TABLA
+   ========================================================= */
 
 .projects-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease;
 }
 
-.projects-table th,
-.projects-table td {
-  padding: 0.4rem;
+.projects-table > thead > tr > th {
+  height: 32px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--border-light);
   text-align: left;
-}
-
-.projects-cell-center {
-  text-align: center;
-}
-
-.projects-key {
-  font-family: monospace;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
   white-space: nowrap;
 }
 
-.projects-error,
-.projects-empty,
-.projects-loading {
-  margin: 0.5rem 0;
+.projects-table > tbody > tr > td {
+  height: 44px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--border-light);
+  font-size: 12px;
+  color: var(--text-secondary);
+  vertical-align: middle;
+}
+
+.projects-table > tbody > tr:last-child > td {
+  border-bottom: none;
+}
+
+.projects-table > tbody > tr:hover > td {
+  background: var(--surface-secondary);
+}
+
+/* El título es lo que se busca al recorrer el tablero. */
+.projects-table .projects-row > td:nth-child(2) {
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* Las tres columnas de conteo --- urgencia, etapas abiertas, solicitudes --- son números que se
+   comparan en vertical, así que van centradas y tabulares para que no baile la coma. */
+.projects-table .projects-cell-center {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Prefijado con la tabla para ganarle a `.projects-table > tbody > tr > td`, que fija el tamaño. */
+.projects-table .projects-key {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+/* La entrega, última columna de dato, no debe partirse en dos renglones. */
+.projects-table > tbody > tr > td:nth-child(8) {
+  white-space: nowrap;
+}
+
+/* «Abrir» es un enlace, no un botón: el botón de la pantalla es «Nuevo proyecto». */
+.projects-table > tbody > tr > td:last-child {
+  text-align: right;
+}
+
+.projects-table > tbody > tr > td > button {
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  color: #3270b5;
+  cursor: pointer;
+}
+
+.projects-table > tbody > tr > td > button:hover {
+  text-decoration: underline;
+}
+
+/* =========================================================
+   PANTALLAS ANGOSTAS
+   ========================================================= */
+
+@media (max-width: 960px) {
+  .projects {
+    padding: 20px 16px 32px;
+    overflow-x: auto;
+  }
+
+  .projects-header-actions {
+    margin-left: 0;
+  }
+
+  .projects-table {
+    min-width: 980px;
+  }
 }

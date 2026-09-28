@@ -413,6 +413,24 @@ function RequestDetail({ solicitud, areas, onCerrar, onCambio }) {
     setDetalle({ ...detalle, requester });
   }
 
+  function escribirTitulo(title) {
+    setDetalle({ ...detalle, title });
+  }
+
+  // El título de lo importado lo escribió una columna de Excel, así que puede llegar vacío de
+  // sentido («Solicitud», «-», el nombre de quien llenó el formulario). Se corrige aquí, antes de
+  // convertir: la bandeja lista por título, y el proyecto nace con este mismo.
+  async function corregirTitulo() {
+    setError(null);
+    try {
+      await api.updateRequest(detalle.id, { title: detalle.title });
+      await recargar();
+      onCambio();
+    } catch (fallo) {
+      setError(fallo.message);
+    }
+  }
+
   // Paso 2 del recorrido: lo importado de Excel llega sin área y alguien decide a quién le toca.
   async function asignarArea(valor) {
     let areaId = null;
@@ -540,6 +558,28 @@ function RequestDetail({ solicitud, areas, onCerrar, onCambio }) {
     );
   }
 
+  // Ya convertida, el título es historia: lo que se lee es el del proyecto.
+  let bloqueDeTitulo = <dd>{detalle.title}</dd>;
+  if (!yaEsProyecto) {
+    bloqueDeTitulo = (
+      <dd>
+        <input
+          className="request-detail-title-input"
+          value={detalle.title}
+          onChange={(evento) => escribirTitulo(evento.target.value)}
+          placeholder="Lo que es este trabajo"
+        />
+        <button
+          type="button"
+          onClick={corregirTitulo}
+          disabled={ocupado || detalle.title.trim() === ""}
+        >
+          Guardar título
+        </button>
+      </dd>
+    );
+  }
+
   let bloqueDeProyecto = null;
   if (yaEsProyecto) {
     bloqueDeProyecto = (
@@ -603,7 +643,7 @@ function RequestDetail({ solicitud, areas, onCerrar, onCambio }) {
     bloqueDeAcciones = (
       <p className="request-detail-converted">
         Ya es un proyecto, así que no se edita ni se elimina: el proyecto perdería lo que contesta.
-        El solicitante sí se puede corregir.
+        El solicitante sí se puede corregir; el título ya no, porque el proyecto lleva el suyo.
       </p>
     );
   } else {
@@ -659,6 +699,9 @@ function RequestDetail({ solicitud, areas, onCerrar, onCambio }) {
       <Recorrido pasoActual={pasoActualDe(detalle)} />
 
       <dl className="request-detail-facts">
+        <dt>Título</dt>
+        {bloqueDeTitulo}
+
         <dt>Formato</dt>
         <dd>
           {detalle.schemaName} (v{detalle.schemaVersion})
