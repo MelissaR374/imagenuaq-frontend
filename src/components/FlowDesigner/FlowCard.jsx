@@ -1,7 +1,6 @@
 import {
     MdKeyboardArrowDown,
     MdEdit,
-    MdArrowDownward,
 } from "react-icons/md";
 
 import "./FlowCard.css";
