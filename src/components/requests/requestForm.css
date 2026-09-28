@@ -1,0 +1,43 @@
+/* Solo acomodo: el diseño lo revisa quien lleva el CSS. */
+
+.request-form {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  border: 1px solid;
+  max-width: 40rem;
+}
+
+.request-form-title {
+  margin: 0 0 0.5rem;
+}
+
+.request-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+/* El espacio entre campos vive aquí y no en `.field-input`: es del contenedor, y así una rejilla
+   de dos columnas no arrastra un margen suelto. */
+.request-form-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+  margin: 0.75rem 0;
+  padding: 0.5rem;
+}
+
+.request-form-fields > legend,
+.request-form-fields > p {
+  grid-column: 1 / -1;
+}
+
+.request-form-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.request-form-error {
+  margin: 0.5rem 0;
+}

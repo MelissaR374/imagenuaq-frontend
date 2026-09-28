@@ -70,7 +70,7 @@ function Login({ onEntrar }) {
         <p className="login-subtitle">
           {activando
             ? "Activa tu cuenta con la invitación que te enviaron"
-            : "Sistema de gestión de trabajo"}
+            : "Sistema interno de gestión de trabajo"}
         </p>
 
         <form className="login-form" onSubmit={handleSubmit}>

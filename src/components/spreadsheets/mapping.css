@@ -1,0 +1,487 @@
+/* =========================================================
+   ASISTENTE DE MAPEO
+   Etapa 2 de la canalización, así que vive dentro de
+   `.pipeline-panel` y no trae superficie propia. El teal es
+   el color de la hoja de cálculo en este sistema, y aquí
+   marca todo lo que viene de ella: las columnas.
+   ========================================================= */
+
+.mapping {
+  padding: 20px 24px 24px;
+}
+
+.mapping-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.mapping-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.mapping-header > button {
+  height: 32px;
+  padding: 0 16px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.mapping-header > button:hover {
+  border-color: #3b73b9;
+  color: #3270b5;
+}
+
+/* =========================================================
+   CÓMO SE IMPORTAN LOS DATOS
+   Abierto por omisión: es la pregunta que la pantalla dejaba
+   sin contestar, así que no se esconde detrás de un clic.
+   ========================================================= */
+
+.mapping-explainer {
+  margin: 0 0 20px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-secondary);
+}
+
+.mapping-explainer > summary {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.mapping-explainer ul {
+  max-width: 82ch;
+  margin: 10px 0 0;
+  padding-left: 18px;
+}
+
+.mapping-explainer li {
+  margin-bottom: 7px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.mapping-explainer li:last-child {
+  margin-bottom: 0;
+}
+
+.mapping-explainer strong {
+  color: var(--text);
+}
+
+/* =========================================================
+   ELEGIR FORMATO
+   ========================================================= */
+
+.mapping-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 420px;
+  margin-bottom: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.mapping-field > select {
+  width: 100%;
+  height: 36px;
+  padding: 0 11px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface-secondary);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 11px;
+  outline: none;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.mapping-field > select:focus {
+  border-color: #3b73b9;
+  box-shadow: 0 0 0 2px rgba(59, 115, 185, 0.08);
+}
+
+/* =========================================================
+   LA TABLA DE REGLAS
+   ========================================================= */
+
+.mapping-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin-bottom: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  overflow: hidden;
+}
+
+.mapping-table > thead > tr > th {
+  height: 32px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--border-light);
+  text-align: left;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.mapping-table > tbody > tr > th,
+.mapping-table > tbody > tr > td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-light);
+  text-align: left;
+  vertical-align: top;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.mapping-table > tbody > tr:last-child > th,
+.mapping-table > tbody > tr:last-child > td {
+  border-bottom: none;
+}
+
+.mapping-table > tbody > tr:hover > th,
+.mapping-table > tbody > tr:hover > td {
+  background: var(--surface-secondary);
+}
+
+/* Prefijadas con la tabla a propósito: `.mapping-table > tbody > tr > th` tiene más
+   especificidad que una clase sola, así que sin el prefijo el tamaño y el color de estas dos
+   celdas no llegaban a aplicarse. */
+
+/* El destino: el nombre del campo pesa, su indicación no. */
+.mapping-table .mapping-target {
+  max-width: 220px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: normal;
+}
+
+.mapping-table .mapping-accepts {
+  max-width: 260px;
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+
+/* =========================================================
+   CONTROLES DENTRO DE LA TABLA
+   Los selectores de columna llevan el teal: lo que eligen
+   viene de la hoja.
+   ========================================================= */
+
+.mapping-input {
+  width: 100%;
+  max-width: 220px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface-secondary);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 11px;
+  outline: none;
+  box-sizing: border-box;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.mapping-input:focus {
+  border-color: #3b73b9;
+  box-shadow: 0 0 0 2px rgba(59, 115, 185, 0.08);
+}
+
+.mapping-input::placeholder {
+  color: var(--text-muted);
+}
+
+select.mapping-input:not([value=""]) {
+  border-color: rgba(15, 138, 138, 0.35);
+}
+
+.mapping-input-short {
+  width: 92px;
+  max-width: 92px;
+}
+
+.mapping-pair {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.mapping-from {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 6px;
+  font-size: 10px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.mapping-help {
+  max-width: 62ch;
+  margin: 5px 0 0;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+
+/* =========================================================
+   EQUIVALENCIAS DE ESTATUS Y COLUMNAS DE LA HUELLA
+   ========================================================= */
+
+.mapping-status,
+.mapping-hash {
+  margin: 0 0 20px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-secondary);
+}
+
+.mapping-status > legend,
+.mapping-hash > legend {
+  padding: 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.mapping-status .mapping-pair {
+  margin-bottom: 8px;
+}
+
+.mapping-status button,
+.mapping-hash button {
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mapping-status button:hover,
+.mapping-hash button:hover {
+  border-color: #3b73b9;
+  color: #3270b5;
+}
+
+.mapping-columns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+/* Cada columna de la hoja como una pastilla teal; marcada, se llena. */
+.mapping-column {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 260px;
+  padding: 4px 10px;
+  border: 1px solid rgba(15, 138, 138, 0.25);
+  border-radius: 10px;
+  background: var(--surface);
+  font-size: 10px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.mapping-column:has(input:checked) {
+  border-color: rgba(15, 138, 138, 0.5);
+  background: rgba(15, 138, 138, 0.1);
+  color: #0f8a8a;
+  font-weight: 600;
+}
+
+/* =========================================================
+   ACCIONES, AVISOS Y RESUMEN
+   ========================================================= */
+
+.mapping-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.mapping-actions > button[type="submit"] {
+  height: 32px;
+  min-width: 140px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 5px;
+  background: #2864a8;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    transform 0.1s ease;
+}
+
+.mapping-actions > button[type="submit"]:hover:not(:disabled) {
+  background: #205895;
+}
+
+.mapping-actions > button[type="submit"]:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.mapping-actions > button[type="button"] {
+  height: 32px;
+  padding: 0 16px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.mapping-actions > button[type="button"]:hover:not(:disabled) {
+  border-color: #3b73b9;
+  color: #3270b5;
+}
+
+.mapping-actions > button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.mapping-error {
+  max-width: 82ch;
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  border: 1px solid rgba(217, 83, 79, 0.35);
+  border-radius: 6px;
+  background: rgba(217, 83, 79, 0.08);
+  font-size: 12px;
+  line-height: 1.55;
+  color: #b23c38;
+}
+
+.mapping-notice {
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border: 1px solid rgba(46, 125, 50, 0.35);
+  border-radius: 6px;
+  background: rgba(46, 125, 50, 0.08);
+  font-size: 12px;
+  color: #2e7d32;
+}
+
+.mapping-summary {
+  margin: 0 0 16px;
+}
+
+.mapping-summary-line {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* =========================================================
+   LA PRUEBA
+   ========================================================= */
+
+.mapping-preview {
+  margin-top: 8px;
+}
+
+.mapping-preview > h4 {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.mapping-value {
+  display: block;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.mapping-problem {
+  margin: 5px 0 0;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: #b23c38;
+}
+
+/* =========================================================
+   PANTALLAS ANGOSTAS
+   La tabla de reglas conserva su ancho y se desplaza: cada
+   regla es una línea que se lee de izquierda a derecha, y
+   apilarla pierde justamente eso.
+   ========================================================= */
+
+@media (max-width: 860px) {
+  .mapping {
+    padding: 16px;
+    overflow-x: auto;
+  }
+
+  .mapping-table {
+    min-width: 720px;
+  }
+}

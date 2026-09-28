@@ -1,0 +1,600 @@
+/* =========================================================
+   DETALLE DE UNA SOLICITUD
+   Se abre debajo de la bandeja, así que es un panel con
+   superficie propia y no una pantalla: los mismos tokens del
+   sistema, radio 9, una sola sombra.
+
+   Los colores ya significan algo en este sistema y aquí se
+   respetan: verde lo resuelto, ámbar lo que espera a alguien,
+   azul la acción, rojo el rechazo.
+   ========================================================= */
+
+.request-detail {
+  margin-top: 20px;
+  padding: 20px 24px 24px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease;
+}
+
+/* =========================================================
+   ENCABEZADO
+   ========================================================= */
+
+.request-detail-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.request-detail-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.request-detail-header > button {
+  flex-shrink: 0;
+  height: 30px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.request-detail-header > button:hover {
+  border-color: #3b73b9;
+  color: #3270b5;
+}
+
+/* =========================================================
+   EL RECORRIDO (DATAMODEL.md §8.2)
+   Una tira con la línea arriba: el borde superior es la vía y
+   su color dice en qué va cada paso. Los números ya vienen en
+   el texto ("2. Se reparte"), así que no hace falta una marca
+   aparte.
+   ========================================================= */
+
+.request-detail-walk {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 0 0 20px;
+  padding: 0;
+  list-style: none;
+}
+
+.request-detail-walk-step {
+  flex: 1 1 150px;
+  min-width: 0;
+  padding: 10px 0 0;
+  border-top: 2px solid var(--border);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.request-detail-walk-help {
+  max-width: 34ch;
+  margin: 5px 0 0;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+/* Ya pasó. */
+.request-detail-walk-step.is-hecho {
+  border-top-color: rgba(46, 125, 50, 0.5);
+  color: #2e7d32;
+}
+
+/* El paso que toca: es el único que explica qué lo mueve, así que también es el que resalta. */
+.request-detail-walk-step.is-actual {
+  border-top-color: #a8701a;
+  color: var(--text);
+}
+
+/* Todavía no toca: la vía se ve, apagada. */
+.request-detail-walk-step.is-pendiente {
+  border-top-style: dashed;
+}
+
+/* =========================================================
+   LOS DATOS DE LA SOLICITUD
+   ========================================================= */
+
+.request-detail-facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 24px;
+  row-gap: 12px;
+  align-items: center;
+  margin: 0 0 20px;
+}
+
+.request-detail-facts dt {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.request-detail-facts dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
+/* Los controles que viven dentro de los datos: el área, el estatus, el solicitante. */
+.request-detail-facts dd select,
+.request-detail-facts dd input {
+  height: 32px;
+  min-width: 180px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface-secondary);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 11px;
+  outline: none;
+  box-sizing: border-box;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.request-detail-facts dd select:focus,
+.request-detail-facts dd input:focus {
+  border-color: #3b73b9;
+  box-shadow: 0 0 0 2px rgba(59, 115, 185, 0.08);
+}
+
+.request-detail-facts dd select:disabled,
+.request-detail-facts dd input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* El título es una frase, no un nombre: se le da el ancho de la columna en lugar del mínimo. */
+.request-detail-facts dd > .request-detail-title-input {
+  width: 100%;
+  max-width: 52ch;
+  font-size: 12px;
+}
+
+/* Guardar el título o el solicitante: acción de texto, porque corrige un campo y no cierra nada. */
+.request-detail-facts dd > button {
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  color: #3270b5;
+  cursor: pointer;
+}
+
+.request-detail-facts dd > button:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.request-detail-facts dd > button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* =========================================================
+   LO CAPTURADO
+   ========================================================= */
+
+.request-detail-subhead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.request-detail-subtitle {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.request-detail-subhead > button {
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.request-detail-subhead > button:hover:not(:disabled) {
+  border-color: #3b73b9;
+  color: #3270b5;
+}
+
+.request-detail-data {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.request-detail-data th,
+.request-detail-data td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border-light);
+  text-align: left;
+  vertical-align: top;
+  font-size: 12px;
+}
+
+.request-detail-data tr:last-child th,
+.request-detail-data tr:last-child td {
+  border-bottom: none;
+}
+
+/* El nombre del campo a la izquierda, angosto; el valor manda. */
+.request-detail-data th {
+  width: 240px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.request-detail-data td {
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+/* Fuera del formato: se conserva (RF-SOL-06) pero no se lee como parte del formato. */
+.request-detail-data .request-detail-extra th,
+.request-detail-data .request-detail-extra td {
+  background: var(--surface-secondary);
+  color: var(--text-muted);
+}
+
+.request-detail-data .request-detail-extra th {
+  font-weight: 400;
+  font-style: italic;
+}
+
+/* =========================================================
+   CORREGIR LO CAPTURADO
+   ========================================================= */
+
+.request-detail-capture {
+  margin-top: 4px;
+  padding: 14px 16px 16px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-secondary);
+}
+
+.request-detail-capture-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+  margin: 12px 0 0;
+}
+
+/* =========================================================
+   EL RENGLÓN ORIGINAL DE LA HOJA
+   ========================================================= */
+
+.request-detail-raw {
+  margin-top: 16px;
+}
+
+.request-detail-raw > button {
+  height: 28px;
+  margin-bottom: 10px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.request-detail-raw > button:hover {
+  border-color: #3b73b9;
+  color: #3270b5;
+}
+
+/* =========================================================
+   CONFLICTOS AL CONVERTIR
+   Ámbar: no falló nada --- se guardó un valor y se descartó
+   otro, y alguien tiene que saber cuál.
+   ========================================================= */
+
+.request-detail-conflicts {
+  margin-top: 16px;
+  padding: 12px 16px 14px;
+  border: 1px solid rgba(214, 153, 30, 0.4);
+  border-radius: 6px;
+  background: rgba(214, 153, 30, 0.08);
+}
+
+.request-detail-conflicts > h4 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #a8701a;
+}
+
+.request-detail-conflicts > ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 11px;
+  line-height: 1.7;
+  color: #a8701a;
+}
+
+/* =========================================================
+   AVISOS
+   ========================================================= */
+
+.request-detail-error {
+  max-width: 82ch;
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border: 1px solid rgba(217, 83, 79, 0.35);
+  border-radius: 6px;
+  background: rgba(217, 83, 79, 0.08);
+  font-size: 12px;
+  line-height: 1.55;
+  color: #b23c38;
+}
+
+.request-detail-help {
+  max-width: 82ch;
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+/* Ya es proyecto: un hecho, no una advertencia. */
+.request-detail-converted {
+  max-width: 82ch;
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+/* =========================================================
+   ACCIONES
+   ========================================================= */
+
+.request-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.request-detail-actions > button[type="submit"] {
+  height: 32px;
+  min-width: 140px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 5px;
+  background: #2864a8;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    transform 0.1s ease;
+}
+
+.request-detail-actions > button[type="submit"]:hover:not(:disabled) {
+  background: #205895;
+}
+
+.request-detail-actions > button[type="submit"]:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+/* Convertir es la acción de esta pantalla, así que va llena. Con clase y no por posición: un
+   botón que se agregue mañana no debería heredar el peso del primero. */
+.request-detail-actions > .request-detail-primary {
+  min-width: 160px;
+  border: none;
+  background: #2864a8;
+  color: #ffffff;
+}
+
+.request-detail-actions > .request-detail-primary:hover:not(:disabled) {
+  border: none;
+  background: #205895;
+  color: #ffffff;
+}
+
+.request-detail-actions > button[type="button"] {
+  height: 32px;
+  padding: 0 16px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.request-detail-actions > button[type="button"]:hover:not(:disabled) {
+  border-color: #3b73b9;
+  color: #3270b5;
+}
+
+.request-detail-actions > button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Eliminar: destructivo, así que se ve distinto sin gritar. */
+.request-detail-actions > .request-detail-danger {
+  border-color: rgba(228, 92, 92, 0.4);
+  background: transparent;
+  color: #e45c5c;
+}
+
+.request-detail-actions > .request-detail-danger:hover:not(:disabled) {
+  border-color: #e45c5c;
+  background: rgba(228, 92, 92, 0.08);
+  color: #e45c5c;
+}
+
+/* =========================================================
+   CONVERTIR EN PROYECTO
+   ========================================================= */
+
+.request-detail-convert {
+  max-width: 640px;
+  margin-top: 20px;
+  padding: 18px 20px 20px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface-secondary);
+}
+
+.request-detail-convert > h4 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.request-detail-convert > .request-detail-help {
+  margin-bottom: 16px;
+}
+
+.request-detail-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.request-detail-field input:not([type="checkbox"]),
+.request-detail-field select {
+  width: 100%;
+  height: 36px;
+  padding: 0 11px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 11px;
+  outline: none;
+  box-sizing: border-box;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.request-detail-field input::placeholder {
+  color: var(--text-muted);
+}
+
+.request-detail-field input:not([type="checkbox"]):focus,
+.request-detail-field select:focus {
+  border-color: #3b73b9;
+  box-shadow: 0 0 0 2px rgba(59, 115, 185, 0.08);
+}
+
+/* «Con costo» es una casilla: la etiqueta va a su lado, no encima. */
+.request-detail-field:has(input[type="checkbox"]) {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  font-weight: 400;
+  color: var(--text);
+}
+
+/* =========================================================
+   PANTALLAS ANGOSTAS
+   ========================================================= */
+
+@media (max-width: 860px) {
+  .request-detail {
+    padding: 16px;
+  }
+
+  .request-detail-facts {
+    grid-template-columns: 1fr;
+    row-gap: 4px;
+  }
+
+  .request-detail-facts dd {
+    margin-bottom: 10px;
+  }
+
+  .request-detail-data th {
+    width: auto;
+  }
+}

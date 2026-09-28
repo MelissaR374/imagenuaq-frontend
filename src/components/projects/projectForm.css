@@ -1,0 +1,141 @@
+/* Solo acomodo: el diseño lo revisa quien lleva el CSS. */
+
+.project-form {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  border: 1px solid;
+  max-width: 40rem;
+}
+
+.project-form-title {
+  margin: 0 0 0.5rem;
+}
+
+.project-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+/* El espacio entre campos vive aquí y no en `.field-input`: es del contenedor, y así una rejilla
+   de dos columnas no arrastra un margen suelto. */
+.project-form-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+  margin: 0.75rem 0;
+  padding: 0.5rem;
+}
+
+.project-form-fields > legend,
+.project-form-fields > p {
+  grid-column: 1 / -1;
+}
+
+.project-form-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.project-form-error,
+.project-form-help {
+  margin: 0.5rem 0;
+}
+
+.project-form-help {
+  font-size: 0.9em;
+}
+
+/* Datos sólo de este proyecto: clave y valor, sin tocar el formato */
+.project-form-extras {
+  margin: 12px 0;
+  padding: 12px 14px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-secondary);
+}
+
+.project-form-extras > legend {
+  padding: 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.project-form-extra {
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) minmax(140px, 2fr) auto;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.project-form-extra > input {
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 11px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.project-form-extra > input:focus {
+  border-color: #3b73b9;
+  box-shadow: 0 0 0 2px rgba(59, 115, 185, 0.08);
+}
+
+.project-form-key {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.project-form-key--bad {
+  border-color: rgba(217, 83, 79, 0.55) !important;
+  background: rgba(217, 83, 79, 0.06) !important;
+  color: #b23c38;
+}
+
+.project-form-extra > button {
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  color: #e45c5c;
+  cursor: pointer;
+}
+
+.project-form-extra > button:hover {
+  text-decoration: underline;
+}
+
+.project-form-bad {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 10px;
+  color: #b23c38;
+}
+
+.project-form-add {
+  height: 30px;
+  padding: 0 14px;
+  border: 1px dashed var(--border);
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.project-form-add:hover {
+  border-color: #3b73b9;
+  border-style: solid;
+  color: #3270b5;
+}

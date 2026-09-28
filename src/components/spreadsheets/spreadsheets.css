@@ -683,3 +683,26 @@
   color: var(--text);
   font-weight: 600;
 }
+/* Importación: el resumen de la corrida y el historial (RF-MIG-02) */
+.sheet-import {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+}
+
+.sheet-import-errors {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.sheet-imports {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.sheet-imports th,
+.sheet-imports td {
+  padding: 6px 8px;
+  text-align: left;
+}

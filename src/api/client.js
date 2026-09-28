@@ -238,3 +238,193 @@ export const registerSpreadsheet = (input) =>
 export const previewSpreadsheet = (id) => request(`/spreadsheets/${id}/preview`);
 
 export const deleteSpreadsheet = (id) => request(`/spreadsheets/${id}`, { method: "DELETE" });
+
+// --- Formatos de solicitud (RF-SOL-01) ---
+//
+// Un formato es la identidad; lo que pide vive en sus versiones, y una versión publicada no
+// se edita: "editar" es publicar la siguiente. Los campos van en dos secciones,
+// `deliverables` e `information`, cada una un arreglo de { code, name, type, note, required }.
+
+export const listSchemas = () => request("/schemas");
+
+export const getSchema = (id) => request(`/schemas/${id}`);
+
+export const listSchemaVersions = (id) => request(`/schemas/${id}/versions`);
+
+// Una versión por su propio id: es a lo que apuntan las solicitudes y los proyectos.
+export const getSchemaVersion = (versionId) => request(`/schemas/versions/${versionId}`);
+
+export const createSchema = (input) => request("/schemas", { method: "POST", body: input });
+
+// Publica la siguiente versión. Las anteriores quedan intactas.
+export const createSchemaVersion = (id, fields) =>
+  request(`/schemas/${id}/versions`, { method: "POST", body: { fields } });
+
+// Un formato nuevo que empieza con los campos del último del otro (plantilla).
+export const cloneSchema = (id, code, name) =>
+  request(`/schemas/${id}/clone`, { method: "POST", body: { code, name } });
+
+// Solo nombre y activo; los campos no se editan por aquí.
+export const updateSchema = (id, changes) =>
+  request(`/schemas/${id}`, { method: "PATCH", body: changes });
+
+export const deleteSchema = (id) => request(`/schemas/${id}`, { method: "DELETE" });
+
+// El vocabulario de claves: cada clave publicada alguna vez, con su definición más reciente y
+// en qué formatos vive. Una clave significa una sola cosa en todo el sistema, así que el
+// constructor de formatos la reusa en vez de redefinirla.
+export const listFieldKeys = () => request("/schemas/field-keys");
+
+// El catálogo de tipos de campo. Es de solo lectura: cada tipo es una regla de conversión
+// que el servidor implementa.
+export const listDataTypes = () => request("/data-types");
+
+// --- Catálogo de estatus (RF-EST-02) ---
+//
+// Sin área es el catálogo global, del que parten todas; con área, los de esa área. Un área
+// puede reusar un código global. Nada se borra: dar de baja es desactivar.
+
+export const listStatuses = (params = {}) => {
+  const search = new URLSearchParams(
+    Object.entries(params).filter(([, value]) => value !== null && value !== ""),
+  );
+  return request(`/statuses?${search}`);
+};
+
+export const createStatus = (input) => request("/statuses", { method: "POST", body: input });
+
+// El código y el área no se editan: son bajo lo que se archivó lo anterior.
+export const updateStatus = (id, changes) =>
+  request(`/statuses/${id}`, { method: "PATCH", body: changes });
+
+export const deleteStatus = (id) => request(`/statuses/${id}`, { method: "DELETE" });
+
+// --- Solicitantes (RF-SOL-07) ---
+
+// Las cadenas en uso, de más usada a menos, para el autocompletado. No hay padrón de
+// solicitantes: el nombre es una cadena y esto es lo que evita que se vuelva cuatro.
+export const listRequesters = (q = "") =>
+  request(`/requesters?${new URLSearchParams(q ? { q } : {})}`);
+
+// --- Solicitudes (RF-SOL-03 a RF-SOL-08) ---
+
+export const listRequests = (params = {}) => {
+  const search = new URLSearchParams(
+    Object.entries(params).filter(([, value]) => value !== null && value !== ""),
+  );
+  return request(`/requests?${search}`);
+};
+
+// La solicitud con los campos del formato con que se capturó, para poder mostrarla.
+export const getRequest = (id) => request(`/requests/${id}`);
+
+// { schemaId | schemaVersionId, title, requester, data, areaId, priority, source }.
+// Los valores se convierten según el tipo de cada campo; un error trae todas las quejas.
+export const createRequest = (input) => request("/requests", { method: "POST", body: input });
+
+export const updateRequest = (id, changes) =>
+  request(`/requests/${id}`, { method: "PATCH", body: changes });
+
+export const setRequestStatus = (id, statusId) =>
+  request(`/requests/${id}/status`, { method: "PUT", body: { statusId } });
+
+export const deleteRequest = (id) => request(`/requests/${id}`, { method: "DELETE" });
+
+// Convierte en proyecto: devuelve { project, conflicts }. Lo que se omite se toma de la
+// solicitud, y cada valor capturado viaja al proyecto con su clave.
+export const convertRequest = (id, input = {}) =>
+  request(`/requests/${id}/convert`, { method: "POST", body: input });
+
+// --- Proyectos (RF-PRY-02) ---
+
+export const listProjects = (params = {}) => {
+  const search = new URLSearchParams(
+    Object.entries(params).filter(([, value]) => value !== null && value !== ""),
+  );
+  return request(`/projects?${search}`);
+};
+
+// El proyecto con sus etapas (y los vistos buenos de cada una), sus valores y las
+// solicitudes que contesta.
+export const getProject = (id) => request(`/projects/${id}`);
+
+// La llave se genera si no se manda. `stages` abre las primeras etapas: la de menor `seq`
+// arranca activa.
+export const createProject = (input) => request("/projects", { method: "POST", body: input });
+
+export const updateProject = (id, changes) =>
+  request(`/projects/${id}`, { method: "PATCH", body: changes });
+
+export const setProjectStatus = (id, statusId) =>
+  request(`/projects/${id}/status`, { method: "PUT", body: { statusId } });
+
+// Se niega mientras alguna etapa siga activa o en espera.
+export const closeProject = (id) => request(`/projects/${id}/close`, { method: "POST" });
+
+export const archiveProject = (id) => request(`/projects/${id}/archive`, { method: "POST" });
+
+export const deleteProject = (id) => request(`/projects/${id}`, { method: "DELETE" });
+
+export const listProjectStages = (id) => request(`/projects/${id}/stages`);
+
+export const createProjectStage = (id, input) =>
+  request(`/projects/${id}/stages`, { method: "POST", body: input });
+
+// Mueve la etapa: pending → active, active ↔ waiting_external (con motivo), → cancelled.
+// `done` no se pone a mano: la etapa la cierra un visto bueno.
+export const updateProjectStage = (id, stageId, changes) =>
+  request(`/projects/${id}/stages/${stageId}`, { method: "PATCH", body: changes });
+
+// El visto bueno (RF-FLW-03). Devuelve { approval, stage, reopened }: rechazar cierra el
+// intento y abre el siguiente.
+export const createApproval = (id, stageId, input) =>
+  request(`/projects/${id}/stages/${stageId}/approvals`, { method: "POST", body: input });
+
+export const listFieldValues = (id) => request(`/projects/${id}/field-values`);
+
+// Un valor que una etapa produce y otra lee (RF-FLW-06). Una corrección es este mismo PUT.
+export const setFieldValue = (id, key, value, producedByStageId = null) =>
+  request(`/projects/${id}/field-values/${encodeURIComponent(key)}`, {
+    method: "PUT",
+    body: producedByStageId === null ? { value } : { value, producedByStageId },
+  });
+
+export const deleteFieldValue = (id, key) =>
+  request(`/projects/${id}/field-values/${encodeURIComponent(key)}`, { method: "DELETE" });
+
+// Finanzas señala que el proyecto necesita cotización o factura, sin editar el proyecto.
+// `needed: false` retira el pedido. Necesita el permiso `finance.request`.
+export const requestFinance = (id, input) =>
+  request(`/projects/${id}/finance-request`, { method: "POST", body: input });
+
+// --- Mapeo e importación de libros (RF-MIG-02) ---
+//
+// El mapeo dice a qué versión de formato apunta el libro y qué columna alimenta cada campo.
+// `headers` es opcional: cuando se manda, el servidor revisa que cada columna nombrada exista
+// de verdad en la hoja, que es lo que convierte una columna renombrada en un error al guardar
+// en vez de una sorpresa en el renglón 200 de la importación.
+export const setSpreadsheetMapping = (id, input) =>
+  request(`/spreadsheets/${id}/mapping`, { method: "PUT", body: input });
+
+export const clearSpreadsheetMapping = (id) =>
+  request(`/spreadsheets/${id}/mapping`, { method: "DELETE" });
+
+// Las primeras filas como las leería el mapeo, sin escribir nada. Se le puede pasar un mapeo
+// que todavía no se guarda, que es la única forma honesta de juzgarlo: las preguntas que
+// contesta son sobre los datos.
+export const previewSpreadsheetMapping = (id, input = {}) =>
+  request(`/spreadsheets/${id}/mapping/preview`, { method: "POST", body: input });
+
+// Convierte las filas en solicitudes. `dryRun` cuenta sin escribir. Las filas ya importadas
+// no se vuelven a crear: la huella de la fila ya se conoce.
+export const importSpreadsheet = (id, input = {}) =>
+  request(`/spreadsheets/${id}/import`, { method: "POST", body: input });
+
+export const listSpreadsheetImports = (id) => request(`/spreadsheets/${id}/imports`);
+
+// Marcar las filas de hoy como ya vistas, sin crear solicitudes, y deshacerlo.
+export const markSpreadsheetRows = (id, input = {}) =>
+  request(`/spreadsheets/${id}/baseline`, { method: "POST", body: input });
+
+export const clearSpreadsheetMarks = (id) =>
+  request(`/spreadsheets/${id}/baseline`, { method: "DELETE" });

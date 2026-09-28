@@ -1,0 +1,81 @@
+/* Solo acomodo: el diseño lo revisa quien lleva el CSS. */
+
+.status-catalog {
+  margin-bottom: 1.5rem;
+  padding: 0.75rem;
+  border: 1px solid;
+}
+
+.status-catalog-title {
+  margin: 0 0 0.25rem;
+}
+
+.status-catalog-help {
+  margin: 0 0 0.75rem;
+  font-size: 0.9em;
+}
+
+.status-catalog-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.status-catalog-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.status-catalog-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.status-catalog-table th,
+.status-catalog-table td {
+  padding: 0.3rem;
+  text-align: left;
+}
+
+.status-cell-center {
+  text-align: center;
+}
+
+.status-code {
+  font-family: monospace;
+}
+
+.status-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.25rem;
+}
+
+.status-input-short {
+  width: 5rem;
+}
+
+.status-row-inactive {
+  opacity: 0.6;
+}
+
+.status-catalog-new {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid;
+  max-width: 28rem;
+}
+
+.status-catalog-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.status-catalog-error {
+  margin: 0.5rem 0;
+}
