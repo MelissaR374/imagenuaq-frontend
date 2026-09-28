@@ -16,6 +16,7 @@ import ImportConfig from "./components/spreadsheets/importConfig.jsx";
 import Inbox from "./components/requests/inbox.jsx";
 import Projects from "./components/projects/projects.jsx";
 import Profile from "./components/profile/profile.jsx";
+import Notifications from "./components/notifications/notifications.jsx";
 
 import * as api from "./api/client.js";
 import { MICROSOFT_PARAM } from "./config.js";
@@ -180,12 +181,15 @@ function App() {
           </div>
         </header>
 
-        {/* Las pestañas con pantalla: "Mi perfil", "Empleados", "Áreas y usuarios",
-            "Roles y permisos", "Formatos de solicitud" (da de alta las cuentas y los libros de
-            Excel), "Esquemas de datos" (qué datos lleva un proyecto), "Configuración de formatos
-            de solicitud" (mapea las columnas de un libro e importa sus filas), "Bandeja de
-            solicitudes" y "Proyectos". Las demás muestran su nombre. */}
-        {activa === "Mi perfil" ? (
+        {/* Las pestañas con pantalla: "Notificaciones" (todavía con datos de prueba, sin
+            backend), "Mi perfil", "Empleados", "Áreas y usuarios", "Roles y permisos",
+            "Formatos de solicitud" (da de alta las cuentas y los libros de Excel), "Esquemas de
+            datos" (qué datos lleva un proyecto), "Configuración de formatos de solicitud" (mapea
+            las columnas de un libro e importa sus filas), "Bandeja de solicitudes" y
+            "Proyectos". Las demás muestran su nombre. */}
+        {activa === "Notificaciones" ? (
+          <Notifications />
+        ) : activa === "Mi perfil" ? (
           <Profile
             usuario={usuario}
             foto={foto}

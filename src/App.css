@@ -10,7 +10,10 @@
   width: 100%;
   overflow-x: hidden;
 
-  /* Variables modo claro */
+  color-scheme: light;
+  /* =========================================================
+    MODO CLARO
+  ========================================================= */
   --background: #f5f7fa;
   --surface: #ffffff;
   --surface-secondary: #f8fafc;
@@ -42,6 +45,8 @@
 ========================================================= */
 
 .app-container.dark-mode {
+  color-scheme: dark;
+  
   --background: #111827;
   --surface: #1f2937;
   --surface-secondary: #182333;

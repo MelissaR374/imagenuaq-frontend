@@ -336,6 +336,35 @@
     grid-column: 1;
 }
 
+.password-toggle {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 0;
+    border: none;
+    background: transparent;
+
+    color: var(--text-muted);
+    cursor: pointer;
+
+    font-size: 22px;
+
+    transition: color 0.2s ease;
+}
+
+.password-toggle:hover {
+    color: var(--text);
+}
+
+.password-container .profile-form-input {
+    padding-right: 45px;
+}
 
 /* =========================================================
    RESPONSIVE
