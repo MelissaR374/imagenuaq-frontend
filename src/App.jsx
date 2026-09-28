@@ -13,6 +13,7 @@ import Roles from "./components/roles/roles.jsx";
 import Spreadsheets from "./components/spreadsheets/spreadsheets.jsx";
 import Profile from "./components/profile/profile.jsx";
 import Notifications from "./components/notifications/notifications.jsx";
+import FlowDesigner from "./components/FlowDesigner/FlowDesigner.jsx";
 
 import * as api from "./api/client.js";
 import { MICROSOFT_PARAM } from "./config.js";
@@ -196,7 +197,9 @@ function App() {
           <Roles />
         ) : activa === "Formatos de solicitud" && usuario.role === "admin" ? (
           <Spreadsheets />
-        ) : (
+        ) : activa === "Diseñador de flujos" && usuario.role === "admin" ? (
+          <FlowDesigner />
+        ): (
           <h1>{activa}</h1>
         )}
       </main>
