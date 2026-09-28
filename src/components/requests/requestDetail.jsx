@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import * as api from "../../api/client.js";
+import FieldInput from "../shared/fieldInput.jsx";
 import RequesterInput from "./requesterInput.jsx";
 import "./requestDetail.css";
 
@@ -131,6 +132,63 @@ function ValoresCapturados({ campos, data }) {
   );
 }
 
+// Corregir lo capturado antes de que se vuelva proyecto.
+//
+// Quien llena la hoja de Excel se equivoca --- deja un campo obligatorio vacío, escribe una fecha
+// en la casilla del tiraje --- y hasta ahora la única salida era vivir con el dato malo o volver a
+// importar. Al convertir, cada valor pasa a `project_field_values` y ahí ya lo leen la orden de
+// impresión y facturación, así que **éste es el momento de arreglarlo**: después la solicitud se
+// cierra a los cambios justamente para que el proyecto no pierda lo que contesta.
+//
+// Se corrige contra los campos de la versión con la que se capturó, no con el formato de hoy: una
+// versión publicada no se edita, así que una solicitud vieja se sigue leyendo como se llenó.
+function EditorDeCaptura({ campos, data, ocupado, onGuardar, onCancelar }) {
+  const [valores, setValores] = useState(() => ({ ...(data ?? {}) }));
+
+  function cambiar(code, valor) {
+    setValores({ ...valores, [code]: valor });
+  }
+
+  function enviar(evento) {
+    evento.preventDefault();
+    onGuardar(valores);
+  }
+
+  let textoDelBoton = "Guardar lo corregido";
+  if (ocupado) {
+    textoDelBoton = "Guardando...";
+  }
+
+  return (
+    <form className="request-detail-capture" onSubmit={enviar}>
+      <p className="request-detail-help">
+        El servidor revisa cada valor contra el tipo de su campo, igual que al importar: si algo no
+        corresponde lo dice y no se guarda nada a medias.
+      </p>
+
+      <div className="request-detail-capture-fields">
+        {campos.map((campo) => (
+          <FieldInput
+            key={campo.code}
+            field={campo}
+            value={valores[campo.code]}
+            onChange={(valor) => cambiar(campo.code, valor)}
+          />
+        ))}
+      </div>
+
+      <div className="request-detail-actions">
+        <button type="submit" disabled={ocupado}>
+          {textoDelBoton}
+        </button>
+        <button type="button" onClick={onCancelar} disabled={ocupado}>
+          Cancelar
+        </button>
+      </div>
+    </form>
+  );
+}
+
 // El renglón como lo tenía la hoja, columnas ignoradas incluidas (RF-SOL-06).
 function RenglonOriginal({ sourceData }) {
   const [abierto, setAbierto] = useState(false);
@@ -139,7 +197,7 @@ function RenglonOriginal({ sourceData }) {
     setAbierto(!abierto);
   }
 
-  let texto = "Ver el renglón original de la hoja";
+  let texto = "Ver el valor original del registro de la hoja";
   if (abierto) {
     texto = "Ocultar el renglón original";
   }
@@ -268,6 +326,8 @@ function RequestDetail({ solicitud, areas, onCerrar, onCambio }) {
   const [error, setError] = useState(null);
   const [ocupado, setOcupado] = useState(false);
 
+  const [corrigiendo, setCorrigiendo] = useState(false);
+
   // El formulario de conversión: null mientras no se abre.
   const [convertir, setConvertir] = useState(null);
   const [conflictos, setConflictos] = useState([]);
@@ -332,6 +392,20 @@ function RequestDetail({ solicitud, areas, onCerrar, onCambio }) {
       await recargar();
     } catch (fallo) {
       setError(fallo.message);
+    }
+  }
+
+  async function guardarCaptura(data) {
+    setOcupado(true);
+    setError(null);
+    try {
+      await api.updateRequest(detalle.id, { data });
+      await recargar();
+      setCorrigiendo(false);
+    } catch (fallo) {
+      setError(fallo.message);
+    } finally {
+      setOcupado(false);
     }
   }
 
@@ -478,6 +552,29 @@ function RequestDetail({ solicitud, areas, onCerrar, onCambio }) {
     );
   }
 
+  // Corregir sólo mientras no sea proyecto: después la solicitud ya no se edita.
+  let botonDeCorreccion = null;
+  if (!yaEsProyecto && campos.length > 0 && !corrigiendo) {
+    botonDeCorreccion = (
+      <button type="button" onClick={() => setCorrigiendo(true)} disabled={ocupado}>
+        Corregir lo capturado
+      </button>
+    );
+  }
+
+  let bloqueDeCaptura = <ValoresCapturados campos={campos} data={detalle.data} />;
+  if (corrigiendo) {
+    bloqueDeCaptura = (
+      <EditorDeCaptura
+        campos={campos}
+        data={detalle.data}
+        ocupado={ocupado}
+        onGuardar={guardarCaptura}
+        onCancelar={() => setCorrigiendo(false)}
+      />
+    );
+  }
+
   let bloqueDelRenglon = null;
   if (detalle.sourceData !== null && detalle.sourceData !== undefined) {
     bloqueDelRenglon = <RenglonOriginal sourceData={detalle.sourceData} />;
@@ -512,10 +609,20 @@ function RequestDetail({ solicitud, areas, onCerrar, onCambio }) {
   } else {
     bloqueDeAcciones = (
       <>
-        <button type="button" onClick={abrirConversion} disabled={ocupado}>
+        <button
+          className="request-detail-primary"
+          type="button"
+          onClick={abrirConversion}
+          disabled={ocupado}
+        >
           Convertir en proyecto
         </button>
-        <button type="button" onClick={eliminar} disabled={ocupado}>
+        <button
+          className="request-detail-danger"
+          type="button"
+          onClick={eliminar}
+          disabled={ocupado}
+        >
           Eliminar
         </button>
       </>
@@ -604,8 +711,11 @@ function RequestDetail({ solicitud, areas, onCerrar, onCambio }) {
         {bloqueDeProyecto}
       </dl>
 
-      <h4 className="request-detail-subtitle">Lo capturado</h4>
-      <ValoresCapturados campos={campos} data={detalle.data} />
+      <div className="request-detail-subhead">
+        <h4 className="request-detail-subtitle">Lo capturado</h4>
+        {botonDeCorreccion}
+      </div>
+      {bloqueDeCaptura}
 
       {bloqueDelRenglon}
       {bloqueDeConflictos}

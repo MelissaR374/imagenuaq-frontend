@@ -10,6 +10,14 @@ import "./projectForm.css";
 // La llave se genera si se deja vacía (PRY-000001), así que nadie tiene que inventar un nombre
 // para empezar. El formato es opcional: si se elige, sus valores se guardan como valores del
 // proyecto, los mismos que después leen la orden de impresión y facturación.
+//
+// **Los campos extra son de este proyecto y no del formato.** Un proyecto suele traer un dato que
+// su formato no pide y que igual hace falta --- un folio del SIN, un pantone, una referencia que
+// pidió facturación --- y publicar una versión nueva del formato por eso sería cambiárselo a todos
+// los proyectos futuros. `project_field_values` acepta cualquier clave, así que el dato entra aquí
+// sin tocar el catálogo. El precio, dicho: una clave escrita a mano no la valida nadie contra el
+// vocabulario, y dos personas pueden inventar dos nombres para lo mismo. Cuando la clave vaya a
+// repetirse, el lugar correcto es el formato.
 function ProjectForm({ areas, onCreado, onCancelar }) {
   const [formatos, setFormatos] = useState([]);
   const [formatoId, setFormatoId] = useState("");
@@ -24,6 +32,7 @@ function ProjectForm({ areas, onCreado, onCancelar }) {
     areaId: "",
     stageTitle: "",
   });
+  const [extras, setExtras] = useState([]);
   const [error, setError] = useState(null);
   const [guardando, setGuardando] = useState(false);
 
@@ -63,10 +72,15 @@ function ProjectForm({ areas, onCreado, onCancelar }) {
         hasCost: cabecera.hasCost,
         dueOn: cabecera.dueOn || undefined,
         schemaVersionId: formato ? formato.schemaVersionId : undefined,
-        // Los valores capturados se guardan con la clave de su campo.
-        fieldValues: Object.entries(valores)
-          .filter(([, valor]) => valor !== "" && valor !== undefined && valor !== null)
-          .map(([key, value]) => ({ key, value })),
+        // Los valores capturados se guardan con la clave de su campo, y los extra con la suya.
+        fieldValues: [
+          ...Object.entries(valores)
+            .filter(([, valor]) => valor !== "" && valor !== undefined && valor !== null)
+            .map(([key, value]) => ({ key, value })),
+          ...extras
+            .filter((extra) => extra.key.trim() !== "" && extra.value !== "")
+            .map((extra) => ({ key: extra.key.trim(), value: extra.value })),
+        ],
         stages:
           cabecera.areaId === ""
             ? []
@@ -84,6 +98,27 @@ function ProjectForm({ areas, onCreado, onCancelar }) {
       setGuardando(false);
     }
   }
+
+  function agregarExtra() {
+    setExtras([...extras, { key: "", value: "" }]);
+  }
+
+  function cambiarExtra(indice, cambios) {
+    setExtras(extras.map((extra, i) => (i === indice ? { ...extra, ...cambios } : extra)));
+  }
+
+  function quitarExtra(indice) {
+    setExtras(extras.filter((_, i) => i !== indice));
+  }
+
+  // Una clave repetida perdería el valor de una de las dos: el proyecto las guarda por clave.
+  const clavesDelFormato = campos.map((campo) => campo.code);
+  const clavesExtra = extras.map((extra) => extra.key.trim()).filter((clave) => clave !== "");
+  const repetidas = new Set(
+    clavesExtra.filter(
+      (clave, i) => clavesExtra.indexOf(clave) !== i || clavesDelFormato.includes(clave),
+    ),
+  );
 
   return (
     <form className="project-form" onSubmit={guardar}>
@@ -204,6 +239,54 @@ function ProjectForm({ areas, onCreado, onCancelar }) {
           </p>
         </fieldset>
       ) : null}
+
+      <fieldset className="project-form-extras">
+        <legend>Datos sólo de este proyecto</legend>
+        <p className="project-form-help">
+          Para lo que este proyecto trae y su formato no pide. No cambia el formato: se guarda como
+          un valor más del proyecto, con la clave que le pongas. Si la clave va a servir en otros
+          proyectos, conviene agregarla al formato en «Esquemas de datos».
+        </p>
+
+        {extras.map((extra, indice) => {
+          const repetida = extra.key.trim() !== "" && repetidas.has(extra.key.trim());
+
+          let aviso = null;
+          if (repetida) {
+            aviso = (
+              <p className="project-form-bad">
+                Esa clave ya está en este proyecto: se guardaría una sola.
+              </p>
+            );
+          }
+
+          return (
+            <div className="project-form-extra" key={indice}>
+              <input
+                className={repetida ? "project-form-key project-form-key--bad" : "project-form-key"}
+                value={extra.key}
+                onChange={(evento) => cambiarExtra(indice, { key: evento.target.value })}
+                placeholder="folio_sin"
+                aria-label="Clave"
+              />
+              <input
+                value={extra.value}
+                onChange={(evento) => cambiarExtra(indice, { value: evento.target.value })}
+                placeholder="Valor"
+                aria-label="Valor"
+              />
+              <button type="button" onClick={() => quitarExtra(indice)}>
+                Quitar
+              </button>
+              {aviso}
+            </div>
+          );
+        })}
+
+        <button className="project-form-add" type="button" onClick={agregarExtra}>
+          Agregar un dato
+        </button>
+      </fieldset>
 
       {error ? <p className="project-form-error">{error}</p> : null}
 

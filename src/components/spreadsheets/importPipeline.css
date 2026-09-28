@@ -491,3 +491,86 @@
     margin-bottom: 8px;
   }
 }
+
+/* Los motivos de una corrida pasada, abiertos desde su renglón */
+.pipeline-cell-actions {
+  text-align: right;
+}
+
+.pipeline-row-action {
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  color: #3270b5;
+  cursor: pointer;
+}
+
+.pipeline-row-action:hover {
+  text-decoration: underline;
+}
+
+.pipeline-table tbody tr.pipeline-reasons-row > td {
+  height: auto;
+  padding: 12px 14px 14px;
+  background: var(--surface-secondary);
+  white-space: normal;
+}
+
+/* =========================================================
+   LA RAYA: marcar lo viejo como ya visto
+   Es una decisión sobre el libro, no una corrida, así que se
+   separa de las acciones con su propio recuadro.
+   ========================================================= */
+
+.pipeline-baseline {
+  margin-top: 20px;
+  padding: 14px 16px 16px;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  background: var(--surface-secondary);
+}
+
+/* Ya marcado: verde, como todo lo resuelto en este sistema, y con borde sólido --- ya no es una
+   invitación, es un hecho. */
+.pipeline-baseline.is-hecho {
+  border-style: solid;
+  border-color: rgba(46, 125, 50, 0.35);
+  background: rgba(46, 125, 50, 0.06);
+}
+
+.pipeline-baseline-line {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.pipeline-baseline.is-hecho .pipeline-baseline-line {
+  color: #2e7d32;
+}
+
+.pipeline-baseline .pipeline-help {
+  max-width: 78ch;
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.pipeline-baseline > button {
+  margin-top: 12px;
+}
+
+.pipeline-baseline-result {
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  border: 1px solid rgba(59, 115, 185, 0.3);
+  border-radius: 6px;
+  background: rgba(59, 115, 185, 0.06);
+  font-size: 12px;
+  font-weight: 600;
+  color: #3270b5;
+}

@@ -421,3 +421,10 @@ export const importSpreadsheet = (id, input = {}) =>
   request(`/spreadsheets/${id}/import`, { method: "POST", body: input });
 
 export const listSpreadsheetImports = (id) => request(`/spreadsheets/${id}/imports`);
+
+// Marcar las filas de hoy como ya vistas, sin crear solicitudes, y deshacerlo.
+export const markSpreadsheetRows = (id, input = {}) =>
+  request(`/spreadsheets/${id}/baseline`, { method: "POST", body: input });
+
+export const clearSpreadsheetMarks = (id) =>
+  request(`/spreadsheets/${id}/baseline`, { method: "DELETE" });

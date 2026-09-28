@@ -59,7 +59,7 @@ function aceptaDe(campo) {
 // Una regla lista para mandar, o `undefined` si no se llenó. Se queda solo con las llaves que su
 // operación usa, igual que hace el servidor al guardarla: una regla que todavía recuerda la
 // columna que alguien intentó primero se lee como una regla que la usa.
-const LLAVES_DE_REGLA = ["column", "columns", "value", "separator", "index", "from", "format"];
+const LLAVES_DE_REGLA = ["column", "columns", "value", "separator", "index", "from", "format", "default"];
 
 function limpiarRegla(regla) {
   if (regla === undefined || regla === null) {
@@ -125,7 +125,7 @@ function SelectorDeColumna({ headers, valor, onChange }) {
 // Una fila de regla: de dónde sale el valor, lo que ese "de dónde" necesita saber, y qué acepta
 // el destino --- esto último para que nadie tenga que adivinar si una columna de texto cabe en un
 // campo de número.
-function FilaDeRegla({ etiqueta, ayuda, tipo, acepta, regla, headers, onCambio }) {
+function FilaDeRegla({ etiqueta, ayuda, tipo, acepta, obligatorio, regla, headers, onCambio }) {
   const actual = regla ?? SIN_REGLA;
 
   let notaDelCampo = null;
@@ -240,6 +240,18 @@ function FilaDeRegla({ etiqueta, ayuda, tipo, acepta, regla, headers, onCambio }
           </label>
         ) : null}
       </td>
+      <td>
+        {/* Un valor de respaldo sirve justo cuando el campo es obligatorio y la hoja trae la celda
+            vacía: sin esto el renglón se rechaza y no hay nada que decidir. */}
+        {actual.op === "column" || actual.op === "concat" || actual.op === "split" ? (
+          <input
+            className="mapping-input"
+            value={actual.default ?? ""}
+            onChange={(e) => onCambio({ default: e.target.value })}
+            placeholder={obligatorio ? "Obligatorio: conviene uno" : "Se queda vacío"}
+          />
+        ) : null}
+      </td>
       <td className="mapping-accepts">{acepta}</td>
     </tr>
   );
@@ -264,8 +276,10 @@ function ResumenDePrueba({ rows }) {
   if (falladas.length > 0) {
     consejo = (
       <p className="mapping-help">
-        Una fila que no entra se reporta con su motivo y no se guarda a medias. Revisa la columna
-        «Qué pasaría» de la tabla: casi siempre es una columna apuntada a un campo de otro tipo.
+        Una fila que no entra se reporta con su motivo y no se guarda a medias. Los dos motivos
+        frecuentes tienen arreglo aquí mismo: una columna apuntada a un campo de otro tipo se
+        corrige cambiándola, y un campo obligatorio con la celda vacía se resuelve dándole un
+        valor en «Si viene vacía».
       </p>
     );
   }
@@ -578,7 +592,9 @@ function Mapping({ sheet, onGuardado, onCerrar }) {
           </li>
           <li>
             Una celda vacía en un campo opcional simplemente no se guarda. Vacía en un campo
-            obligatorio es un error de esa fila.
+            obligatorio rechaza la fila, <strong>a menos que le pongas un valor en «Si viene
+            vacía»</strong>: ahí se decide qué pasa con las filas incompletas, que en una hoja
+            llena a mano son varias.
           </li>
           <li>
             Las columnas que ninguna regla lee <strong>igual se guardan</strong>, tal como venían,
@@ -613,6 +629,7 @@ function Mapping({ sheet, onGuardado, onCerrar }) {
                   <th>De dónde</th>
                   <th>Qué columna</th>
                   <th>Cómo leerla</th>
+                  <th>Si viene vacía</th>
                   <th>Qué acepta el destino</th>
                 </tr>
               </thead>
@@ -621,6 +638,7 @@ function Mapping({ sheet, onGuardado, onCerrar }) {
                   etiqueta="Título"
                   ayuda="Obligatorio: la solicitud necesita uno."
                   acepta="Cualquier texto. Una fila con el título vacío no entra."
+                  obligatorio
                   regla={reglas.title}
                   headers={headers}
                   onCambio={(cambios) => cambiarRegla("title", cambios)}
@@ -647,6 +665,7 @@ function Mapping({ sheet, onGuardado, onCerrar }) {
                     ayuda={campo.note || null}
                     tipo={campo.type}
                     acepta={aceptaDe(campo)}
+                    obligatorio={campo.required === true}
                     regla={reglas[campo.code]}
                     headers={headers}
                     onCambio={(cambios) => cambiarRegla(campo.code, cambios)}

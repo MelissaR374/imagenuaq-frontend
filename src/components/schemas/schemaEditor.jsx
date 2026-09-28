@@ -216,8 +216,12 @@ function SchemaEditor({
                       ↓
                     </button>
                   </td>
-                  <td>
-                    <button type="button" onClick={() => quitarCampo(seccion.clave, indice)}>
+                  <td className="schema-cell-remove">
+                    <button
+                      className="schema-remove"
+                      type="button"
+                      onClick={() => quitarCampo(seccion.clave, indice)}
+                    >
                       Quitar
                     </button>
                   </td>

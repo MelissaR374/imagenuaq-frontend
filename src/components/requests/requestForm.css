@@ -18,9 +18,19 @@
   margin-bottom: 0.5rem;
 }
 
+/* El espacio entre campos vive aquí y no en `.field-input`: es del contenedor, y así una rejilla
+   de dos columnas no arrastra un margen suelto. */
 .request-form-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
   margin: 0.75rem 0;
   padding: 0.5rem;
+}
+
+.request-form-fields > legend,
+.request-form-fields > p {
+  grid-column: 1 / -1;
 }
 
 .request-form-actions {

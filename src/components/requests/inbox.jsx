@@ -16,6 +16,11 @@ import "./inbox.css";
 //
 // Por omisión muestra lo que todavía no se ha convertido, que es lo que un área tiene
 // pendiente; `converted` en el servidor sin valor trae todo, así que aquí se manda explícito.
+// Cuántas se ven de un jalón. Una importación mete decenas de renglones de golpe, así que la
+// bandeja se pagina: el total viene del servidor (`total`, que cuenta lo filtrado y no la página),
+// de modo que se puede decir cuánto falta por ver en lugar de adivinarlo.
+const POR_PAGINA = 20;
+
 const FILTROS_VACIOS = {
   q: "",
   areaId: "",
@@ -80,12 +85,21 @@ function FiltroSelect({ etiqueta, valor, opciones, onCambio }) {
 }
 
 // Un renglón de la bandeja.
-function FilaDeSolicitud({ solicitud, onAbrir }) {
+function FilaDeSolicitud({ solicitud, onAbrir, onEliminar, ocupado }) {
   const paso = pasoDe(solicitud);
 
   let marcaDeDuplicado = null;
   if (solicitud.possibleDuplicateOf !== null) {
     marcaDeDuplicado = <span className="inbox-badge"> posible duplicado</span>;
+  }
+
+  // Ya convertida no se borra: el proyecto perdería lo que contesta, y el servidor lo rechaza.
+  // Se deja el botón a la vista, apagado y diciendo por qué, en lugar de desaparecerlo.
+  const yaEsProyecto = solicitud.projectId !== null;
+
+  let ayudaDeBorrado = "Quita la solicitud de la bandeja";
+  if (yaEsProyecto) {
+    ayudaDeBorrado = `No se puede: ya es el proyecto ${solicitud.projectKey}`;
   }
 
   return (
@@ -106,9 +120,19 @@ function FilaDeSolicitud({ solicitud, onAbrir }) {
       <td className="inbox-cell-center">{solicitud.priority}</td>
       <td>{solicitud.source}</td>
       <td>{oGuion(solicitud.projectKey)}</td>
-      <td>
+      <td className="inbox-cell-actions">
         <button type="button" onClick={() => onAbrir(solicitud)}>
           Abrir
+        </button>
+        {/* Borrar desde aquí: una fila mal importada se descarta en el momento, sin abrirla. */}
+        <button
+          className="inbox-action-danger"
+          type="button"
+          onClick={() => onEliminar(solicitud)}
+          disabled={yaEsProyecto || ocupado}
+          title={ayudaDeBorrado}
+        >
+          Eliminar
         </button>
       </td>
     </tr>
@@ -120,10 +144,13 @@ function Inbox() {
   const [areas, setAreas] = useState([]);
   const [estatus, setEstatus] = useState([]);
   const [filtros, setFiltros] = useState(FILTROS_VACIOS);
+  const [pagina, setPagina] = useState(0);
+  const [total, setTotal] = useState(0);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
   const [abierta, setAbierta] = useState(null);
   const [capturando, setCapturando] = useState(false);
+  const [borrando, setBorrando] = useState(false);
 
   // Sube cada vez que algo cambia, para volver a pedir la lista.
   const [version, setVersion] = useState(0);
@@ -161,9 +188,14 @@ function Inbox() {
     async function cargarSolicitudes() {
       setCargando(true);
       try {
-        const respuesta = await api.listRequests(filtros);
+        const respuesta = await api.listRequests({
+          ...filtros,
+          limit: POR_PAGINA,
+          offset: pagina * POR_PAGINA,
+        });
         if (!cancelado) {
           setSolicitudes(respuesta.requests);
+          setTotal(respuesta.total);
         }
       } catch (fallo) {
         if (!cancelado) {
@@ -180,14 +212,24 @@ function Inbox() {
     return () => {
       cancelado = true;
     };
-  }, [filtros, version]);
+  }, [filtros, version, pagina]);
 
   function cambiarFiltro(clave, valor) {
     setFiltros((actual) => ({ ...actual, [clave]: valor }));
+    setPagina(0);
   }
 
   function limpiarFiltros() {
     setFiltros(FILTROS_VACIOS);
+    setPagina(0);
+  }
+
+  function anterior() {
+    setPagina(pagina - 1);
+  }
+
+  function siguiente() {
+    setPagina(pagina + 1);
   }
 
   function recargar() {
@@ -210,6 +252,33 @@ function Inbox() {
 
   function cerrarDetalle() {
     setAbierta(null);
+  }
+
+  // Borrar desde la bandeja. Pregunta primero porque el botón queda a un clic de «Abrir» y el
+  // renglón desaparece de la lista; nombra el folio para que se vea cuál se va.
+  async function eliminar(solicitud) {
+    const seguro = window.confirm(
+      `¿Eliminar ${solicitud.folio} — ${solicitud.title}?
+
+Se quita de la bandeja. Lo importado de Excel se puede volver a traer importando el libro otra vez.`,
+    );
+    if (!seguro) {
+      return;
+    }
+
+    setBorrando(true);
+    setError(null);
+    try {
+      await api.deleteRequest(solicitud.id);
+      if (abierta?.id === solicitud.id) {
+        setAbierta(null);
+      }
+      recargar();
+    } catch (fallo) {
+      setError(fallo.message);
+    } finally {
+      setBorrando(false);
+    }
   }
 
   // Las opciones de cada filtro. «Sin área» es el paso 2 del recorrido: lo importado de Excel
@@ -258,16 +327,41 @@ function Inbox() {
     bloqueVacio = <p className="inbox-empty">No hay solicitudes con esos filtros.</p>;
   }
 
-  // Cuántas están esperando el paso 2. Se cuenta sobre lo que trajo el filtro, así que es un
-  // recordatorio de lo que hay a la vista y no un total del sistema.
+  // El rango se cuenta desde uno porque se lee, no se indexa.
+  const primera = total === 0 ? 0 : pagina * POR_PAGINA + 1;
+  const ultima = pagina * POR_PAGINA + solicitudes.length;
+  const hayMas = ultima < total;
+
+  let paginacion = null;
+  if (total > POR_PAGINA) {
+    paginacion = (
+      <div className="inbox-pages">
+        <p className="inbox-range">
+          {primera}–{ultima} de {total}
+        </p>
+        <div className="inbox-page-actions">
+          <button type="button" onClick={anterior} disabled={pagina === 0 || cargando}>
+            Anteriores
+          </button>
+          <button type="button" onClick={siguiente} disabled={!hayMas || cargando}>
+            Siguientes
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Cuántas esperan el paso 2 **en esta página**. Con páginas, contar lo que se ve y llamarlo
+  // total sería mentir; para el total del sistema está el filtro «Sin área», que lo dice.
   const sinRepartir = solicitudes.filter((solicitud) => pasoDe(solicitud) === PASOS.sinRepartir);
 
   let avisoDeReparto = null;
   if (sinRepartir.length > 0) {
     avisoDeReparto = (
       <p className="inbox-notice">
-        {sinRepartir.length} solicitud{sinRepartir.length === 1 ? "" : "es"} sin área. Ábrela y
-        dile a qué área le toca: mientras no lo tenga, nadie la ve en su bandeja.
+        {sinRepartir.length} de las {solicitudes.length} de esta página no tienen área. Ábrela y
+        dile a qué área le toca: mientras no lo tenga, nadie la ve en su bandeja. Para ver todas,
+        filtra por «Sin área».
       </p>
     );
   }
@@ -295,6 +389,9 @@ function Inbox() {
     <section className="inbox">
       <header className="inbox-header">
         <h2 className="inbox-title">Bandeja de solicitudes</h2>
+        <p className="inbox-count">
+          {total} solicitud{total === 1 ? "" : "es"} con estos filtros
+        </p>
         <button type="button" onClick={abrirCaptura}>
           Nueva solicitud
         </button>
@@ -372,12 +469,19 @@ function Inbox() {
         </thead>
         <tbody>
           {solicitudes.map((solicitud) => (
-            <FilaDeSolicitud solicitud={solicitud} onAbrir={setAbierta} key={solicitud.id} />
+            <FilaDeSolicitud
+              solicitud={solicitud}
+              onAbrir={setAbierta}
+              onEliminar={eliminar}
+              ocupado={borrando}
+              key={solicitud.id}
+            />
           ))}
         </tbody>
       </table>
 
       {bloqueVacio}
+      {paginacion}
       {formularioDeCaptura}
       {detalle}
     </section>

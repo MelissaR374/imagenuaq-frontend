@@ -1,30 +1,145 @@
-/* Solo acomodo: el diseño lo revisa quien lleva el CSS. */
+/* =========================================================
+   UN CAMPO DE UN FORMATO
+   Compartido por la captura de solicitudes, la de proyectos y
+   la corrección de lo capturado, así que aquí se define una
+   sola vez cómo se ve un campo y las tres pantallas coinciden.
+
+   Mismos tokens del sistema: control de 36px, radio 5, foco
+   azul con anillo, rojo para lo que falta.
+   ========================================================= */
 
 .field-input {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  margin-bottom: 0.75rem;
+  gap: 6px;
+  min-width: 0;
 }
+
+/* =========================================================
+   ETIQUETA
+   ========================================================= */
+
+.field-label {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  cursor: pointer;
+}
+
+.field-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
+/* El asterisco de obligatorio: rojo, porque es lo que va a rechazar el renglón si falta. */
+.field-required {
+  color: #e45c5c;
+  font-weight: 700;
+}
+
+/* La indicación del campo, que la escribió quien armó el formato. */
+.field-note {
+  max-width: 46ch;
+  margin: 0;
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+/* =========================================================
+   EL CONTROL
+   ========================================================= */
+
+.field-control {
+  width: 100%;
+  height: 36px;
+  padding: 0 11px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 11px;
+  outline: none;
+  box-sizing: border-box;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background-color 0.3s ease,
+    color 0.3s ease;
+}
+
+.field-control::placeholder {
+  color: var(--text-muted);
+}
+
+.field-control:focus {
+  border-color: #3b73b9;
+  box-shadow: 0 0 0 2px rgba(59, 115, 185, 0.08);
+}
+
+.field-control:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Un obligatorio vacío se marca solo cuando ya se intentó mandar, no mientras se escribe:
+   señalar en rojo un campo que apenas se va a llenar regaña por adelantado. */
+.field-control:required:invalid:not(:placeholder-shown) {
+  border-color: rgba(217, 83, 79, 0.55);
+}
+
+form:invalid .field-control:required:invalid {
+  background: rgba(217, 83, 79, 0.04);
+}
+
+/* Las fechas y las horas traen su propio control del navegador y quedan angostas si se les deja
+   el ancho completo; el resto sí lo aprovecha. */
+.field-control[type="date"],
+.field-control[type="datetime-local"] {
+  max-width: 220px;
+}
+
+.field-control[type="number"] {
+  max-width: 180px;
+}
+
+/* =========================================================
+   BOOLEANO
+   Es una casilla, así que la etiqueta va a su lado y no
+   encima: el nombre del campo es la pregunta.
+   ========================================================= */
 
 .field-input-boolean .field-label {
   flex-direction: row;
   align-items: center;
-  gap: 0.5rem;
+  gap: 8px;
+  min-height: 36px;
 }
 
-.field-label {
-  display: flex;
-  gap: 0.25rem;
+.field-input-boolean .field-name {
+  font-weight: 400;
+  color: var(--text);
 }
 
-.field-control {
-  padding: 0.4rem;
-  width: 100%;
-  box-sizing: border-box;
+.field-checkbox {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  accent-color: #2864a8;
+  cursor: pointer;
 }
 
-.field-note {
-  margin: 0;
-  font-size: 0.85em;
+/* =========================================================
+   PANTALLAS ANGOSTAS
+   ========================================================= */
+
+@media (max-width: 600px) {
+  .field-control[type="date"],
+  .field-control[type="datetime-local"],
+  .field-control[type="number"] {
+    max-width: none;
+  }
 }

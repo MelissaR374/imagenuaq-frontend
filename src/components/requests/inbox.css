@@ -1,70 +1,389 @@
-/* Solo acomodo: el diseño lo revisa quien lleva el CSS. */
+/* =========================================================
+   BANDEJA DE SOLICITUDES
+   Mismos tokens que el resto del sistema: Poppins, radios
+   5/6/9/10, una sola sombra, azul para la acción, y los
+   colores que ya significan listo / pendiente / error.
+
+   El folio va monoespaciado, que es cómo este sistema marca
+   un identificador (`roles.css`, `users.css`).
+   ========================================================= */
 
 .inbox {
-  padding: 1rem;
+  padding: 28px 32px 40px;
+  background: var(--background);
+  color: var(--text);
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
 }
+
+/* =========================================================
+   ENCABEZADO
+   ========================================================= */
 
 .inbox-header {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
 .inbox-title {
   margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text);
 }
+
+.inbox-count {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* El botón de nueva solicitud se va al extremo. */
+.inbox-header > button {
+  height: 32px;
+  min-width: 140px;
+  margin-left: auto;
+  padding: 0 16px;
+  border: none;
+  border-radius: 5px;
+  background: #2864a8;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    transform 0.1s ease;
+}
+
+.inbox-header > button:hover {
+  background: #205895;
+}
+
+.inbox-header > button:active {
+  transform: translateY(1px);
+}
+
+/* =========================================================
+   AVISOS
+   ========================================================= */
+
+.inbox-error {
+  max-width: 82ch;
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border: 1px solid rgba(217, 83, 79, 0.35);
+  border-radius: 6px;
+  background: rgba(217, 83, 79, 0.08);
+  font-size: 12px;
+  color: #b23c38;
+}
+
+/* Lo que falta repartir: ámbar, como la insignia «sin mapear». No es un error --- es trabajo. */
+.inbox-notice {
+  max-width: 82ch;
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border: 1px solid rgba(214, 153, 30, 0.4);
+  border-radius: 6px;
+  background: rgba(214, 153, 30, 0.08);
+  font-size: 12px;
+  line-height: 1.6;
+  color: #a8701a;
+}
+
+.inbox-loading,
+.inbox-empty {
+  margin: 12px 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* =========================================================
+   FILTROS
+   ========================================================= */
 
 .inbox-filters {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
 }
 
 .inbox-filter {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 5px;
+  min-width: 0;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
 }
+
+.inbox-filter > input,
+.inbox-filter > select {
+  height: 32px;
+  min-width: 150px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface-secondary);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 11px;
+  outline: none;
+  box-sizing: border-box;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.inbox-filter > input::placeholder {
+  color: var(--text-muted);
+}
+
+.inbox-filter > input:focus,
+.inbox-filter > select:focus {
+  border-color: #3b73b9;
+  box-shadow: 0 0 0 2px rgba(59, 115, 185, 0.08);
+}
+
+/* Limpiar: el único botón suelto entre los filtros, así que se alinea con ellos. */
+.inbox-filters > button {
+  height: 32px;
+  padding: 0 16px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.inbox-filters > button:hover {
+  border-color: #3b73b9;
+  color: #3270b5;
+}
+
+/* =========================================================
+   LA TABLA
+   ========================================================= */
 
 .inbox-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease;
 }
 
-.inbox-table th,
-.inbox-table td {
-  padding: 0.4rem;
+.inbox-table > thead > tr > th {
+  height: 32px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--border-light);
   text-align: left;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  white-space: nowrap;
 }
 
-.inbox-cell-center {
+.inbox-table > tbody > tr > td {
+  height: 44px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--border-light);
+  font-size: 12px;
+  color: var(--text-secondary);
+  vertical-align: middle;
+}
+
+.inbox-table > tbody > tr:last-child > td {
+  border-bottom: none;
+}
+
+.inbox-table > tbody > tr:hover > td {
+  background: var(--surface-secondary);
+}
+
+/* El título es lo que se busca al recorrer la bandeja. */
+.inbox-table .inbox-row > td:nth-child(2) {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.inbox-table .inbox-cell-center {
   text-align: center;
 }
 
-.inbox-folio {
-  font-family: monospace;
+/* Prefijado con la tabla para ganarle a `.inbox-table > tbody > tr > td`, que fija el tamaño. */
+.inbox-table .inbox-folio {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
   white-space: nowrap;
 }
 
+/* Posible duplicado: una advertencia, no un error --- la fila entró. */
 .inbox-badge {
-  font-size: 0.8em;
-}
-
-.inbox-error,
-.inbox-empty,
-.inbox-loading {
-  margin: 0.5rem 0;
-}
-
-/* El paso del recorrido (DATAMODEL.md §8.2) y el recordatorio de lo que falta repartir */
-.inbox-step {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(214, 153, 30, 0.14);
+  color: #a8701a;
+  font-size: 10px;
+  font-weight: 600;
   white-space: nowrap;
 }
 
-.inbox-notice {
-  margin: 8px 0;
+/* El paso del recorrido (DATAMODEL.md §8.2). */
+.inbox-step {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 10px;
+  background: var(--surface-secondary);
+  border: 1px solid var(--border);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  cursor: help;
+}
+
+.inbox-table > tbody > tr > td > button {
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  color: #3270b5;
+  cursor: pointer;
+}
+
+.inbox-table > tbody > tr > td > button:hover {
+  text-decoration: underline;
+}
+
+/* =========================================================
+   PÁGINAS
+   Una importación mete decenas de renglones de golpe, así que
+   el rango y el total van a la vista: «cuánto falta» es la
+   pregunta de una bandeja.
+   ========================================================= */
+
+.inbox-pages {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.inbox-range {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.inbox-page-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.inbox-page-actions > button {
+  height: 30px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.inbox-page-actions > button:hover:not(:disabled) {
+  border-color: #3b73b9;
+  color: #3270b5;
+}
+
+.inbox-page-actions > button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* =========================================================
+   PANTALLAS ANGOSTAS
+   La tabla se desplaza: cada solicitud es un renglón que se
+   compara con el de arriba, y apilarla pierde eso.
+   ========================================================= */
+
+@media (max-width: 860px) {
+  .inbox {
+    padding: 20px 16px 32px;
+  }
+
+  .inbox-header > button {
+    margin-left: 0;
+  }
+
+  .inbox {
+    overflow-x: auto;
+  }
+
+  .inbox-table {
+    min-width: 900px;
+  }
+}
+
+/* Las dos acciones del renglón: abrir, y descartar una fila mal importada sin abrirla */
+.inbox-table .inbox-cell-actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.inbox-cell-actions > button + button {
+  margin-left: 12px;
+}
+
+.inbox-table > tbody > tr > td > .inbox-action-danger {
+  color: #e45c5c;
+}
+
+.inbox-table > tbody > tr > td > .inbox-action-danger:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.inbox-table > tbody > tr > td > .inbox-action-danger:disabled:hover {
+  text-decoration: none;
 }

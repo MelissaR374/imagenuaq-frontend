@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 
 import * as api from "../../api/client.js";
 import Mapping from "./mapping.jsx";
@@ -229,7 +229,60 @@ function PanelDeRegistro({ sheet, vista, cargando, onVer }) {
 }
 
 // Etapa 3. Correr la importación, el resumen de la corrida y el historial.
-function PanelDeImportacion({ sheet, corrida, corridas, importando, onImportar, onProbarEnSeco }) {
+// Marcar las filas de hoy como ya vistas, sin volverlas solicitudes. Es lo que hace utilizable un
+// rastreador que ya lleva meses: lo viejo se deja atrás de una vez, y de ahí en adelante sólo
+// entra lo que alguien agregue.
+function Arranque({ sheet, marcando, onMarcar, onContar, onDeshacer }) {
+  const marcadas = sheet.markedRows ?? 0;
+
+  if (marcadas > 0) {
+    return (
+      <div className="pipeline-baseline is-hecho">
+        <p className="pipeline-baseline-line">
+          {marcadas} fila{marcadas === 1 ? "" : "s"} marcada{marcadas === 1 ? "" : "s"} como ya
+          vista{marcadas === 1 ? "" : "s"}: no se importan.
+        </p>
+        <p className="pipeline-help">
+          Se marcaron sin crear solicitudes, así que sólo entra lo que se agregue de aquí en
+          adelante. Deshacerlo las vuelve desconocidas y la próxima importación las trae; lo que ya
+          se importó no se toca.
+        </p>
+        <button
+          type="button"
+          className="pipeline-button-ghost"
+          onClick={onDeshacer}
+          disabled={marcando}
+        >
+          Deshacer las marcas
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="pipeline-baseline">
+      <p className="pipeline-baseline-line">¿El libro ya traía historia?</p>
+      <p className="pipeline-help">
+        Si sus filas se atendieron antes de que existiera este sistema, márcalas como ya vistas: no
+        se crean solicitudes y dejan de aparecer en cada corrida. Desde entonces sólo entra lo
+        nuevo. Se puede deshacer.
+      </p>
+      <div className="pipeline-actions">
+        <button type="button" className="pipeline-button-ghost" onClick={onContar} disabled={marcando}>
+          ¿Cuántas serían?
+        </button>
+        <button type="button" className="pipeline-button-ghost" onClick={onMarcar} disabled={marcando}>
+          {marcando ? "Marcando..." : "Marcar las filas de hoy"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function PanelDeImportacion({
+  sheet, corrida, corridas, importando, marcando, marcado,
+  onImportar, onProbarEnSeco, onMarcar, onContar, onDeshacer,
+}) {
   if (!sheet.mapped) {
     return (
       <div className="pipeline-body">
@@ -239,6 +292,15 @@ function PanelDeImportacion({ sheet, corrida, corridas, importando, onImportar, 
         </p>
       </div>
     );
+  }
+
+  let avisoDeMarcado = null;
+  if (marcado !== null) {
+    let linea = `${marcado.rowsMarked} de ${marcado.rowsRead} filas quedaron marcadas como ya vistas.`;
+    if (marcado.dryRun) {
+      linea = `Se marcarían ${marcado.rowsMarked} de ${marcado.rowsRead} filas; ${marcado.rowsAlreadyKnown} ya se conocían.`;
+    }
+    avisoDeMarcado = <p className="pipeline-baseline-result">{linea}</p>;
   }
 
   if (corrida !== null) {
@@ -284,6 +346,7 @@ function PanelDeImportacion({ sheet, corrida, corridas, importando, onImportar, 
 
     return (
       <div className="pipeline-body">
+        {avisoDeMarcado}
         <div className="pipeline-run">
           <span className="pipeline-run-label">{leyenda}</span>
           <p className="pipeline-run-line">
@@ -298,6 +361,13 @@ function PanelDeImportacion({ sheet, corrida, corridas, importando, onImportar, 
           onImportar={onImportar}
           onProbarEnSeco={onProbarEnSeco}
         />
+        <Arranque
+          sheet={sheet}
+          marcando={marcando}
+          onMarcar={onMarcar}
+          onContar={onContar}
+          onDeshacer={onDeshacer}
+        />
         <Historial corridas={corridas} />
       </div>
     );
@@ -310,7 +380,15 @@ function PanelDeImportacion({ sheet, corrida, corridas, importando, onImportar, 
         entró se reconoce y se salta, así que correr esto dos veces no duplica nada. No se escribe
         nada en el libro de Excel.
       </p>
+      {avisoDeMarcado}
       <Acciones importando={importando} onImportar={onImportar} onProbarEnSeco={onProbarEnSeco} />
+      <Arranque
+        sheet={sheet}
+        marcando={marcando}
+        onMarcar={onMarcar}
+        onContar={onContar}
+        onDeshacer={onDeshacer}
+      />
       <Historial corridas={corridas} />
     </div>
   );
@@ -339,13 +417,22 @@ function Acciones({ importando, onImportar, onProbarEnSeco }) {
   );
 }
 
+// El historial. Los motivos de cada corrida se guardaron en `sheet_imports.errors`, así que
+// «¿por qué no entraron esas diez?» se contesta al día siguiente y no sólo en el momento: por eso
+// un renglón con errores se abre.
 function Historial({ corridas }) {
+  const [abierta, setAbierta] = useState(null);
+
   if (corridas === null) {
     return null;
   }
 
   if (corridas.length === 0) {
     return <p className="pipeline-note">Este libro no se ha importado todavía.</p>;
+  }
+
+  function alternar(id) {
+    setAbierta(abierta === id ? null : id);
   }
 
   return (
@@ -360,19 +447,53 @@ function Historial({ corridas }) {
             <th>Nuevas</th>
             <th>Ya estaban</th>
             <th>Con error</th>
+            <th />
           </tr>
         </thead>
         <tbody>
-          {corridas.map((una) => (
-            <tr key={una.id}>
-              <td>{fechaLarga(una.startedAt)}</td>
-              <td>{una.runByName ?? "—"}</td>
-              <td>{una.rowsRead}</td>
-              <td>{una.rowsCreated}</td>
-              <td>{una.rowsSkipped}</td>
-              <td>{una.rowsFailed}</td>
-            </tr>
-          ))}
+          {corridas.map((una) => {
+            let boton = null;
+            if (una.rowsFailed > 0) {
+              boton = (
+                <button type="button" className="pipeline-row-action" onClick={() => alternar(una.id)}>
+                  {abierta === una.id ? "Ocultar motivos" : "Ver motivos"}
+                </button>
+              );
+            }
+
+            let motivos = null;
+            if (abierta === una.id) {
+              motivos = (
+                <tr className="pipeline-reasons-row">
+                  <td colSpan={7}>
+                    <ul className="pipeline-errors">
+                      {una.errors.map((fallo) => (
+                        <li key={fallo.index}>
+                          {/* +2: el renglón 1 de la hoja es el encabezado */}
+                          Renglón {fallo.index + 2}: {fallo.message}
+                        </li>
+                      ))}
+                    </ul>
+                  </td>
+                </tr>
+              );
+            }
+
+            return (
+              <Fragment key={una.id}>
+                <tr>
+                  <td>{fechaLarga(una.startedAt)}</td>
+                  <td>{una.runByName ?? "—"}</td>
+                  <td>{una.rowsRead}</td>
+                  <td>{una.rowsCreated}</td>
+                  <td>{una.rowsSkipped}</td>
+                  <td>{una.rowsFailed}</td>
+                  <td className="pipeline-cell-actions">{boton}</td>
+                </tr>
+                {motivos}
+              </Fragment>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -420,6 +541,8 @@ function ImportPipeline({ sheet, onCerrar, onCambio }) {
   const [corrida, setCorrida] = useState(null);
   const [corridas, setCorridas] = useState(null);
   const [importando, setImportando] = useState(false);
+  const [marcando, setMarcando] = useState(false);
+  const [marcado, setMarcado] = useState(null);
   const [error, setError] = useState(null);
 
   // El historial se pide una vez y se refresca tras cada corrida.
@@ -490,6 +613,53 @@ function ImportPipeline({ sheet, onCerrar, onCambio }) {
     }
   }
 
+  // Marcar es una decisión con consecuencia --- esas filas dejan de entrar ---, así que pregunta
+  // primero y dice cuántas son. `dryRun` contesta «¿cuántas serían?» sin escribir nada.
+  async function marcar(dryRun) {
+    setError(null);
+    setMarcado(null);
+    setMarcando(true);
+    try {
+      const respuesta = await api.markSpreadsheetRows(sheet.id, { dryRun });
+      setMarcado({ ...respuesta, dryRun });
+      if (!dryRun) {
+        onCambio();
+      }
+    } catch (fallo) {
+      setError(fallo.message);
+    } finally {
+      setMarcando(false);
+    }
+  }
+
+  function contarMarcas() {
+    marcar(true);
+  }
+
+  function marcarFilas() {
+    const seguro = window.confirm(
+      "¿Marcar las filas que el libro tiene hoy como ya vistas?\n\nNo se crean solicitudes: esas filas dejan de importarse y sólo entrará lo que se agregue después. Se puede deshacer.",
+    );
+    if (!seguro) {
+      return;
+    }
+    marcar(false);
+  }
+
+  async function deshacerMarcas() {
+    setError(null);
+    setMarcado(null);
+    setMarcando(true);
+    try {
+      await api.clearSpreadsheetMarks(sheet.id);
+      onCambio();
+    } catch (fallo) {
+      setError(fallo.message);
+    } finally {
+      setMarcando(false);
+    }
+  }
+
   function importar() {
     correr(false);
   }
@@ -541,8 +711,13 @@ function ImportPipeline({ sheet, onCerrar, onCambio }) {
         corrida={corrida}
         corridas={corridas}
         importando={importando}
+        marcando={marcando}
+        marcado={marcado}
         onImportar={importar}
         onProbarEnSeco={probarEnSeco}
+        onMarcar={marcarFilas}
+        onContar={contarMarcas}
+        onDeshacer={deshacerMarcas}
       />
     );
   }

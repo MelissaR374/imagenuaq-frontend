@@ -190,6 +190,29 @@
   cursor: not-allowed;
 }
 
+/* Quitar: acción de texto en rojo, como en las demás tablas del sistema. Es destructiva pero
+   local --- todavía no se ha publicado nada --- así que no pide confirmación. */
+.schema-fields .schema-cell-remove {
+  text-align: right;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.schema-remove {
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  color: #e45c5c;
+  cursor: pointer;
+}
+
+.schema-remove:hover {
+  text-decoration: underline;
+}
+
 /* =========================================================
    AGREGAR, AYUDA Y ACCIONES
    ========================================================= */
