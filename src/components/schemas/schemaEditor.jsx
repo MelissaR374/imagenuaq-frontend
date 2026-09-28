@@ -32,6 +32,24 @@ function codigoSugerido(nombre) {
     .slice(0, 100);
 }
 
+// Por qué un campo quedó bloqueado. La clave es vocabulario compartido (DATAMODEL.md §2.13b): ya
+// tiene valores capturados debajo, así que su nombre y su tipo son los que ya se publicaron y
+// cambiarlos volvería mentira lo capturado. Se puede reusar; no se puede redefinir.
+function textoDeReuso(publicada) {
+  if (publicada === undefined) {
+    return "";
+  }
+
+  const donde = publicada.schemas ?? [];
+  if (donde.length === 0) {
+    return "Esta clave ya se publicó antes, así que su nombre y su tipo vienen de ahí.";
+  }
+  if (donde.length === 1) {
+    return `Ya se usa en «${donde[0]}»: su nombre y su tipo vienen de ahí.`;
+  }
+  return `Ya se usa en ${donde.length} formatos (${donde.join(", ")}): su nombre y su tipo vienen de ahí.`;
+}
+
 function SchemaEditor({
   tipos,
   vocabulario = [],
@@ -153,8 +171,7 @@ function SchemaEditor({
                       required
                     />
                     {publicadas.has(campo.code) ? (
-                      <p className="schema-reused">
-                      </p>
+                      <p className="schema-reused">{textoDeReuso(publicadas.get(campo.code))}</p>
                     ) : null}
                   </td>
                   <td>

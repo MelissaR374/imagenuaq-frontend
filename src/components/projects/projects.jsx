@@ -9,6 +9,10 @@ import "./projects.css";
 // El tablero de proyectos (RF-PRY-02). Por omisión los abiertos, los más urgentes arriba:
 // aquí no hay orden de llegada, la urgencia la pone una persona (RF-FLW-08).
 //
+// «Estatus» y «Etapas abiertas» van pegadas a propósito: son los dos vocabularios de estado de
+// DATAMODEL.md §8.1 y no se mueven solos ni juntos. Un proyecto con cero etapas abiertas y un
+// estatus que no dice «terminado» es trabajo que nadie cerró, y así se ve desde la lista.
+//
 // El catálogo de estatus se edita desde esta misma pantalla, en un panel aparte, porque es
 // donde se usa.
 const FILTROS_VACIOS = {
@@ -21,6 +25,48 @@ const FILTROS_VACIOS = {
   fieldValue: "",
   sort: "priority",
 };
+
+function oGuion(valor) {
+  if (valor === null || valor === undefined || valor === "") {
+    return "—";
+  }
+  return valor;
+}
+
+function FiltroSelect({ etiqueta, valor, opciones, onCambio }) {
+  return (
+    <label className="projects-filter">
+      {etiqueta}
+      <select value={valor} onChange={(evento) => onCambio(evento.target.value)}>
+        {opciones.map((opcion) => (
+          <option value={opcion.valor} key={opcion.valor}>
+            {opcion.texto}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function FilaDeProyecto({ proyecto, onAbrir }) {
+  return (
+    <tr className="projects-row">
+      <td className="projects-key">{proyecto.key}</td>
+      <td>{proyecto.title}</td>
+      <td>{oGuion(proyecto.requester)}</td>
+      <td>{proyecto.statusLabel}</td>
+      <td className="projects-cell-center">{proyecto.priority}</td>
+      <td className="projects-cell-center">{proyecto.openStageCount}</td>
+      <td className="projects-cell-center">{proyecto.requestCount}</td>
+      <td>{oGuion(proyecto.dueOn)}</td>
+      <td>
+        <button type="button" onClick={() => onAbrir(proyecto)}>
+          Abrir
+        </button>
+      </td>
+    </tr>
+  );
+}
 
 function Projects({ usuario }) {
   const [proyectos, setProyectos] = useState([]);
@@ -37,21 +83,25 @@ function Projects({ usuario }) {
   useEffect(() => {
     let cancelado = false;
 
-    async function cargar() {
+    async function cargarCatalogos() {
       try {
-        const [{ areas: areasRes }, { statuses }] = await Promise.all([
+        const [respuestaAreas, respuestaEstatus] = await Promise.all([
           api.listAreas(),
           api.listStatuses(),
         ]);
-        if (cancelado) return;
-        setAreas(areasRes);
-        setEstatus(statuses);
+        if (cancelado) {
+          return;
+        }
+        setAreas(respuestaAreas.areas);
+        setEstatus(respuestaEstatus.statuses);
       } catch (fallo) {
-        if (!cancelado) setError(fallo.message);
+        if (!cancelado) {
+          setError(fallo.message);
+        }
       }
     }
 
-    cargar();
+    cargarCatalogos();
     return () => {
       cancelado = true;
     };
@@ -60,19 +110,25 @@ function Projects({ usuario }) {
   useEffect(() => {
     let cancelado = false;
 
-    async function cargar() {
+    async function cargarProyectos() {
       setCargando(true);
       try {
-        const { projects } = await api.listProjects(filtros);
-        if (!cancelado) setProyectos(projects);
+        const respuesta = await api.listProjects(filtros);
+        if (!cancelado) {
+          setProyectos(respuesta.projects);
+        }
       } catch (fallo) {
-        if (!cancelado) setError(fallo.message);
+        if (!cancelado) {
+          setError(fallo.message);
+        }
       } finally {
-        if (!cancelado) setCargando(false);
+        if (!cancelado) {
+          setCargando(false);
+        }
       }
     }
 
-    cargar();
+    cargarProyectos();
     return () => {
       cancelado = true;
     };
@@ -82,23 +138,125 @@ function Projects({ usuario }) {
     setFiltros((actual) => ({ ...actual, [clave]: valor }));
   }
 
+  function limpiarFiltros() {
+    setFiltros(FILTROS_VACIOS);
+  }
+
+  function recargar() {
+    setVersion((actual) => actual + 1);
+  }
+
+  function abrirCaptura() {
+    setCapturando(true);
+  }
+
+  function cerrarCaptura() {
+    setCapturando(false);
+  }
+
+  function terminarCaptura(proyecto) {
+    setCapturando(false);
+    recargar();
+    setAbierto(proyecto);
+  }
+
+  function alternarCatalogo() {
+    setVerCatalogo(!verCatalogo);
+  }
+
+  function cerrarDetalle() {
+    setAbierto(null);
+  }
+
+  const opcionesDeEstado = [
+    { valor: "open", texto: "Abiertos" },
+    { valor: "closed", texto: "Cerrados" },
+    { valor: "archived", texto: "Archivados" },
+    { valor: "all", texto: "Todos" },
+  ];
+
+  const opcionesDeArea = [{ valor: "", texto: "Todas" }];
+  for (const area of areas) {
+    opcionesDeArea.push({ valor: String(area.id), texto: area.name });
+  }
+
+  const opcionesDeEstatus = [{ valor: "", texto: "Todos" }];
+  for (const uno of estatus) {
+    opcionesDeEstatus.push({ valor: String(uno.id), texto: uno.label });
+  }
+
+  const opcionesDeCosto = [
+    { valor: "", texto: "Todos" },
+    { valor: "true", texto: "Con costo" },
+    { valor: "false", texto: "Sin costo" },
+  ];
+
+  const opcionesDeOrden = [
+    { valor: "priority", texto: "Por urgencia" },
+    { valor: "due", texto: "Por fecha de entrega" },
+  ];
+
+  let textoDelCatalogo = "Catálogo de estatus";
+  if (verCatalogo) {
+    textoDelCatalogo = "Ocultar catálogo de estatus";
+  }
+
+  let bloqueDeError = null;
+  if (error !== null) {
+    bloqueDeError = <p className="projects-error">{error}</p>;
+  }
+
+  let panelDelCatalogo = null;
+  if (verCatalogo) {
+    panelDelCatalogo = <StatusCatalog areas={areas} />;
+  }
+
+  let bloqueDeCarga = null;
+  if (cargando) {
+    bloqueDeCarga = <p className="projects-loading">Cargando...</p>;
+  }
+
+  let bloqueVacio = null;
+  if (!cargando && proyectos.length === 0) {
+    bloqueVacio = <p className="projects-empty">No hay proyectos con esos filtros.</p>;
+  }
+
+  let formularioDeCaptura = null;
+  if (capturando) {
+    formularioDeCaptura = (
+      <ProjectForm areas={areas} onCreado={terminarCaptura} onCancelar={cerrarCaptura} />
+    );
+  }
+
+  let detalle = null;
+  if (abierto !== null) {
+    detalle = (
+      <ProjectDetail
+        proyecto={abierto}
+        areas={areas}
+        usuario={usuario}
+        onCerrar={cerrarDetalle}
+        onCambio={recargar}
+      />
+    );
+  }
+
   return (
     <section className="projects">
       <header className="projects-header">
         <h2 className="projects-title">Proyectos</h2>
         <div className="projects-header-actions">
-          <button type="button" onClick={() => setCapturando(true)}>
+          <button type="button" onClick={abrirCaptura}>
             Nuevo proyecto
           </button>
-          <button type="button" onClick={() => setVerCatalogo(!verCatalogo)}>
-            {verCatalogo ? "Ocultar catálogo de estatus" : "Catálogo de estatus"}
+          <button type="button" onClick={alternarCatalogo}>
+            {textoDelCatalogo}
           </button>
         </div>
       </header>
 
-      {error ? <p className="projects-error">{error}</p> : null}
-
-      {verCatalogo ? <StatusCatalog areas={areas} /> : null}
+      {bloqueDeError}
+      {panelDelCatalogo}
 
       <div className="projects-filters">
         <label className="projects-filter">
@@ -110,48 +268,33 @@ function Projects({ usuario }) {
           />
         </label>
 
-        <label className="projects-filter">
-          Estado
-          <select value={filtros.state} onChange={(evento) => cambiarFiltro("state", evento.target.value)}>
-            <option value="open">Abiertos</option>
-            <option value="closed">Cerrados</option>
-            <option value="archived">Archivados</option>
-            <option value="all">Todos</option>
-          </select>
-        </label>
+        <FiltroSelect
+          etiqueta="Estado"
+          valor={filtros.state}
+          opciones={opcionesDeEstado}
+          onCambio={(valor) => cambiarFiltro("state", valor)}
+        />
 
-        <label className="projects-filter">
-          Área con etapa
-          <select value={filtros.areaId} onChange={(evento) => cambiarFiltro("areaId", evento.target.value)}>
-            <option value="">Todas</option>
-            {areas.map((area) => (
-              <option value={area.id} key={area.id}>
-                {area.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <FiltroSelect
+          etiqueta="Área con etapa"
+          valor={filtros.areaId}
+          opciones={opcionesDeArea}
+          onCambio={(valor) => cambiarFiltro("areaId", valor)}
+        />
 
-        <label className="projects-filter">
-          Estatus
-          <select value={filtros.statusId} onChange={(evento) => cambiarFiltro("statusId", evento.target.value)}>
-            <option value="">Todos</option>
-            {estatus.map((uno) => (
-              <option value={uno.id} key={uno.id}>
-                {uno.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <FiltroSelect
+          etiqueta="Estatus"
+          valor={filtros.statusId}
+          opciones={opcionesDeEstatus}
+          onCambio={(valor) => cambiarFiltro("statusId", valor)}
+        />
 
-        <label className="projects-filter">
-          Costo
-          <select value={filtros.hasCost} onChange={(evento) => cambiarFiltro("hasCost", evento.target.value)}>
-            <option value="">Todos</option>
-            <option value="true">Con costo</option>
-            <option value="false">Sin costo</option>
-          </select>
-        </label>
+        <FiltroSelect
+          etiqueta="Costo"
+          valor={filtros.hasCost}
+          opciones={opcionesDeCosto}
+          onCambio={(valor) => cambiarFiltro("hasCost", valor)}
+        />
 
         {/* RF-IMP-08: encontrar el proyecto por un valor que una etapa produjo. */}
         <label className="projects-filter">
@@ -172,20 +315,19 @@ function Projects({ usuario }) {
           />
         </label>
 
-        <label className="projects-filter">
-          Orden
-          <select value={filtros.sort} onChange={(evento) => cambiarFiltro("sort", evento.target.value)}>
-            <option value="priority">Por urgencia</option>
-            <option value="due">Por fecha de entrega</option>
-          </select>
-        </label>
+        <FiltroSelect
+          etiqueta="Orden"
+          valor={filtros.sort}
+          opciones={opcionesDeOrden}
+          onCambio={(valor) => cambiarFiltro("sort", valor)}
+        />
 
-        <button type="button" onClick={() => setFiltros(FILTROS_VACIOS)}>
+        <button type="button" onClick={limpiarFiltros}>
           Limpiar
         </button>
       </div>
 
-      {cargando ? <p className="projects-loading">Cargando...</p> : null}
+      {bloqueDeCarga}
 
       <table className="projects-table">
         <thead>
@@ -203,50 +345,14 @@ function Projects({ usuario }) {
         </thead>
         <tbody>
           {proyectos.map((proyecto) => (
-            <tr className="projects-row" key={proyecto.id}>
-              <td className="projects-key">{proyecto.key}</td>
-              <td>{proyecto.title}</td>
-              <td>{proyecto.requester ?? "—"}</td>
-              <td>{proyecto.statusLabel}</td>
-              <td className="projects-cell-center">{proyecto.priority}</td>
-              <td className="projects-cell-center">{proyecto.openStageCount}</td>
-              <td className="projects-cell-center">{proyecto.requestCount}</td>
-              <td>{proyecto.dueOn ?? "—"}</td>
-              <td>
-                <button type="button" onClick={() => setAbierto(proyecto)}>
-                  Abrir
-                </button>
-              </td>
-            </tr>
+            <FilaDeProyecto proyecto={proyecto} onAbrir={setAbierto} key={proyecto.id} />
           ))}
         </tbody>
       </table>
 
-      {!cargando && proyectos.length === 0 ? (
-        <p className="projects-empty">No hay proyectos con esos filtros.</p>
-      ) : null}
-
-      {capturando ? (
-        <ProjectForm
-          areas={areas}
-          onCreado={(proyecto) => {
-            setCapturando(false);
-            setVersion((actual) => actual + 1);
-            setAbierto(proyecto);
-          }}
-          onCancelar={() => setCapturando(false)}
-        />
-      ) : null}
-
-      {abierto !== null ? (
-        <ProjectDetail
-          proyecto={abierto}
-          areas={areas}
-          usuario={usuario}
-          onCerrar={() => setAbierto(null)}
-          onCambio={() => setVersion((actual) => actual + 1)}
-        />
-      ) : null}
+      {bloqueVacio}
+      {formularioDeCaptura}
+      {detalle}
     </section>
   );
 }

@@ -59,3 +59,12 @@
 .inbox-loading {
   margin: 0.5rem 0;
 }
+
+/* El paso del recorrido (DATAMODEL.md §8.2) y el recordatorio de lo que falta repartir */
+.inbox-step {
+  white-space: nowrap;
+}
+
+.inbox-notice {
+  margin: 8px 0;
+}

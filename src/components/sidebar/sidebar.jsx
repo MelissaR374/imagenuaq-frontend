@@ -154,7 +154,7 @@ const menuSections = [
         roles: ["admin"],
       },
       {
-        //MAPEO DE LAS COLUMNAS DE LOS LIBROS A LOS ESQUEMAS; TODAVÍA SIN PANTALLA
+        //MAPEO DE LAS COLUMNAS DE LOS LIBROS A LOS ESQUEMAS, Y LA IMPORTACIÓN
         label: "Configuración de formatos de solicitud",
         icon: MdSwapHoriz,
         roles: ["admin"],

@@ -6,18 +6,269 @@ import "./requestDetail.css";
 
 // Una solicitud con todo lo que trae, y el paso a proyecto.
 //
+// La tira de «Recorrido» es el de DATAMODEL.md §8.2 visto desde una sola solicitud: en qué paso
+// está y qué falta para el siguiente. Está aquí porque los pasos 2 y 3 los mueve una mano y no un
+// automatismo, así que la pantalla tiene que decir cuál es esa mano y qué le toca; si no, la
+// solicitud se queda quieta y nadie sabe por qué.
+//
 // Lo capturado se muestra con los campos del formato con el que se capturó, no con el formato
 // de hoy: una versión publicada no se edita, así que una solicitud vieja se sigue leyendo como
 // se llenó. Lo que venga de una hoja trae además el renglón crudo, con las columnas que el
 // mapeo ignoró (RF-SOL-06).
+
+// Los pasos del recorrido que le tocan a una solicitud. El 1 ya pasó si estamos viéndola; del 5
+// en adelante son del proyecto y se ven en su propia pantalla.
+const RECORRIDO = [
+  {
+    clave: "nacio",
+    titulo: "1. Llegó",
+    mueve: "Capturada a mano o importada de un libro de Excel.",
+  },
+  {
+    clave: "repartir",
+    titulo: "2. Se reparte",
+    mueve: "Alguien dice a qué área le toca. Aquí abajo, en «Área».",
+  },
+  {
+    clave: "atender",
+    titulo: "3. Se atiende",
+    mueve: "El área le mueve el estatus mientras avanza.",
+  },
+  {
+    clave: "convertir",
+    titulo: "4. Se convierte",
+    mueve: "Se vuelve proyecto y se lleva cada valor capturado.",
+  },
+];
+
+// Cuál de los pasos es el actual. Una convertida ya pasó por todos, aunque su estatus siga
+// diciendo «Recibido» (DATAMODEL.md §8.4, costura 1).
+function pasoActualDe(detalle) {
+  if (detalle.projectId !== null) {
+    return "convertir";
+  }
+  if (detalle.areaId === null) {
+    return "repartir";
+  }
+  return "atender";
+}
+
+// Un valor capturado como texto legible: los booleanos como sí/no y lo demás tal cual.
+function formatearValor(valor) {
+  if (valor === null || valor === undefined || valor === "") {
+    return "—";
+  }
+  if (valor === true) {
+    return "Sí";
+  }
+  if (valor === false) {
+    return "No";
+  }
+  if (typeof valor === "object") {
+    return JSON.stringify(valor);
+  }
+  return String(valor);
+}
+
+// La tira del recorrido. El paso actual va marcado y es el único que explica qué lo mueve: los
+// demás ya pasaron o todavía no tocan.
+function Recorrido({ pasoActual }) {
+  const indiceActual = RECORRIDO.findIndex((paso) => paso.clave === pasoActual);
+
+  return (
+    <ol className="request-detail-walk">
+      {RECORRIDO.map((paso, indice) => {
+        let estado = "pendiente";
+        if (indice < indiceActual) {
+          estado = "hecho";
+        }
+        if (indice === indiceActual) {
+          estado = "actual";
+        }
+
+        let explicacion = null;
+        if (estado === "actual") {
+          explicacion = <p className="request-detail-walk-help">{paso.mueve}</p>;
+        }
+
+        return (
+          <li className={`request-detail-walk-step is-${estado}`} key={paso.clave}>
+            {paso.titulo}
+            {explicacion}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+// Lo capturado, en el orden del formato, y debajo lo que la captura trae pero el formato ya no
+// pide: no se pierde nada.
+function ValoresCapturados({ campos, data }) {
+  const capturado = data ?? {};
+  const codigosDelFormato = campos.map((campo) => campo.code);
+  const sobrantes = Object.keys(capturado).filter(
+    (clave) => !codigosDelFormato.includes(clave),
+  );
+
+  return (
+    <table className="request-detail-data">
+      <tbody>
+        {campos.map((campo) => (
+          <tr key={campo.code}>
+            <th>{campo.name}</th>
+            <td>{formatearValor(capturado[campo.code])}</td>
+          </tr>
+        ))}
+        {sobrantes.map((clave) => (
+          <tr className="request-detail-extra" key={clave}>
+            <th>{clave} (fuera del formato)</th>
+            <td>{formatearValor(capturado[clave])}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+// El renglón como lo tenía la hoja, columnas ignoradas incluidas (RF-SOL-06).
+function RenglonOriginal({ sourceData }) {
+  const [abierto, setAbierto] = useState(false);
+
+  function alternar() {
+    setAbierto(!abierto);
+  }
+
+  let texto = "Ver el renglón original de la hoja";
+  if (abierto) {
+    texto = "Ocultar el renglón original";
+  }
+
+  let tabla = null;
+  if (abierto) {
+    tabla = (
+      <table className="request-detail-data">
+        <tbody>
+          {Object.keys(sourceData).map((columna) => (
+            <tr key={columna}>
+              <th>{columna}</th>
+              <td>{formatearValor(sourceData[columna])}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    );
+  }
+
+  return (
+    <div className="request-detail-raw">
+      <button type="button" onClick={alternar}>
+        {texto}
+      </button>
+      {tabla}
+    </div>
+  );
+}
+
+// El paso 4 del recorrido. Lo que se deje vacío lo toma de la solicitud.
+function FormularioDeConversion({ datos, areas, ocupado, onCambiar, onEnviar, onCancelar }) {
+  function cambiar(clave, valor) {
+    onCambiar({ ...datos, [clave]: valor });
+  }
+
+  let nombreDeLaEtapa = null;
+  if (datos.areaId !== "") {
+    nombreDeLaEtapa = (
+      <label className="request-detail-field">
+        Nombre de la etapa
+        <input
+          value={datos.stageTitle}
+          onChange={(evento) => cambiar("stageTitle", evento.target.value)}
+          placeholder="Diseño de la propuesta"
+        />
+      </label>
+    );
+  }
+
+  let textoDelBoton = "Crear el proyecto";
+  if (ocupado) {
+    textoDelBoton = "Convirtiendo...";
+  }
+
+  return (
+    <form className="request-detail-convert" onSubmit={onEnviar}>
+      <h4>Convertir en proyecto</h4>
+      <p className="request-detail-help">
+        Lo que se deje vacío se toma de la solicitud. Cada valor capturado pasa al proyecto con su
+        clave, para que la orden de impresión y facturación lo lean sin recapturar.
+      </p>
+
+      <label className="request-detail-field">
+        Llave del proyecto (vacío: se genera como PRY-000001)
+        <input
+          value={datos.key}
+          onChange={(evento) => cambiar("key", evento.target.value)}
+          placeholder="PAPEL-FCQ-03"
+        />
+      </label>
+
+      <label className="request-detail-field">
+        Título del proyecto
+        <input value={datos.title} onChange={(evento) => cambiar("title", evento.target.value)} />
+      </label>
+
+      <label className="request-detail-field" htmlFor={datos.idDelSolicitante}>
+        Entidad solicitante (este es el momento de corregir el nombre)
+      </label>
+      <RequesterInput
+        id={datos.idDelSolicitante}
+        value={datos.requester}
+        onChange={(requester) => cambiar("requester", requester)}
+      />
+
+      <label className="request-detail-field">
+        <input
+          type="checkbox"
+          checked={datos.hasCost}
+          onChange={(evento) => cambiar("hasCost", evento.target.checked)}
+        />
+        Con costo
+      </label>
+
+      {/* Las etapas se crean a mano: el flujo declarativo todavía no existe (§8.3). */}
+      <label className="request-detail-field">
+        Primera etapa, en el área
+        <select value={datos.areaId} onChange={(evento) => cambiar("areaId", evento.target.value)}>
+          <option value="">Sin etapas todavía</option>
+          {areas.map((area) => (
+            <option value={area.id} key={area.id}>
+              {area.name}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      {nombreDeLaEtapa}
+
+      <div className="request-detail-actions">
+        <button type="submit" disabled={ocupado}>
+          {textoDelBoton}
+        </button>
+        <button type="button" onClick={onCancelar}>
+          Cancelar
+        </button>
+      </div>
+    </form>
+  );
+}
+
 function RequestDetail({ solicitud, areas, onCerrar, onCambio }) {
   const [detalle, setDetalle] = useState(solicitud);
   const [estatus, setEstatus] = useState([]);
   const [error, setError] = useState(null);
   const [ocupado, setOcupado] = useState(false);
-  const [verCrudo, setVerCrudo] = useState(false);
 
-  // El formulario de conversión: lo que se omite lo toma de la solicitud.
+  // El formulario de conversión: null mientras no se abre.
   const [convertir, setConvertir] = useState(null);
   const [conflictos, setConflictos] = useState([]);
 
@@ -25,16 +276,27 @@ function RequestDetail({ solicitud, areas, onCerrar, onCambio }) {
     let cancelado = false;
 
     async function cargar() {
+      // El catálogo de estatus depende del área: los globales siempre, los del área solo si la
+      // solicitud es de esa área.
+      let filtroDeEstatus = {};
+      if (solicitud.areaId !== null) {
+        filtroDeEstatus = { areaId: solicitud.areaId };
+      }
+
       try {
-        const [{ request }, { statuses }] = await Promise.all([
+        const [respuestaSolicitud, respuestaEstatus] = await Promise.all([
           api.getRequest(solicitud.id),
-          api.listStatuses(solicitud.areaId ? { areaId: solicitud.areaId } : {}),
+          api.listStatuses(filtroDeEstatus),
         ]);
-        if (cancelado) return;
-        setDetalle(request);
-        setEstatus(statuses);
+        if (cancelado) {
+          return;
+        }
+        setDetalle(respuestaSolicitud.request);
+        setEstatus(respuestaEstatus.statuses);
       } catch (fallo) {
-        if (!cancelado) setError(fallo.message);
+        if (!cancelado) {
+          setError(fallo.message);
+        }
       }
     }
 
@@ -45,8 +307,8 @@ function RequestDetail({ solicitud, areas, onCerrar, onCambio }) {
   }, [solicitud.id, solicitud.areaId]);
 
   async function recargar() {
-    const { request } = await api.getRequest(detalle.id);
-    setDetalle(request);
+    const respuesta = await api.getRequest(detalle.id);
+    setDetalle(respuesta.request);
     onCambio();
   }
 
@@ -63,10 +325,30 @@ function RequestDetail({ solicitud, areas, onCerrar, onCambio }) {
     }
   }
 
-  async function corregirSolicitante(requester) {
+  async function corregirSolicitante() {
     setError(null);
     try {
-      await api.updateRequest(detalle.id, { requester });
+      await api.updateRequest(detalle.id, { requester: detalle.requester });
+      await recargar();
+    } catch (fallo) {
+      setError(fallo.message);
+    }
+  }
+
+  function escribirSolicitante(requester) {
+    setDetalle({ ...detalle, requester });
+  }
+
+  // Paso 2 del recorrido: lo importado de Excel llega sin área y alguien decide a quién le toca.
+  async function asignarArea(valor) {
+    let areaId = null;
+    if (valor !== "") {
+      areaId = Number(valor);
+    }
+
+    setError(null);
+    try {
+      await api.updateRequest(detalle.id, { areaId });
       await recargar();
     } catch (fallo) {
       setError(fallo.message);
@@ -86,8 +368,35 @@ function RequestDetail({ solicitud, areas, onCerrar, onCambio }) {
     }
   }
 
+  function abrirConversion() {
+    setConvertir({
+      key: "",
+      title: detalle.title,
+      requester: detalle.requester ?? "",
+      hasCost: false,
+      areaId: detalle.areaId ?? "",
+      stageTitle: "",
+      idDelSolicitante: `convertir-solicitante-${detalle.id}`,
+    });
+  }
+
+  function cerrarConversion() {
+    setConvertir(null);
+  }
+
   async function convertirEnProyecto(evento) {
     evento.preventDefault();
+
+    // Una etapa inicial solo si se eligió un área para ella.
+    let stages = [];
+    if (convertir.areaId !== "") {
+      let title = convertir.stageTitle;
+      if (title === "") {
+        title = "Primera etapa";
+      }
+      stages = [{ areaId: Number(convertir.areaId), title }];
+    }
+
     setOcupado(true);
     setError(null);
     try {
@@ -96,10 +405,7 @@ function RequestDetail({ solicitud, areas, onCerrar, onCambio }) {
         title: convertir.title || undefined,
         requester: convertir.requester || undefined,
         hasCost: convertir.hasCost,
-        stages:
-          convertir.areaId === ""
-            ? []
-            : [{ areaId: Number(convertir.areaId), title: convertir.stageTitle || "Primera etapa" }],
+        stages,
       });
       setConflictos(respuesta.conflicts);
       setConvertir(null);
@@ -111,10 +417,124 @@ function RequestDetail({ solicitud, areas, onCerrar, onCambio }) {
     }
   }
 
-  // Los campos del formato, en el orden en que se capturaron, con su valor.
-  const campos = detalle.fields
-    ? [...detalle.fields.deliverables, ...detalle.fields.information]
-    : [];
+  const yaEsProyecto = detalle.projectId !== null;
+
+  // Los campos del formato, en el orden en que se capturaron.
+  let campos = [];
+  if (detalle.fields !== null && detalle.fields !== undefined) {
+    campos = [...detalle.fields.deliverables, ...detalle.fields.information];
+  }
+
+  let bloqueDeError = null;
+  if (error !== null) {
+    bloqueDeError = <p className="request-detail-error">{error}</p>;
+  }
+
+  // El área: un selector mientras se pueda repartir, y solo el nombre una vez convertida.
+  let bloqueDeArea;
+  if (yaEsProyecto) {
+    bloqueDeArea = detalle.areaName ?? "sin área";
+  } else {
+    bloqueDeArea = (
+      <select
+        value={detalle.areaId ?? ""}
+        onChange={(evento) => asignarArea(evento.target.value)}
+        disabled={ocupado}
+      >
+        <option value="">Sin área</option>
+        {areas.map((area) => (
+          <option value={area.id} key={area.id}>
+            {area.name}
+          </option>
+        ))}
+      </select>
+    );
+  }
+
+  let origen = detalle.source;
+  if (detalle.sheetName !== null) {
+    origen = `${detalle.source} — ${detalle.sheetName}`;
+  }
+
+  let bloqueDeDuplicado = null;
+  if (detalle.duplicateOfFolio !== null) {
+    bloqueDeDuplicado = (
+      <>
+        <dt>Posible duplicado de</dt>
+        <dd>{detalle.duplicateOfFolio}</dd>
+      </>
+    );
+  }
+
+  let bloqueDeProyecto = null;
+  if (yaEsProyecto) {
+    bloqueDeProyecto = (
+      <>
+        <dt>Proyecto</dt>
+        <dd>
+          {detalle.projectKey} — {detalle.projectTitle}
+        </dd>
+      </>
+    );
+  }
+
+  let bloqueDelRenglon = null;
+  if (detalle.sourceData !== null && detalle.sourceData !== undefined) {
+    bloqueDelRenglon = <RenglonOriginal sourceData={detalle.sourceData} />;
+  }
+
+  let bloqueDeConflictos = null;
+  if (conflictos.length > 0) {
+    bloqueDeConflictos = (
+      <div className="request-detail-conflicts">
+        <h4>Valores que dos solicitudes traían distintos</h4>
+        <ul>
+          {conflictos.map((conflicto) => (
+            <li key={conflicto.key}>
+              <strong>{conflicto.key}</strong>: se guardó «{conflicto.kept}» y se descartó «
+              {conflicto.discarded}» (de {conflicto.folio}).
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
+
+  // Las acciones del paso 4, o la razón por la que ya no hay ninguna.
+  let bloqueDeAcciones;
+  if (yaEsProyecto) {
+    bloqueDeAcciones = (
+      <p className="request-detail-converted">
+        Ya es un proyecto, así que no se edita ni se elimina: el proyecto perdería lo que contesta.
+        El solicitante sí se puede corregir.
+      </p>
+    );
+  } else {
+    bloqueDeAcciones = (
+      <>
+        <button type="button" onClick={abrirConversion} disabled={ocupado}>
+          Convertir en proyecto
+        </button>
+        <button type="button" onClick={eliminar} disabled={ocupado}>
+          Eliminar
+        </button>
+      </>
+    );
+  }
+
+  let formularioDeConversion = null;
+  if (convertir !== null) {
+    formularioDeConversion = (
+      <FormularioDeConversion
+        datos={convertir}
+        areas={areas}
+        ocupado={ocupado}
+        onCambiar={setConvertir}
+        onEnviar={convertirEnProyecto}
+        onCancelar={cerrarConversion}
+      />
+    );
+  }
 
   return (
     <section className="request-detail">
@@ -127,7 +547,9 @@ function RequestDetail({ solicitud, areas, onCerrar, onCambio }) {
         </button>
       </header>
 
-      {error ? <p className="request-detail-error">{error}</p> : null}
+      {bloqueDeError}
+
+      <Recorrido pasoActual={pasoActualDe(detalle)} />
 
       <dl className="request-detail-facts">
         <dt>Formato</dt>
@@ -140,19 +562,15 @@ function RequestDetail({ solicitud, areas, onCerrar, onCambio }) {
           <RequesterInput
             id={`solicitante-${detalle.id}`}
             value={detalle.requester ?? ""}
-            onChange={(requester) => setDetalle({ ...detalle, requester })}
+            onChange={escribirSolicitante}
           />
-          <button
-            type="button"
-            onClick={() => corregirSolicitante(detalle.requester)}
-            disabled={ocupado}
-          >
+          <button type="button" onClick={corregirSolicitante} disabled={ocupado}>
             Guardar solicitante
           </button>
         </dd>
 
         <dt>Área</dt>
-        <dd>{detalle.areaName ?? "sin área"}</dd>
+        <dd>{bloqueDeArea}</dd>
 
         <dt>Estatus</dt>
         <dd>
@@ -161,217 +579,42 @@ function RequestDetail({ solicitud, areas, onCerrar, onCambio }) {
             onChange={(evento) => cambiarEstatus(evento.target.value)}
             disabled={ocupado}
           >
-            {estatus.map((uno) => (
-              <option value={uno.id} key={uno.id}>
-                {uno.label}
-                {uno.isGlobal ? "" : " (del área)"}
-              </option>
-            ))}
+            {estatus.map((uno) => {
+              let sufijo = " (del área)";
+              if (uno.isGlobal) {
+                sufijo = "";
+              }
+              return (
+                <option value={uno.id} key={uno.id}>
+                  {uno.label}
+                  {sufijo}
+                </option>
+              );
+            })}
           </select>
         </dd>
 
         <dt>Cómo llegó</dt>
-        <dd>
-          {detalle.source}
-          {detalle.sheetName ? ` — ${detalle.sheetName}` : null}
-        </dd>
+        <dd>{origen}</dd>
 
-        <dt>Prioridad</dt>
+        <dt>Urgencia</dt>
         <dd>{detalle.priority}</dd>
 
-        {detalle.duplicateOfFolio ? (
-          <>
-            <dt>Posible duplicado de</dt>
-            <dd>{detalle.duplicateOfFolio}</dd>
-          </>
-        ) : null}
-
-        {detalle.projectKey ? (
-          <>
-            <dt>Proyecto</dt>
-            <dd>
-              {detalle.projectKey} — {detalle.projectTitle}
-            </dd>
-          </>
-        ) : null}
+        {bloqueDeDuplicado}
+        {bloqueDeProyecto}
       </dl>
 
       <h4 className="request-detail-subtitle">Lo capturado</h4>
-      <table className="request-detail-data">
-        <tbody>
-          {campos.map((campo) => (
-            <tr key={campo.code}>
-              <th>{campo.name}</th>
-              <td>{formatearValor(detalle.data?.[campo.code])}</td>
-            </tr>
-          ))}
-          {/* Lo que el formato ya no pide pero la captura sí trae: no se pierde nada. */}
-          {Object.entries(detalle.data ?? {})
-            .filter(([clave]) => !campos.some((campo) => campo.code === clave))
-            .map(([clave, valor]) => (
-              <tr className="request-detail-extra" key={clave}>
-                <th>{clave} (fuera del formato)</th>
-                <td>{formatearValor(valor)}</td>
-              </tr>
-            ))}
-        </tbody>
-      </table>
+      <ValoresCapturados campos={campos} data={detalle.data} />
 
-      {detalle.sourceData ? (
-        <div className="request-detail-raw">
-          <button type="button" onClick={() => setVerCrudo(!verCrudo)}>
-            {verCrudo ? "Ocultar el renglón original" : "Ver el renglón original de la hoja"}
-          </button>
-          {verCrudo ? (
-            <table className="request-detail-data">
-              <tbody>
-                {Object.entries(detalle.sourceData).map(([columna, valor]) => (
-                  <tr key={columna}>
-                    <th>{columna}</th>
-                    <td>{formatearValor(valor)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : null}
-        </div>
-      ) : null}
+      {bloqueDelRenglon}
+      {bloqueDeConflictos}
 
-      {conflictos.length > 0 ? (
-        <div className="request-detail-conflicts">
-          <h4>Valores que dos solicitudes traían distintos</h4>
-          <ul>
-            {conflictos.map((conflicto, indice) => (
-              <li key={indice}>
-                <strong>{conflicto.key}</strong>: se guardó «{conflicto.kept}» y se descartó «
-                {conflicto.discarded}» (de {conflicto.folio}).
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
+      <div className="request-detail-actions">{bloqueDeAcciones}</div>
 
-      <div className="request-detail-actions">
-        {detalle.projectId === null ? (
-          <>
-            <button
-              type="button"
-              onClick={() =>
-                setConvertir({
-                  key: "",
-                  title: detalle.title,
-                  requester: detalle.requester ?? "",
-                  hasCost: false,
-                  areaId: detalle.areaId ?? "",
-                  stageTitle: "",
-                })
-              }
-              disabled={ocupado}
-            >
-              Convertir en proyecto
-            </button>
-            <button type="button" onClick={eliminar} disabled={ocupado}>
-              Eliminar
-            </button>
-          </>
-        ) : (
-          <p className="request-detail-converted">
-            Ya es un proyecto, así que no se edita ni se elimina: el proyecto perdería lo que
-            contesta. El solicitante sí se puede corregir.
-          </p>
-        )}
-      </div>
-
-      {convertir !== null ? (
-        <form className="request-detail-convert" onSubmit={convertirEnProyecto}>
-          <h4>Convertir en proyecto</h4>
-          <p className="request-detail-help">
-            Lo que se deje vacío se toma de la solicitud. Cada valor capturado pasa al proyecto
-            con su clave, para que la orden de impresión y facturación lo lean sin recapturar.
-          </p>
-
-          <label className="request-detail-field">
-            Llave del proyecto (vacío: se genera como PRY-000001)
-            <input
-              value={convertir.key}
-              onChange={(evento) => setConvertir({ ...convertir, key: evento.target.value })}
-              placeholder="PAPEL-FCQ-03"
-            />
-          </label>
-
-          <label className="request-detail-field">
-            Título del proyecto
-            <input
-              value={convertir.title}
-              onChange={(evento) => setConvertir({ ...convertir, title: evento.target.value })}
-            />
-          </label>
-
-          <label className="request-detail-field" htmlFor={`convertir-solicitante-${detalle.id}`}>
-            Entidad solicitante (este es el momento de corregir el nombre)
-          </label>
-          <RequesterInput
-            id={`convertir-solicitante-${detalle.id}`}
-            value={convertir.requester}
-            onChange={(requester) => setConvertir({ ...convertir, requester })}
-          />
-
-          <label className="request-detail-field">
-            <input
-              type="checkbox"
-              checked={convertir.hasCost}
-              onChange={(evento) => setConvertir({ ...convertir, hasCost: evento.target.checked })}
-            />
-            Con costo
-          </label>
-
-          <label className="request-detail-field">
-            Primera etapa, en el área
-            <select
-              value={convertir.areaId}
-              onChange={(evento) => setConvertir({ ...convertir, areaId: evento.target.value })}
-            >
-              <option value="">Sin etapas todavía</option>
-              {areas.map((area) => (
-                <option value={area.id} key={area.id}>
-                  {area.name}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          {convertir.areaId !== "" ? (
-            <label className="request-detail-field">
-              Nombre de la etapa
-              <input
-                value={convertir.stageTitle}
-                onChange={(evento) => setConvertir({ ...convertir, stageTitle: evento.target.value })}
-                placeholder="Diseño de la propuesta"
-              />
-            </label>
-          ) : null}
-
-          <div className="request-detail-actions">
-            <button type="submit" disabled={ocupado}>
-              {ocupado ? "Convirtiendo..." : "Crear el proyecto"}
-            </button>
-            <button type="button" onClick={() => setConvertir(null)}>
-              Cancelar
-            </button>
-          </div>
-        </form>
-      ) : null}
+      {formularioDeConversion}
     </section>
   );
-}
-
-// Un valor capturado como texto legible: los booleanos como sí/no y lo demás tal cual.
-function formatearValor(valor) {
-  if (valor === null || valor === undefined || valor === "") return "—";
-  if (valor === true) return "Sí";
-  if (valor === false) return "No";
-  if (typeof valor === "object") return JSON.stringify(valor);
-  return String(valor);
 }
 
 export default RequestDetail;

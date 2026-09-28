@@ -171,7 +171,9 @@ function Schemas() {
           {formatos.map((formato) => (
             <tr className="schemas-row" key={formato.id}>
               <td>{formato.name}</td>
-              <td className="schemas-code">{formato.code}</td>
+              <td className="schemas-cell-code">
+                <code className="schemas-code">{formato.code}</code>
+              </td>
               <td>{formato.version ?? "—"}</td>
               <td>
                 {formato.fields

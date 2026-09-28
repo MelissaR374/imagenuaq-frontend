@@ -1,6 +1,11 @@
-// Cuentas Microsoft conectadas y libros de Excel registrados. Es la primera mitad de la
-// migración (RF-MIG-01): registrar qué libro se lee y con qué cuenta. Mapear sus columnas a
-// un formato es la siguiente etapa y aquí sólo se muestra si ya está hecho.
+// Cuentas Microsoft conectadas y libros de Excel registrados: la primera mitad de la migración
+// (RF-MIG-01). Aquí se conecta la cuenta, se guarda el registro de aplicación de Azure y se dan
+// de alta los libros.
+//
+// Lo que se hace *con* un libro --- mapearlo, importarlo, ver sus corridas --- **no** está aquí:
+// vive en «Configuración de formatos de solicitud» (`importConfig.jsx` y `importPipeline.jsx`),
+// que es la división que el propio menú ya describía. Son dos trabajos de dos momentos: dar de
+// alta el libro pasa una vez, y el mapeo se ajusta cada vez que la hoja cambia.
 import { Fragment, useEffect, useState } from "react";
 
 import * as api from "../../api/client.js";
@@ -60,6 +65,7 @@ function Spreadsheets() {
   // Los encabezados desplegados y unas filas de muestra: { id, kind, name, headers, rows } o null.
   const [vista, setVista] = useState(null);
   const [cargandoVista, setCargandoVista] = useState(false);
+
 
   // El registro de aplicación de Azure: lo que hay y el formulario para cambiarlo.
   const [app, setApp] = useState(null);
@@ -727,9 +733,7 @@ function Spreadsheets() {
                           onClick={() => handleVer(hoja)}
                           disabled={cargandoVista}
                         >
-                          {vista?.id === hoja.id
-                            ? "Ocultar"
-                            : "Ver encabezados"}
+                          {vista?.id === hoja.id ? "Ocultar" : "Ver encabezados"}
                         </button>
                         <button
                           className="spreadsheets-action spreadsheets-action-danger"

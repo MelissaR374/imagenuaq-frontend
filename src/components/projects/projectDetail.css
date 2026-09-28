@@ -140,3 +140,24 @@
 .project-output-done {
   opacity: 0.8;
 }
+
+/* Los dos vocabularios de estado, uno al lado del otro (DATAMODEL.md §8.1) */
+.project-detail-how {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 8px 0 16px;
+}
+
+.project-detail-how-half {
+  flex: 1 1 240px;
+}
+
+.project-detail-how-title {
+  margin: 0 0 4px;
+}
+
+.project-detail-warning {
+  flex: 1 1 100%;
+  margin: 0;
+}

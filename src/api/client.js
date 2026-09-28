@@ -396,3 +396,28 @@ export const deleteFieldValue = (id, key) =>
 // `needed: false` retira el pedido. Necesita el permiso `finance.request`.
 export const requestFinance = (id, input) =>
   request(`/projects/${id}/finance-request`, { method: "POST", body: input });
+
+// --- Mapeo e importación de libros (RF-MIG-02) ---
+//
+// El mapeo dice a qué versión de formato apunta el libro y qué columna alimenta cada campo.
+// `headers` es opcional: cuando se manda, el servidor revisa que cada columna nombrada exista
+// de verdad en la hoja, que es lo que convierte una columna renombrada en un error al guardar
+// en vez de una sorpresa en el renglón 200 de la importación.
+export const setSpreadsheetMapping = (id, input) =>
+  request(`/spreadsheets/${id}/mapping`, { method: "PUT", body: input });
+
+export const clearSpreadsheetMapping = (id) =>
+  request(`/spreadsheets/${id}/mapping`, { method: "DELETE" });
+
+// Las primeras filas como las leería el mapeo, sin escribir nada. Se le puede pasar un mapeo
+// que todavía no se guarda, que es la única forma honesta de juzgarlo: las preguntas que
+// contesta son sobre los datos.
+export const previewSpreadsheetMapping = (id, input = {}) =>
+  request(`/spreadsheets/${id}/mapping/preview`, { method: "POST", body: input });
+
+// Convierte las filas en solicitudes. `dryRun` cuenta sin escribir. Las filas ya importadas
+// no se vuelven a crear: la huella de la fila ya se conoce.
+export const importSpreadsheet = (id, input = {}) =>
+  request(`/spreadsheets/${id}/import`, { method: "POST", body: input });
+
+export const listSpreadsheetImports = (id) => request(`/spreadsheets/${id}/imports`);

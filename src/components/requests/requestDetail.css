@@ -76,3 +76,22 @@
 .request-detail-converted {
   margin: 0.5rem 0;
 }
+
+/* La tira del recorrido (DATAMODEL.md §8.2) */
+.request-detail-walk {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 8px 0 16px;
+  padding: 0;
+  list-style: none;
+}
+
+.request-detail-walk-step {
+  flex: 1 1 140px;
+  padding: 6px 8px;
+}
+
+.request-detail-walk-help {
+  margin: 4px 0 0;
+}

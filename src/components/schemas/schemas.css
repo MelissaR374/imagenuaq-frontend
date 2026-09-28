@@ -1,64 +1,385 @@
-/* Solo acomodo: el diseño lo revisa quien lleva el CSS. */
+/* =========================================================
+   ESQUEMAS DE DATOS
+   El catálogo de formatos: qué datos lleva un proyecto y de
+   qué tipo son. Mismos tokens que el resto del sistema.
+
+   Una clave se pinta como pastilla azul monoespaciada, que es
+   cómo este sistema ya marca un identificador que se teclea
+   exacto (`roles.css`, `users.css`, `spreadsheets.css`).
+   ========================================================= */
 
 .schemas {
-  padding: 1rem;
+  padding: 28px 32px 40px;
+  background: var(--background);
+  color: var(--text);
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
 }
+
+.schemas-loading {
+  padding: 28px 32px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* =========================================================
+   ENCABEZADO
+   ========================================================= */
 
 .schemas-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 1rem;
+  gap: 12px;
+  margin-bottom: 20px;
 }
 
 .schemas-title {
   margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text);
 }
+
+.schemas-header > button {
+  height: 32px;
+  min-width: 140px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 5px;
+  background: #2864a8;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    transform 0.1s ease;
+}
+
+.schemas-header > button:hover {
+  background: #205895;
+}
+
+.schemas-header > button:active {
+  transform: translateY(1px);
+}
+
+/* =========================================================
+   AVISOS
+   ========================================================= */
+
+.schemas-error,
+.schemas-notice {
+  max-width: 82ch;
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.schemas-error {
+  border: 1px solid rgba(217, 83, 79, 0.35);
+  background: rgba(217, 83, 79, 0.08);
+  color: #b23c38;
+}
+
+.schemas-notice {
+  border: 1px solid rgba(46, 125, 50, 0.35);
+  background: rgba(46, 125, 50, 0.08);
+  color: #2e7d32;
+}
+
+/* =========================================================
+   LA TABLA DE FORMATOS
+   ========================================================= */
 
 .schemas-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease;
 }
 
-.schemas-table th,
-.schemas-table td {
-  padding: 0.4rem;
+.schemas-table > thead > tr > th {
+  height: 32px;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--border-light);
   text-align: left;
-  vertical-align: top;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.schemas-table > tbody > tr > td {
+  height: 44px;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--border-light);
+  font-size: 12px;
+  color: var(--text-secondary);
+  vertical-align: middle;
+}
+
+.schemas-table > tbody > tr:last-child > td {
+  border-bottom: none;
+}
+
+.schemas-table > tbody > tr:hover > td {
+  background: var(--surface-secondary);
+}
+
+/* El nombre es lo que se busca al leer la tabla. */
+.schemas-row > td:first-child {
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* La pastilla va en un elemento dentro de la celda, no en la celda: un `td` en
+   `display: inline-block` se sale del modelo de la tabla y descuadra el renglón, y de todos modos
+   su relleno lo gana `.schemas-table > tbody > tr > td`, que tiene más especificidad. Mismos
+   valores que `.permissions-cell-code code` en `roles.css`: es el mismo objeto. */
+.schemas-cell-code {
+  white-space: nowrap;
 }
 
 .schemas-code {
-  font-family: monospace;
+  padding: 2px 7px;
+  border-radius: 10px;
+  background: rgba(59, 115, 185, 0.12);
+  color: #3270b5;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
+/* =========================================================
+   ACCIONES DE FILA
+   Texto, como en el resto de las tablas de este sistema.
+   ========================================================= */
+
+/* Sin `display: flex` en la celda: eso la saca del modelo de la tabla y le quita el
+   `vertical-align`. La separación se hace entre hermanos, como en el resto de las tablas de este
+   sistema (`.spreadsheets-action + .spreadsheets-action`). */
 .schemas-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
+  white-space: nowrap;
 }
 
-.schemas-versions,
+.schemas-actions > button + button {
+  margin-left: 12px;
+}
+
+.schemas-actions > button {
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  color: #3270b5;
+  cursor: pointer;
+}
+
+.schemas-actions > button:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.schemas-actions > button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* =========================================================
+   VERSIONES
+   Inmutables: publicar una nueva es la única forma de
+   cambiar un formato, así que la lista es historia y se lee
+   como historia, no como algo editable.
+   ========================================================= */
+
+.schemas-versions {
+  margin-top: 20px;
+  padding: 18px 20px 20px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+.schemas-versions > h3 {
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.schemas-versions > ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.schemas-versions > ul > li {
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border-light);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.schemas-versions > ul > li:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+/* =========================================================
+   PANELES (nuevo formato, clonar, nueva versión)
+   ========================================================= */
+
 .schemas-panel {
-  margin-top: 1rem;
-  padding: 0.75rem;
-  border: 1px solid;
+  margin-top: 20px;
+  padding: 20px 24px 24px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+.schemas-panel-help {
+  max-width: 82ch;
+  margin: 0 0 16px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.schemas-panel-help strong {
+  color: var(--text);
 }
 
 .schemas-field {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  margin-bottom: 0.5rem;
-  max-width: 28rem;
+  gap: 6px;
+  max-width: 420px;
+  margin-bottom: 14px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.schemas-field input,
+.schemas-field select {
+  width: 100%;
+  height: 36px;
+  padding: 0 11px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface-secondary);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 11px;
+  outline: none;
+  box-sizing: border-box;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.schemas-field input::placeholder {
+  color: var(--text-muted);
+}
+
+.schemas-field input:focus,
+.schemas-field select:focus {
+  border-color: #3b73b9;
+  box-shadow: 0 0 0 2px rgba(59, 115, 185, 0.08);
 }
 
 .schemas-panel-actions {
   display: flex;
-  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
 }
 
-.schemas-error,
-.schemas-notice {
-  margin: 0.5rem 0;
+.schemas-panel-actions > button[type="submit"] {
+  height: 32px;
+  min-width: 140px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 5px;
+  background: #2864a8;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    transform 0.1s ease;
+}
+
+.schemas-panel-actions > button[type="submit"]:hover:not(:disabled) {
+  background: #205895;
+}
+
+.schemas-panel-actions > button[type="submit"]:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.schemas-panel-actions > button[type="button"] {
+  height: 32px;
+  padding: 0 16px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.schemas-panel-actions > button[type="button"]:hover:not(:disabled) {
+  border-color: #3b73b9;
+  color: #3270b5;
+}
+
+.schemas-panel-actions > button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* =========================================================
+   PANTALLAS ANGOSTAS
+   La tabla se desplaza en lugar de apilarse: cada formato es
+   un renglón que se compara con el de arriba.
+   ========================================================= */
+
+@media (max-width: 860px) {
+  .schemas {
+    padding: 20px 16px 32px;
+    overflow-x: auto;
+  }
+
+  .schemas-table {
+    min-width: 760px;
+  }
 }
