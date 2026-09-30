@@ -187,7 +187,7 @@ function App() {
             "Formatos de solicitud" (da de alta las cuentas y los libros de Excel), "Esquemas de
             datos" (qué datos lleva un proyecto), "Configuración de formatos de solicitud" (mapea
             las columnas de un libro e importa sus filas), "Bandeja de solicitudes", "Proyectos"
-            y "Diseñador de flujos" (también con datos de prueba). Las demás muestran su
+            y "Diseñador de flujos" (las plantillas de flujo). Las demás muestran su
             nombre. */}
         {activa === "Notificaciones" ? (
           <Notifications />
