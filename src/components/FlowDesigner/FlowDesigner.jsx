@@ -758,6 +758,9 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
                             id="etapa-persona"
                             value={modal.etapa.defaultAssigneeId ?? ""}
                             onChange={(event) => cambiarEtapa("defaultAssigneeId", event.target.value)}
+                            id="etapa-persona"
+                            value={modal.etapa.defaultAssigneeId ?? ""}
+                            onChange={(event) => cambiarEtapa("defaultAssigneeId", event.target.value)}
                         >
                             <option value="">{deSolicitud ? "Sin responsable todavía" : "Sin persona sugerida"}</option>
                             {miembrosDelArea.map((miembro) => (
@@ -824,16 +827,22 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
 
                     <div className="modal-field">
                         <label htmlFor="etapa-dias">Duración</label>
+                        <label htmlFor="etapa-dias">Duración</label>
                         <div className="days-input">
                             <input
+                                id="etapa-dias"
                                 id="etapa-dias"
                                 type="number"
                                 min="1"
                                 max="365"
                                 value={modal.etapa.estimatedDays}
                                 onChange={(event) => cambiarEtapa("estimatedDays", event.target.value)}
+                                max="365"
+                                value={modal.etapa.estimatedDays}
+                                onChange={(event) => cambiarEtapa("estimatedDays", event.target.value)}
                                 required
                             />
+                            <span>días hábiles</span>
                             <span>días hábiles</span>
                         </div>
                     </div>
@@ -853,8 +862,24 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
                             </button>
                         )}
                         <button type="button" className="modal-cancel" onClick={cerrarModal}>
+                        {modal.editando && (
+                            <button
+                                type="button"
+                                className="modal-cancel flow-modal-remove"
+                                onClick={() => {
+                                    const fase = fases.find((una) => una.clave === modal.faseClave);
+                                    quitarEtapa(fase, modal.etapa);
+                                    cerrarModal();
+                                }}
+                            >
+                                Quitar esta etapa
+                            </button>
+                        )}
+                        <button type="button" className="modal-cancel" onClick={cerrarModal}>
                             Cancelar
                         </button>
+                        <button type="submit" className="modal-primary">
+                            {modal.editando ? "Guardar cambios" : "+ Agregar etapa"}
                         <button type="submit" className="modal-primary">
                             {modal.editando ? "Guardar cambios" : "+ Agregar etapa"}
                         </button>
@@ -867,6 +892,7 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
                 ================================================= */}
 
             {modal?.tipo === "fase" && (
+            {modal?.tipo === "fase" && (
                 <FlowModal
                     type="phase"
                     titulo={modal.faseClave ? "Editar fase" : "Agregar fase"}
@@ -874,14 +900,23 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
                     onClose={cerrarModal}
                     onSubmit={guardarFase}
                 >
+                    titulo={modal.faseClave ? "Editar fase" : "Agregar fase"}
+                    descripcion="Las etapas de una fase trabajan al mismo tiempo."
+                    onClose={cerrarModal}
+                    onSubmit={guardarFase}
+                >
                     <div className="modal-field">
+                        <label htmlFor="phase-name">Nombre de la fase</label>
                         <label htmlFor="phase-name">Nombre de la fase</label>
                         <input
                             id="phase-name"
                             type="text"
                             value={modal.name}
                             onChange={(event) => setModal({ ...modal, name: event.target.value })}
+                            value={modal.name}
+                            onChange={(event) => setModal({ ...modal, name: event.target.value })}
                             placeholder="Ej. REVISIÓN"
+                            maxLength={100}
                             maxLength={100}
                             autoFocus
                             required
@@ -889,6 +924,55 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
                     </div>
 
                     <div className="modal-actions">
+                        <button type="button" className="modal-cancel" onClick={cerrarModal}>
+                            Cancelar
+                        </button>
+                        <button type="submit" className="modal-primary">
+                            {modal.faseClave ? "Guardar cambios" : "+ Agregar fase"}
+                        </button>
+                    </div>
+                </FlowModal>
+            )}
+
+            {/* =================================================
+                MODAL DE PLANTILLA NUEVA (guardar como)
+                ================================================= */}
+
+            {modal?.tipo === "plantilla" && (
+                <FlowModal
+                    type="phase"
+                    titulo="Guardar como plantilla nueva"
+                    descripcion="Se publica como la versión 1 de una plantilla nueva."
+                    error={modalError}
+                    onClose={cerrarModal}
+                    onSubmit={guardarComo}
+                >
+                    <div className="modal-field">
+                        <label htmlFor="plantilla-nombre">Nombre</label>
+                        <input
+                            id="plantilla-nombre"
+                            type="text"
+                            value={modal.name}
+                            onChange={(event) => cambiarNombreModal(event.target.value)}
+                            placeholder="Ej. Manual de identidad"
+                            maxLength={300}
+                            autoFocus
+                            required
+                        />
+                    </div>
+                    <div className="modal-field">
+                        <label htmlFor="plantilla-codigo">Código</label>
+                        <input
+                            id="plantilla-codigo"
+                            type="text"
+                            value={modal.code}
+                            onChange={(event) => setModal({ ...modal, code: event.target.value, codeTocado: true })}
+                            maxLength={50}
+                            required
+                        />
+                    </div>
+                    <div className="modal-actions">
+                        <button type="button" className="modal-cancel" onClick={cerrarModal}>
                         <button type="button" className="modal-cancel" onClick={cerrarModal}>
                             Cancelar
                         </button>
