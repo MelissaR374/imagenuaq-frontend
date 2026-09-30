@@ -45,6 +45,11 @@ body {
 
   font-family: "Poppins", sans-serif;
 
+  /* Tamaño base: sin él, todo lo que no fija el suyo (ayudas, etiquetas, indicadores) sale
+     al 16px del navegador y se ve más grande que los títulos diseñados. */
+  font-size: 14px;
+  line-height: 1.45;
+
   background-color: var(--background);
   color: var(--text);
 
@@ -123,6 +128,16 @@ h1 {
 
 h2 {
   font-size: 24px;
+  font-weight: 600;
+}
+
+h3 {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+h4 {
+  font-size: 15px;
   font-weight: 600;
 }
 

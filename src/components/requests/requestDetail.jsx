@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import * as api from "../../api/client.js";
 import FieldInput from "../shared/fieldInput.jsx";
+import FlowDesigner from "../FlowDesigner/FlowDesigner.jsx";
 import RequesterInput from "./requesterInput.jsx";
 import "./requestDetail.css";
 
@@ -22,33 +23,38 @@ import "./requestDetail.css";
 const RECORRIDO = [
   {
     clave: "nacio",
-    titulo: "1. Llegó",
-    mueve: "Capturada a mano o importada de un libro de Excel.",
+    titulo: "1. Recibida",
+    mueve: "Se capturó a mano o llegó de un libro de Excel.",
   },
   {
     clave: "repartir",
-    titulo: "2. Se reparte",
-    mueve: "Alguien dice a qué área le toca. Aquí abajo, en «Área».",
+    titulo: "2. Con flujo",
+    mueve:
+      "Falta decidir por qué áreas va a pasar. Aplica una plantilla o diseña su flujo en «Flujo», aquí abajo.",
   },
   {
     clave: "atender",
-    titulo: "3. Se atiende",
-    mueve: "El área le mueve el estatus mientras avanza.",
+    titulo: "3. En atención",
+    mueve:
+      "Las áreas de la primera fase la tienen en su bandeja y actualizan el estatus conforme avanza.",
   },
   {
     clave: "convertir",
-    titulo: "4. Se convierte",
-    mueve: "Se vuelve proyecto y se lleva cada valor capturado.",
+    titulo: "4. Convertida en proyecto",
+    mueve: "Ya es un proyecto: se llevó su flujo y todos los datos capturados.",
   },
 ];
 
 // Cuál de los pasos es el actual. Una convertida ya pasó por todos, aunque su estatus siga
-// diciendo «Recibido» (DATAMODEL.md §8.4, costura 1).
+// diciendo «Recibido» (DATAMODEL.md §8.4, costura 1). Una con área asignada a mano, de antes de
+// los flujos, cuenta como repartida.
 function pasoActualDe(detalle) {
   if (detalle.projectId !== null) {
     return "convertir";
   }
-  if (detalle.areaId === null) {
+  // La fila de la bandeja trae `hasFlow`; el detalle ya cargado trae `flow`.
+  const tieneFlujo = Boolean(detalle.flow) || Boolean(detalle.hasFlow);
+  if (!tieneFlujo && detalle.areaId === null) {
     return "repartir";
   }
   return "atender";
@@ -228,23 +234,27 @@ function RenglonOriginal({ sourceData }) {
   );
 }
 
-// El paso 4 del recorrido. Lo que se deje vacío lo toma de la solicitud.
-function FormularioDeConversion({ datos, areas, ocupado, onCambiar, onEnviar, onCancelar }) {
+// El paso 4 del recorrido. Lo que se deje vacío lo toma de la solicitud; las etapas salen de
+// su flujo.
+function FormularioDeConversion({ datos, flujo, ocupado, onCambiar, onEnviar, onCancelar }) {
   function cambiar(clave, valor) {
     onCambiar({ ...datos, [clave]: valor });
   }
 
-  let nombreDeLaEtapa = null;
-  if (datos.areaId !== "") {
-    nombreDeLaEtapa = (
-      <label className="request-detail-field">
-        Nombre de la etapa
-        <input
-          value={datos.stageTitle}
-          onChange={(evento) => cambiar("stageTitle", evento.target.value)}
-          placeholder="Diseño de la propuesta"
-        />
-      </label>
+  let avisoDelFlujo = (
+    <p className="request-detail-help">
+      Sin flujo: el proyecto nace sin etapas. Si ya sabes por qué áreas va a pasar, aplica o diseña
+      su flujo antes de convertirla.
+    </p>
+  );
+  if (flujo) {
+    const etapas = flujo.phases.reduce((total, fase) => total + fase.stages.length, 0);
+    avisoDelFlujo = (
+      <p className="request-detail-help">
+        El proyecto nace con el flujo de la solicitud: {flujo.phases.length}{" "}
+        {flujo.phases.length === 1 ? "fase" : "fases"} y {etapas}{" "}
+        {etapas === 1 ? "etapa" : "etapas"}. Las de la primera fase empiezan activas.
+      </p>
     );
   }
 
@@ -293,20 +303,7 @@ function FormularioDeConversion({ datos, areas, ocupado, onCambiar, onEnviar, on
         Con costo
       </label>
 
-      {/* Las etapas se crean a mano: el flujo declarativo todavía no existe (§8.3). */}
-      <label className="request-detail-field">
-        Primera etapa, en el área
-        <select value={datos.areaId} onChange={(evento) => cambiar("areaId", evento.target.value)}>
-          <option value="">Sin etapas todavía</option>
-          {areas.map((area) => (
-            <option value={area.id} key={area.id}>
-              {area.name}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      {nombreDeLaEtapa}
+      {avisoDelFlujo}
 
       <div className="request-detail-actions">
         <button type="submit" disabled={ocupado}>
@@ -320,7 +317,87 @@ function FormularioDeConversion({ datos, areas, ocupado, onCambiar, onEnviar, on
   );
 }
 
-function RequestDetail({ solicitud, areas, onCerrar, onCambio }) {
+// El paso 2 del recorrido: el flujo decide a qué bandejas cae la solicitud (DATAMODEL.md §2.5).
+// Con flujo se resume fase por fase; sin él se ofrece aplicar una plantilla o diseñarlo.
+function FlujoDeLaSolicitud({ flujo, areaName, convertida, plantillas, ocupado, onAplicar, onDisenar, onQuitar }) {
+  const activas = plantillas.filter((una) => una.isActive);
+  const [elegida, setElegida] = useState("");
+
+  let resumen = <p className="request-detail-flow-empty">Sin flujo.</p>;
+  if (flujo) {
+    resumen = (
+      <>
+        {flujo.workflowName && (
+          <p className="request-detail-flow-origin">
+            Copiado de la plantilla «{flujo.workflowName}» (versión {flujo.version}).
+          </p>
+        )}
+        <ol className="request-detail-flow-phases">
+          {flujo.phases.map((fase) => (
+            <li key={fase.id}>
+              <strong>{fase.name}:</strong>{" "}
+              {[...new Set(fase.stages.map((etapa) => etapa.areaName))].join(", ")}
+            </li>
+          ))}
+        </ol>
+      </>
+    );
+  } else if (areaName) {
+    // Una repartida a mano antes de que hubiera flujos.
+    resumen = <p className="request-detail-flow-empty">Sin flujo; asignada a {areaName}.</p>;
+  }
+
+  // Ya convertida, el flujo es del proyecto: aquí solo se muestra.
+  if (convertida) {
+    return <div className="request-detail-flow">{resumen}</div>;
+  }
+
+  return (
+    <div className="request-detail-flow">
+      {resumen}
+
+      <div className="request-detail-flow-actions">
+        {flujo ? (
+          <>
+            <button type="button" onClick={onDisenar} disabled={ocupado}>
+              Editar flujo
+            </button>
+            <button type="button" onClick={onQuitar} disabled={ocupado}>
+              Quitar flujo
+            </button>
+          </>
+        ) : (
+          <>
+            <select
+              value={elegida}
+              onChange={(evento) => setElegida(evento.target.value)}
+              disabled={ocupado || activas.length === 0}
+            >
+              <option value="">Elige una plantilla</option>
+              {activas.map((una) => (
+                <option value={una.id} key={una.id}>
+                  {una.name}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={() => onAplicar(Number(elegida))}
+              disabled={ocupado || elegida === ""}
+            >
+              Aplicar plantilla
+            </button>
+            <button type="button" onClick={onDisenar} disabled={ocupado}>
+              Diseñar un flujo nuevo
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function RequestDetail({ solicitud, onCerrar, onCambio }) {
   const [detalle, setDetalle] = useState(solicitud);
   const [estatus, setEstatus] = useState([]);
   const [error, setError] = useState(null);
@@ -331,6 +408,10 @@ function RequestDetail({ solicitud, areas, onCerrar, onCambio }) {
   // El formulario de conversión: null mientras no se abre.
   const [convertir, setConvertir] = useState(null);
   const [conflictos, setConflictos] = useState([]);
+
+  // Las plantillas que se pueden aplicar, y si se está diseñando el flujo en el diseñador.
+  const [plantillas, setPlantillas] = useState([]);
+  const [disenando, setDisenando] = useState(false);
 
   useEffect(() => {
     let cancelado = false;
@@ -344,15 +425,17 @@ function RequestDetail({ solicitud, areas, onCerrar, onCambio }) {
       }
 
       try {
-        const [respuestaSolicitud, respuestaEstatus] = await Promise.all([
+        const [respuestaSolicitud, respuestaEstatus, respuestaPlantillas] = await Promise.all([
           api.getRequest(solicitud.id),
           api.listStatuses(filtroDeEstatus),
+          api.listWorkflows(),
         ]);
         if (cancelado) {
           return;
         }
         setDetalle(respuestaSolicitud.request);
         setEstatus(respuestaEstatus.statuses);
+        setPlantillas(respuestaPlantillas.workflows);
       } catch (fallo) {
         if (!cancelado) {
           setError(fallo.message);
@@ -431,20 +514,40 @@ function RequestDetail({ solicitud, areas, onCerrar, onCambio }) {
     }
   }
 
-  // Paso 2 del recorrido: lo importado de Excel llega sin área y alguien decide a quién le toca.
-  async function asignarArea(valor) {
-    let areaId = null;
-    if (valor !== "") {
-      areaId = Number(valor);
-    }
-
+  // Paso 2 del recorrido: se le da un flujo, y con él las bandejas en las que cae.
+  async function aplicarPlantilla(workflowId) {
+    setOcupado(true);
     setError(null);
     try {
-      await api.updateRequest(detalle.id, { areaId });
+      await api.setRequestFlow(detalle.id, { workflowId });
       await recargar();
     } catch (fallo) {
       setError(fallo.message);
+    } finally {
+      setOcupado(false);
     }
+  }
+
+  async function quitarFlujo() {
+    if (!window.confirm("¿Quitarle el flujo? Dejará de aparecer en las bandejas de sus áreas.")) {
+      return;
+    }
+    setOcupado(true);
+    setError(null);
+    try {
+      await api.clearRequestFlow(detalle.id);
+      await recargar();
+    } catch (fallo) {
+      setError(fallo.message);
+    } finally {
+      setOcupado(false);
+    }
+  }
+
+  // El diseñador devuelve la solicitud ya con su flujo nuevo.
+  async function flujoGuardado() {
+    setDisenando(false);
+    await recargar();
   }
 
   async function eliminar() {
@@ -466,8 +569,6 @@ function RequestDetail({ solicitud, areas, onCerrar, onCambio }) {
       title: detalle.title,
       requester: detalle.requester ?? "",
       hasCost: false,
-      areaId: detalle.areaId ?? "",
-      stageTitle: "",
       idDelSolicitante: `convertir-solicitante-${detalle.id}`,
     });
   }
@@ -479,16 +580,7 @@ function RequestDetail({ solicitud, areas, onCerrar, onCambio }) {
   async function convertirEnProyecto(evento) {
     evento.preventDefault();
 
-    // Una etapa inicial solo si se eligió un área para ella.
-    let stages = [];
-    if (convertir.areaId !== "") {
-      let title = convertir.stageTitle;
-      if (title === "") {
-        title = "Primera etapa";
-      }
-      stages = [{ areaId: Number(convertir.areaId), title }];
-    }
-
+    // Las etapas no se mandan: el proyecto se lleva el flujo de la solicitud, si tiene.
     setOcupado(true);
     setError(null);
     try {
@@ -497,7 +589,6 @@ function RequestDetail({ solicitud, areas, onCerrar, onCambio }) {
         title: convertir.title || undefined,
         requester: convertir.requester || undefined,
         hasCost: convertir.hasCost,
-        stages,
       });
       setConflictos(respuesta.conflicts);
       setConvertir(null);
@@ -522,24 +613,14 @@ function RequestDetail({ solicitud, areas, onCerrar, onCambio }) {
     bloqueDeError = <p className="request-detail-error">{error}</p>;
   }
 
-  // El área: un selector mientras se pueda repartir, y solo el nombre una vez convertida.
-  let bloqueDeArea;
-  if (yaEsProyecto) {
-    bloqueDeArea = detalle.areaName ?? "sin área";
-  } else {
-    bloqueDeArea = (
-      <select
-        value={detalle.areaId ?? ""}
-        onChange={(evento) => asignarArea(evento.target.value)}
-        disabled={ocupado}
-      >
-        <option value="">Sin área</option>
-        {areas.map((area) => (
-          <option value={area.id} key={area.id}>
-            {area.name}
-          </option>
-        ))}
-      </select>
+  // Diseñar el flujo ocupa la pantalla entera; al guardar o volver se regresa a la solicitud.
+  if (disenando) {
+    return (
+      <FlowDesigner
+        solicitud={detalle}
+        onGuardado={flujoGuardado}
+        onCerrar={() => setDisenando(false)}
+      />
     );
   }
 
@@ -674,7 +755,7 @@ function RequestDetail({ solicitud, areas, onCerrar, onCambio }) {
     formularioDeConversion = (
       <FormularioDeConversion
         datos={convertir}
-        areas={areas}
+        flujo={detalle.flow ?? null}
         ocupado={ocupado}
         onCambiar={setConvertir}
         onEnviar={convertirEnProyecto}
@@ -719,8 +800,19 @@ function RequestDetail({ solicitud, areas, onCerrar, onCambio }) {
           </button>
         </dd>
 
-        <dt>Área</dt>
-        <dd>{bloqueDeArea}</dd>
+        <dt>Flujo</dt>
+        <dd>
+          <FlujoDeLaSolicitud
+            flujo={detalle.flow ?? null}
+            areaName={detalle.areaName}
+            convertida={yaEsProyecto}
+            plantillas={plantillas}
+            ocupado={ocupado}
+            onAplicar={aplicarPlantilla}
+            onDisenar={() => setDisenando(true)}
+            onQuitar={quitarFlujo}
+          />
+        </dd>
 
         <dt>Estatus</dt>
         <dd>

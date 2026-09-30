@@ -598,3 +598,23 @@
     width: auto;
   }
 }
+
+/* Solo acomodo: el diseño lo revisa quien lleva el CSS. */
+
+.request-detail-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.request-detail-flow-phases {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.request-detail-flow-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}

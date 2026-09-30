@@ -1,37 +1,48 @@
 import {
-    MdKeyboardArrowDown,
     MdEdit,
+    MdClose,
 } from "react-icons/md";
 
 import "./FlowCard.css";
 
-
+// Una etapa de la plantilla: qué área la hace, quién suele hacerla, qué datos necesita y
+// cuáles entrega (con su nota para leer) y cuántos días toma.
 function FlowCard({
     area,
     title,
     person,
     initials,
-    input,
-    output,
+    entradas,
+    salidas,
+    notaEntrada,
+    notaSalida,
     days,
-    active = false,
     onEdit,
+    onRemove,
 }) {
 
     return (
-        <article
-            className={`flow-card ${active ? "active" : ""}`}
-        >
+
+        <article className="flow-card">
 
             {/* EDITAR */}
-
             <button
                 type="button"
                 className="flow-card-edit"
-                title="Editar área"
+                title="Editar etapa"
                 onClick={() => onEdit?.()}
             >
                 <MdEdit />
+            </button>
+
+            {/* QUITAR */}
+            <button
+                type="button"
+                className="flow-card-remove"
+                title="Quitar etapa"
+                onClick={() => onRemove?.()}
+            >
+                <MdClose />
             </button>
 
             <span className="flow-card-area">
@@ -52,13 +63,9 @@ function FlowCard({
                     {person}
                 </span>
 
-                <MdKeyboardArrowDown />
-
             </div>
 
-
             {/* ENTRADA / SALIDA */}
-
             <div className="flow-io">
 
                 <div>
@@ -67,12 +74,21 @@ function FlowCard({
                         ENTRA
                     </span>
 
-                    <p>
-                        {input}
-                    </p>
+                    {entradas.length > 0 && (
+                        <ul className="flow-io-keys">
+                            {entradas.map((clave, i) => (
+                                <li key={i}>{clave}</li>
+                            ))}
+                        </ul>
+                    )}
+
+                    {notaEntrada && (
+                        <p>
+                            {notaEntrada}
+                        </p>
+                    )}
 
                 </div>
-
 
                 <div>
 
@@ -80,31 +96,31 @@ function FlowCard({
                         SALE
                     </span>
 
-                    <p>
-                        {output}
-                    </p>
+                    {salidas.length > 0 && (
+                        <ul className="flow-io-keys">
+                            {salidas.map((clave, i) => (
+                                <li key={i}>{clave}</li>
+                            ))}
+                        </ul>
+                    )}
+
+                    {notaSalida && (
+                        <p>
+                            {notaSalida}
+                        </p>
+                    )}
 
                 </div>
 
             </div>
 
-
             {/* DÍAS */}
-
             <span className="flow-days">
                 {days}
             </span>
 
-
-            {/* CONECTOR */}
-
-            {/* <span className="flow-connector">
-                <MdArrowDownward />
-            </span> */}
-
         </article>
     );
 }
-
 
 export default FlowCard;

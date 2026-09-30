@@ -34,29 +34,38 @@ const FILTROS_VACIOS = {
 // siguiente. El paso 1 (nacer) ya ocurrió si está en la lista.
 const PASOS = {
   sinRepartir: {
-    etiqueta: "Sin repartir",
-    ayuda: "Paso 2: falta decirle a qué área le toca.",
+    etiqueta: "Sin flujo",
+    ayuda: "Paso 2: falta decidir por qué áreas va a pasar.",
   },
   repartida: {
-    etiqueta: "En el área",
-    ayuda: "Paso 3: se atiende como solicitud, y luego se convierte en proyecto.",
+    etiqueta: "En atención",
+    ayuda: "Paso 3: las áreas de la primera fase la atienden; después se convierte en proyecto.",
   },
   convertida: {
     etiqueta: "Convertida",
-    ayuda: "Paso 4: ya es un proyecto, y desde aquí no se edita.",
+    ayuda: "Paso 4: ya es un proyecto y desde aquí no se edita.",
   },
 };
 
 // En qué paso está una solicitud. El orden de las preguntas importa: una convertida ya pasó por
-// el reparto, aunque hoy su estatus siga diciendo «Recibido» (DATAMODEL.md §8.4, costura 1).
+// el reparto, aunque hoy su estatus siga diciendo «Recibido» (DATAMODEL.md §8.4, costura 1). Una
+// con área asignada a mano, de antes de los flujos, cuenta como repartida.
 function pasoDe(solicitud) {
   if (solicitud.projectId !== null) {
     return PASOS.convertida;
   }
-  if (solicitud.areaId === null) {
+  if (!solicitud.hasFlow && solicitud.areaId === null) {
     return PASOS.sinRepartir;
   }
   return PASOS.repartida;
+}
+
+// Las áreas que la tienen en su bandeja: las de la primera fase de su flujo, o la asignada a mano.
+function areasDe(solicitud) {
+  if (solicitud.hasFlow && solicitud.firstPhaseAreas.length > 0) {
+    return solicitud.firstPhaseAreas.join(", ");
+  }
+  return solicitud.areaName;
 }
 
 // Un valor que puede venir vacío, como se escribe en una tabla.
@@ -110,7 +119,7 @@ function FilaDeSolicitud({ solicitud, onAbrir, onEliminar, ocupado }) {
         {marcaDeDuplicado}
       </td>
       <td>{oGuion(solicitud.requester)}</td>
-      <td>{oGuion(solicitud.areaName)}</td>
+      <td>{oGuion(areasDe(solicitud))}</td>
       <td>{solicitud.statusLabel}</td>
       <td>
         <span className="inbox-step" title={paso.ayuda}>
@@ -281,11 +290,12 @@ Se quita de la bandeja. Lo importado de Excel se puede volver a traer importando
     }
   }
 
-  // Las opciones de cada filtro. «Sin área» es el paso 2 del recorrido: lo importado de Excel
-  // llega sin área y aquí es donde se encuentra para repartirlo.
+  // Las opciones de cada filtro. «Sin flujo ni área» es el paso 2 del recorrido: lo importado de
+  // Excel llega así y aquí es donde se encuentra para darle su flujo. Un área muestra lo que la
+  // tiene en la primera fase de su flujo, y lo que se le asignó a mano.
   const opcionesDeArea = [
     { valor: "", texto: "Todas" },
-    { valor: "none", texto: "Sin área (sin repartir)" },
+    { valor: "none", texto: "Sin flujo ni área" },
   ];
   for (const area of areas) {
     opcionesDeArea.push({ valor: String(area.id), texto: area.name });
@@ -352,16 +362,16 @@ Se quita de la bandeja. Lo importado de Excel se puede volver a traer importando
   }
 
   // Cuántas esperan el paso 2 **en esta página**. Con páginas, contar lo que se ve y llamarlo
-  // total sería mentir; para el total del sistema está el filtro «Sin área», que lo dice.
+  // total sería mentir; para el total del sistema está el filtro «Sin flujo ni área», que lo dice.
   const sinRepartir = solicitudes.filter((solicitud) => pasoDe(solicitud) === PASOS.sinRepartir);
 
   let avisoDeReparto = null;
   if (sinRepartir.length > 0) {
     avisoDeReparto = (
       <p className="inbox-notice">
-        {sinRepartir.length} de las {solicitudes.length} de esta página no tienen área. Ábrela y
-        dile a qué área le toca: mientras no lo tenga, nadie la ve en su bandeja. Para ver todas,
-        filtra por «Sin área».
+        {sinRepartir.length} de las {solicitudes.length} de esta página todavía no tienen flujo.
+        Ábrelas y aplícales una plantilla o diseña su flujo: mientras no lo tengan, no aparecen en
+        la bandeja de ninguna área. Para verlas todas, filtra por «Sin flujo ni área».
       </p>
     );
   }

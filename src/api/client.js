@@ -279,6 +279,37 @@ export const listFieldKeys = () => request("/schemas/field-keys");
 // que el servidor implementa.
 export const listDataTypes = () => request("/data-types");
 
+// --- Plantillas de flujo (RF-FLW-02, RF-PRY-06) ---
+//
+// Una plantilla es la identidad; su contenido son fases ordenadas cuyas etapas trabajan en
+// paralelo, y vive en versiones que no se editan: guardar publica la siguiente con el flujo
+// completo. `phases` es [{ name, stages: [{ areaId, title, defaultAssigneeId, inputs, outputs,
+// inputNote, outputNote, estimatedDays }] }], en el orden en que se muestran.
+
+export const listWorkflows = () => request("/workflows");
+
+export const getWorkflow = (id) => request(`/workflows/${id}`);
+
+export const listWorkflowVersions = (id) => request(`/workflows/${id}/versions`);
+
+export const getWorkflowVersion = (versionId) => request(`/workflows/versions/${versionId}`);
+
+export const createWorkflow = (input) => request("/workflows", { method: "POST", body: input });
+
+// Publica la siguiente versión con el flujo completo. Las anteriores quedan intactas.
+export const publishWorkflowVersion = (id, phases) =>
+  request(`/workflows/${id}/versions`, { method: "POST", body: { phases } });
+
+// Una plantilla nueva que empieza con la última versión de otra.
+export const cloneWorkflow = (id, code, name) =>
+  request(`/workflows/${id}/clone`, { method: "POST", body: { code, name } });
+
+// Solo nombre y activo; el flujo no se edita por aquí.
+export const updateWorkflow = (id, changes) =>
+  request(`/workflows/${id}`, { method: "PATCH", body: changes });
+
+export const deleteWorkflow = (id) => request(`/workflows/${id}`, { method: "DELETE" });
+
 // --- Catálogo de estatus (RF-EST-02) ---
 //
 // Sin área es el catálogo global, del que parten todas; con área, los de esa área. Un área
@@ -330,10 +361,18 @@ export const setRequestStatus = (id, statusId) =>
 
 export const deleteRequest = (id) => request(`/requests/${id}`, { method: "DELETE" });
 
-// Convierte en proyecto: devuelve { project, conflicts }. Lo que se omite se toma de la
-// solicitud, y cada valor capturado viaja al proyecto con su clave.
+// Convierte en proyecto: devuelve { project, conflicts, discardedFlows }. Lo que se omite se
+// toma de la solicitud, cada valor capturado viaja al proyecto con su clave, y si la solicitud
+// tiene flujo el proyecto nace con él.
 export const convertRequest = (id, input = {}) =>
   request(`/requests/${id}/convert`, { method: "POST", body: input });
+
+// El flujo de una solicitud, que decide a qué bandejas cae. `{ workflowId }` copia una
+// plantilla; `{ phases }` es un flujo diseñado para ella. Reemplaza el que tuviera.
+export const setRequestFlow = (id, body) =>
+  request(`/requests/${id}/flow`, { method: "PUT", body });
+
+export const clearRequestFlow = (id) => request(`/requests/${id}/flow`, { method: "DELETE" });
 
 // --- Proyectos (RF-PRY-02) ---
 
