@@ -4,7 +4,7 @@ import { useState } from "react";
 import { MdVisibility, MdVisibilityOff } from "react-icons/md";
 
 import canelita from "../../assets/Canela_29.png"
-import imagenuaq from "../../assets/Imagenuaq.png"
+import imagenuaq from "../../assets/Imagenuaq.svg"
 
 import * as api from "../../api/client.js";
 import { INVITE_PARAM } from "../../config.js";
