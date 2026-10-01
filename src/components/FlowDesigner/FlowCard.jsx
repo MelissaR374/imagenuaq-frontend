@@ -1,3 +1,5 @@
+// Una etapa de la plantilla: qué área la hace, quién suele hacerla, qué datos necesita y
+// cuáles entrega (con su nota para leer) y cuántos días toma.
 import {
     MdEdit,
     MdClose,
@@ -5,8 +7,6 @@ import {
 
 import "./FlowCard.css";
 
-// Una etapa de la plantilla: qué área la hace, quién suele hacerla, qué datos necesita y
-// cuáles entrega (con su nota para leer) y cuántos días toma.
 function FlowCard({
     area,
     title,
@@ -25,7 +25,6 @@ function FlowCard({
 
         <article className="flow-card">
 
-            {/* EDITAR */}
             <button
                 type="button"
                 className="flow-card-edit"
@@ -35,7 +34,6 @@ function FlowCard({
                 <MdEdit />
             </button>
 
-            {/* QUITAR */}
             <button
                 type="button"
                 className="flow-card-remove"
@@ -65,7 +63,6 @@ function FlowCard({
 
             </div>
 
-            {/* ENTRADA / SALIDA */}
             <div className="flow-io">
 
                 <div>
@@ -114,7 +111,6 @@ function FlowCard({
 
             </div>
 
-            {/* DÍAS */}
             <span className="flow-days">
                 {days}
             </span>

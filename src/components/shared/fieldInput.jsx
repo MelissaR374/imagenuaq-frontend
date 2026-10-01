@@ -1,10 +1,10 @@
-import "./fieldInput.css";
-
 // Un campo de un formato, dibujado según su tipo. Lo usan la captura de solicitudes y la de
 // proyectos, así que el tipo se traduce a un <input> en un solo lugar.
 //
 // `field` es { code, name, type, note, required }. El tipo es un `data_types.code`: el
 // servidor lo convierte al guardar, así que aquí solo elegimos con qué se teclea más cómodo.
+import "./fieldInput.css";
+
 const TIPOS = {
   text: "text",
   email: "email",
@@ -23,7 +23,6 @@ function FieldInput({ field, value, onChange }) {
   const id = `campo-${field.code}`;
   const tipo = TIPOS[field.type] ?? "text";
 
-  // El booleano es una casilla; su valor no es texto.
   if (field.type === "boolean") {
     return (
       <div className="field-input field-input-boolean">
@@ -53,7 +52,6 @@ function FieldInput({ field, value, onChange }) {
         className="field-control"
         id={id}
         type={tipo}
-        // `quantity` es entero y `currency` lleva centavos; el servidor lo valida igual.
         step={field.type === "currency" ? "0.01" : field.type === "quantity" ? "1" : undefined}
         min={field.type === "quantity" || field.type === "percentage" ? "0" : undefined}
         max={field.type === "percentage" ? "100" : undefined}

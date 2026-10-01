@@ -1,11 +1,3 @@
-import { useEffect, useState } from "react";
-
-import * as api from "../../api/client.js";
-import ProjectDetail from "./projectDetail.jsx";
-import ProjectForm from "./projectForm.jsx";
-import StatusCatalog from "./statusCatalog.jsx";
-import "./projects.css";
-
 // El tablero de proyectos (RF-PRY-02). Por omisión los abiertos, los más urgentes arriba:
 // aquí no hay orden de llegada, la urgencia la pone una persona (RF-FLW-08).
 //
@@ -15,6 +7,16 @@ import "./projects.css";
 //
 // El catálogo de estatus se edita desde esta misma pantalla, en un panel aparte, porque es
 // donde se usa.
+import { useEffect, useState } from "react";
+
+import * as api from "../../api/client.js";
+import { oGuion } from "../shared/formato.js";
+import FiltroSelect from "../shared/filtroSelect.jsx";
+import ProjectDetail from "./projectDetail.jsx";
+import ProjectForm from "./projectForm.jsx";
+import StatusCatalog from "./statusCatalog.jsx";
+import "./projects.css";
+
 const FILTROS_VACIOS = {
   q: "",
   state: "open",
@@ -25,28 +27,6 @@ const FILTROS_VACIOS = {
   fieldValue: "",
   sort: "priority",
 };
-
-function oGuion(valor) {
-  if (valor === null || valor === undefined || valor === "") {
-    return "—";
-  }
-  return valor;
-}
-
-function FiltroSelect({ etiqueta, valor, opciones, onCambio }) {
-  return (
-    <label className="projects-filter">
-      {etiqueta}
-      <select value={valor} onChange={(evento) => onCambio(evento.target.value)}>
-        {opciones.map((opcion) => (
-          <option value={opcion.valor} key={opcion.valor}>
-            {opcion.texto}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
 
 function FilaDeProyecto({ proyecto, onAbrir }) {
   return (
@@ -269,6 +249,7 @@ function Projects({ usuario }) {
         </label>
 
         <FiltroSelect
+          clase="projects-filter"
           etiqueta="Estado"
           valor={filtros.state}
           opciones={opcionesDeEstado}
@@ -276,6 +257,7 @@ function Projects({ usuario }) {
         />
 
         <FiltroSelect
+          clase="projects-filter"
           etiqueta="Área con etapa"
           valor={filtros.areaId}
           opciones={opcionesDeArea}
@@ -283,6 +265,7 @@ function Projects({ usuario }) {
         />
 
         <FiltroSelect
+          clase="projects-filter"
           etiqueta="Estatus"
           valor={filtros.statusId}
           opciones={opcionesDeEstatus}
@@ -290,13 +273,13 @@ function Projects({ usuario }) {
         />
 
         <FiltroSelect
+          clase="projects-filter"
           etiqueta="Costo"
           valor={filtros.hasCost}
           opciones={opcionesDeCosto}
           onCambio={(valor) => cambiarFiltro("hasCost", valor)}
         />
 
-        {/* RF-IMP-08: encontrar el proyecto por un valor que una etapa produjo. */}
         <label className="projects-filter">
           Por valor: clave
           <input
@@ -316,6 +299,7 @@ function Projects({ usuario }) {
         </label>
 
         <FiltroSelect
+          clase="projects-filter"
           etiqueta="Orden"
           valor={filtros.sort}
           opciones={opcionesDeOrden}

@@ -15,28 +15,27 @@ import { MdVisibility, MdVisibilityOff } from "react-icons/md";
 import * as api from "../../api/client.js";
 import "./profile.css";
 
-// Lo que acepta el servidor; el input lo usa como filtro del selector de archivos.
+/** Lo que acepta el servidor; el input lo usa como filtro del selector de archivos. */
 const TIPOS_DE_IMAGEN = "image/png,image/jpeg,image/webp";
 const TAMANO_MAXIMO = 2 * 1024 * 1024;
 
 const CONTRASENA_VACIA = { actual: "", nueva: "", confirmacion: "" };
 
-// `usuario` es la sesión; `foto` el object URL de la imagen actual o null. `onActualizar`
-// recibe los datos nuevos para que el encabezado y la barra lateral los reflejen;
-// `onFoto` recibe el Blob nuevo o null cuando se quita.
+/**
+ * `usuario` es la sesión; `foto` el object URL de la imagen actual o null. `onActualizar`
+ * recibe los datos nuevos para que el encabezado y la barra lateral los reflejen;
+ * `onFoto` recibe el Blob nuevo o null cuando se quita.
+ */
 function Profile({ usuario, foto, onActualizar, onFoto }) {
-  // El registro completo, con cumpleaños y áreas; la sesión sola no lo trae.
   const [perfil, setPerfil] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
 
-  // El formulario de datos
   const [form, setForm] = useState({ fullName: "", email: "", birthday: "" });
   const [guardando, setGuardando] = useState(false);
   const [errorForm, setErrorForm] = useState(null);
   const [guardado, setGuardado] = useState(false);
 
-  // El formulario de contraseña
   const [contrasena, setContrasena] = useState(CONTRASENA_VACIA);
   const [cambiando, setCambiando] = useState(false);
   const [errorContrasena, setErrorContrasena] = useState(null);
@@ -47,11 +46,9 @@ function Profile({ usuario, foto, onActualizar, onFoto }) {
     confirmacion: false,
   });
 
-  // La foto
   const [subiendo, setSubiendo] = useState(false);
   const [errorFoto, setErrorFoto] = useState(null);
 
-  // Al abrir la pestaña se pide el registro completo y se llena el formulario con él.
   useEffect(() => {
     api
       .getProfile()
@@ -105,7 +102,6 @@ function Profile({ usuario, foto, onActualizar, onFoto }) {
     event.preventDefault();
     setErrorContrasena(null);
 
-    // La confirmación se revisa aquí; el servidor solo ve la actual y la nueva.
     if (contrasena.nueva !== contrasena.confirmacion) {
       setErrorContrasena("La contraseña nueva y su confirmación no coinciden.");
       return;
@@ -126,7 +122,6 @@ function Profile({ usuario, foto, onActualizar, onFoto }) {
 
   async function handleFoto(event) {
     const archivo = event.target.files[0];
-    // Para poder volver a elegir el mismo archivo después de un error.
     event.target.value = "";
     if (!archivo) return;
 
@@ -163,7 +158,6 @@ function Profile({ usuario, foto, onActualizar, onFoto }) {
     }
   }
 
-  // Las iniciales, igual que en la barra lateral, para cuando no hay foto.
   const iniciales = (perfil?.fullName ?? usuario.fullName ?? "")
     .trim()
     .split(" ")
@@ -184,7 +178,6 @@ function Profile({ usuario, foto, onActualizar, onFoto }) {
         {error}
       </p>
 
-      {/* FOTO */}
       <div className="profile-picture">
         <div className="profile-avatar">
           {foto ? (
@@ -227,12 +220,9 @@ function Profile({ usuario, foto, onActualizar, onFoto }) {
         </div>
       </div>
 
-      {/* DATOS QUE NO SE EDITAN AQUÍ */}
       <dl className="profile-summary">
         <div className="profile-summary-item">
           <dt className="profile-summary-label">Rol</dt>
-          {/* El nombre del rol tal como está registrado en "Roles y permisos", igual que
-              lo muestra la barra lateral. */}
           <dd className="profile-summary-value">{perfil?.role ?? "—"}</dd>
         </div>
 
@@ -250,7 +240,6 @@ function Profile({ usuario, foto, onActualizar, onFoto }) {
         </div>
       </dl>
 
-      {/* DATOS */}
       <form className="profile-form" onSubmit={handleGuardar}>
         <h2 className="profile-form-title">Mis datos</h2>
 
@@ -315,11 +304,9 @@ function Profile({ usuario, foto, onActualizar, onFoto }) {
         </button>
       </form>
 
-      {/* CONTRASEÑA */}
       <form className="profile-form profile-form-password" onSubmit={handleCambiarContrasena}>
         <h2 className="profile-form-title">Cambiar contraseña</h2>
         
-        {/* CONTRASEÑA ACTUAL */}
         <div className="profile-form-field">
           <label className="profile-form-label" htmlFor="profile-password-current">
             Contraseña actual
@@ -346,7 +333,6 @@ function Profile({ usuario, foto, onActualizar, onFoto }) {
           </div>
         </div>
 
-        {/*CONTRASEÑA NUEVA */}
         <div className="profile-form-field">
           <label className="profile-form-label" htmlFor="profile-password-new">
             Contraseña nueva
@@ -374,7 +360,6 @@ function Profile({ usuario, foto, onActualizar, onFoto }) {
           </div>
         </div>
 
-        {/*CONFIRMAR CONTRASEÑA */}
         <div className="profile-form-field">
           <label className="profile-form-label" htmlFor="profile-password-confirm">
             Confirmar contraseña nueva

@@ -1,8 +1,3 @@
-import { useEffect, useState } from "react";
-
-import * as api from "../../api/client.js";
-import "./projectDetail.css";
-
 // Un proyecto con sus etapas, sus vistos buenos y los valores que cruzan etapas.
 //
 // El bloque «Cómo va» existe por DATAMODEL.md §8.1: hay dos vocabularios de estado y no se
@@ -17,6 +12,12 @@ import "./projectDetail.css";
 // otra vez con el intento siguiente, y las dos quedan a la vista.
 //
 // `done` no se pone a mano: una etapa la cierra un visto bueno (RF-FLW-03).
+import { useEffect, useState } from "react";
+
+import * as api from "../../api/client.js";
+import { fechaCorta, oGuion } from "../shared/formato.js";
+import "./projectDetail.css";
+
 const TRANSICIONES = {
   pending: [
     { status: "active", label: "Iniciar" },
@@ -44,9 +45,11 @@ const ESTADOS_ETAPA = {
 
 const ESTADOS_ABIERTOS = ["active", "waiting_external"];
 
-// Las claves que una etapa puede declarar: las que el proyecto ya tiene y las que otras etapas
-// ya nombraron. Es una sugerencia, no un catálogo cerrado: una etapa puede prometer una clave que
-// todavía no existe, que es justamente lo normal —la promete porque la va a producir—.
+/**
+ * Las claves que una etapa puede declarar: las que el proyecto ya tiene y las que otras etapas
+ * ya nombraron. Es una sugerencia, no un catálogo cerrado: una etapa puede prometer una clave que
+ * todavía no existe, que es justamente lo normal —la promete porque la va a producir—.
+ */
 function clavesConocidas(detalle) {
   const claves = new Set();
   for (const valor of detalle.fieldValues) {
@@ -63,7 +66,9 @@ function clavesConocidas(detalle) {
   return [...claves].sort();
 }
 
-// «dependencia, tiraje» a ["dependencia", "tiraje"]. El servidor valida que sean snake_case.
+/**
+ * «dependencia, tiraje» a ["dependencia", "tiraje"]. El servidor valida que sean snake_case.
+ */
 function listaDeClaves(texto) {
   if (texto === null || texto === undefined) {
     return [];
@@ -74,19 +79,10 @@ function listaDeClaves(texto) {
     .filter((clave) => clave !== "");
 }
 
-function oGuion(valor) {
-  if (valor === null || valor === undefined || valor === "") {
-    return "—";
-  }
-  return valor;
-}
-
-function fechaCorta(valor) {
-  return new Date(valor).toLocaleDateString();
-}
-
-// Los dos vocabularios de estado, uno al lado del otro (DATAMODEL.md §8.1), y el aviso cuando se
-// contradicen. No se unen a propósito; lo que sí se puede hacer es que se vean.
+/**
+ * Los dos vocabularios de estado, uno al lado del otro (DATAMODEL.md §8.1), y el aviso cuando se
+ * contradicen. No se unen a propósito; lo que sí se puede hacer es que se vean.
+ */
 function ComoVa({ detalle }) {
   const abiertas = detalle.stages.filter((etapa) => ESTADOS_ABIERTOS.includes(etapa.status));
   const concluidas = detalle.stages.filter((etapa) => etapa.status === "done");
@@ -101,7 +97,6 @@ function ComoVa({ detalle }) {
     }.`;
   }
 
-  // El trabajo terminó pero el estatus visible no lo dice. Nada lo mueve solo: por eso el aviso.
   const trabajoTerminado =
     detalle.stages.length > 0 && abiertas.length === 0 && concluidas.length > 0;
   const estatusLoDice = detalle.statusIsTerminal || detalle.closedAt !== null;
@@ -140,8 +135,10 @@ function ComoVa({ detalle }) {
   );
 }
 
-// Las salidas que una etapa prometió, con la que ya tiene valor marcada: el visto bueno se niega
-// mientras falte alguna (RF-FLW-06).
+/**
+ * Las salidas que una etapa prometió, con la que ya tiene valor marcada: el visto bueno se niega
+ * mientras falte alguna (RF-FLW-06).
+ */
 function SalidasDeLaEtapa({ outputs, fieldValues }) {
   if (outputs.length === 0) {
     return null;
@@ -204,9 +201,7 @@ function FilaDeEtapa({ etapa, fieldValues, ocupado, onTransicion, onBloquear, on
     });
   }
 
-  // Los botones son las transiciones legales de este estado, y ninguna otra: `done` no está.
   const botones = TRANSICIONES[etapa.status].map((paso) => {
-    // Esperar a un tercero pide el motivo que RF-FLW-07 quiere, así que va por otro camino.
     if (paso.status === "waiting_external") {
       return (
         <button type="button" key={paso.status} onClick={() => onBloquear(etapa)} disabled={ocupado}>
@@ -325,7 +320,6 @@ function FormularioDeEtapa({
         />
       </label>
 
-      {/* Las claves que ya andan por el proyecto, como sugerencia. */}
       <datalist id={listaId}>
         {claves.map((clave) => (
           <option value={clave} key={clave} />
@@ -399,8 +393,10 @@ function FormularioDeFirma({ datos, ocupado, onCambiar, onEnviar, onCancelar }) 
   );
 }
 
-// Los valores que cruzan de una etapa a otra. Se editan en su lugar: el valor se guarda al salir
-// del campo, y solo si cambió y no quedó vacío —vaciarlo es quitarlo, y eso tiene su botón—.
+/**
+ * Los valores que cruzan de una etapa a otra. Se editan en su lugar: el valor se guarda al salir
+ * del campo, y solo si cambió y no quedó vacío —vaciarlo es quitarlo, y eso tiene su botón—.
+ */
 function ValoresDelProyecto({ detalle, ocupado, onGuardar, onQuitar }) {
   function nombreDeLaEtapa(producedByStageId) {
     if (producedByStageId === null) {
@@ -537,7 +533,6 @@ function ProjectDetail({ proyecto, areas, usuario, onCerrar, onCambio }) {
         }
         setDetalle(respuesta.project);
 
-        // Los estatus que puede vestir: los globales más los de las áreas con etapa aquí.
         const areasConEtapa = [...new Set(respuesta.project.stages.map((etapa) => etapa.areaId))];
         const peticiones = [api.listStatuses()];
         for (const id of areasConEtapa) {
@@ -575,7 +570,6 @@ function ProjectDetail({ proyecto, areas, usuario, onCerrar, onCambio }) {
     onCambio();
   }
 
-  // Envuelve una acción: apaga los botones, muestra el error del servidor y recarga.
   async function hacer(accion) {
     setOcupado(true);
     setError(null);
@@ -765,7 +759,6 @@ function ProjectDetail({ proyecto, areas, usuario, onCerrar, onCambio }) {
     );
   }
 
-  // Finanzas pide, y administración también, porque es quien acompaña el trámite.
   let rol = null;
   if (usuario !== null && usuario !== undefined) {
     rol = usuario.role;

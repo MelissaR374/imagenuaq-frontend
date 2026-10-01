@@ -1,3 +1,9 @@
+// Captura directa de una solicitud (RF-SOL-08): lo que llega por correo se registra aquí, para
+// que todo el trabajo entre por un solo canal.
+//
+// Los campos se dibujan del formato elegido, así que la pantalla no sabe nada de ellos: cambia
+// el formato y cambia el formulario. La conversión de valores la hace el servidor según el
+// tipo de cada campo, de modo que "1,000" y "15/03/2026" llegan bien sin tocar nada aquí.
 import { useEffect, useState } from "react";
 
 import * as api from "../../api/client.js";
@@ -5,12 +11,6 @@ import FieldInput from "../shared/fieldInput.jsx";
 import RequesterInput from "./requesterInput.jsx";
 import "./requestForm.css";
 
-// Captura directa de una solicitud (RF-SOL-08): lo que llega por correo se registra aquí, para
-// que todo el trabajo entre por un solo canal.
-//
-// Los campos se dibujan del formato elegido, así que la pantalla no sabe nada de ellos: cambia
-// el formato y cambia el formulario. La conversión de valores la hace el servidor según el
-// tipo de cada campo, de modo que "1,000" y "15/03/2026" llegan bien sin tocar nada aquí.
 const ORIGENES = [
   { value: "manual", label: "Captura directa" },
   { value: "email", label: "Llegó por correo" },
@@ -38,7 +38,6 @@ function RequestForm({ areas, onCreada, onCancelar }) {
       try {
         const { schemas } = await api.listSchemas();
         if (cancelado) return;
-        // Solo los activos: un formato desactivado ya no recibe solicitudes.
         setFormatos(schemas.filter((formato) => formato.isActive && formato.fields !== null));
       } catch (fallo) {
         if (!cancelado) setError(fallo.message);
@@ -89,7 +88,6 @@ function RequestForm({ areas, onCreada, onCancelar }) {
           value={formatoId}
           onChange={(evento) => {
             setFormatoId(evento.target.value);
-            // Los campos cambian con el formato, así que lo capturado hasta ahora no aplica.
             setValores({});
           }}
           required

@@ -1,15 +1,15 @@
-import { useEffect, useState } from "react";
-
-import * as api from "../../api/client.js";
-import SchemaEditor from "./schemaEditor.jsx";
-import "./schemas.css";
-
 // Los formatos de solicitud (RF-SOL-01). Un formato es la identidad; lo que pide vive en sus
 // versiones, y una versión publicada no se edita: "editar" es publicar la siguiente, para que
 // lo capturado con la anterior siga leyéndose como se capturó.
 //
 // Clonar es lo que hace de un formato una plantilla: el nuevo empieza con los campos del
 // último del otro. Los cinco formatos sembrados están precisamente para eso.
+import { useEffect, useState } from "react";
+
+import * as api from "../../api/client.js";
+import SchemaEditor from "./schemaEditor.jsx";
+import "./schemas.css";
+
 function Schemas() {
   const [formatos, setFormatos] = useState([]);
   const [tipos, setTipos] = useState([]);
@@ -18,8 +18,6 @@ function Schemas() {
   const [error, setError] = useState(null);
   const [aviso, setAviso] = useState(null);
 
-  // Qué está abierto: null, { modo: "nuevo" }, { modo: "version", formato } o
-  // { modo: "clon", formato }.
   const [panel, setPanel] = useState(null);
   const [guardando, setGuardando] = useState(false);
   const [errorPanel, setErrorPanel] = useState(null);

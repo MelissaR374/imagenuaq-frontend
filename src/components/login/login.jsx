@@ -16,7 +16,7 @@ function invitacionEnLaUrl() {
 
 function Login({ onEntrar }) {
   const [invitacion, setInvitacion] = useState(invitacionEnLaUrl);
-  const [modo, setModo] = useState(invitacion ? "activar" : "entrar"); // "entrar" o "activar"
+  const [modo, setModo] = useState(invitacion ? "activar" : "entrar");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [mostrarPassword, setMostrarPassword] = useState(false);
@@ -32,7 +32,6 @@ function Login({ onEntrar }) {
     setEnviando(true);
 
     try {
-      // Los dos caminos devuelven lo mismo: { token, user }.
       const respuesta = activando
         ? await api.activate(invitacion.trim(), password)
         : await api.login(email.trim(), password);
@@ -98,7 +97,6 @@ function Login({ onEntrar }) {
         </p>
 
         <form className="login-form" onSubmit={handleSubmit}>
-          {/* INVITACIÓN o CORREO, según el modo */}
           {activando ? (
             <div className="login-field">
               <label className="login-label" htmlFor="login-invite">
@@ -138,7 +136,6 @@ function Login({ onEntrar }) {
             </div>
           )}
 
-          {/* CONTRASEÑA */}
           <div className="login-field">
             <label className="login-label" htmlFor="login-password">
               {activando ? "Elige una contraseña" : "Contraseña"}
@@ -166,7 +163,6 @@ function Login({ onEntrar }) {
             {activando && <p className="login-hint">Mínimo 8 caracteres.</p>}
           </div>
 
-          {/* ERROR */}
           <p className="login-error" role="alert">
             {error}
           </p>

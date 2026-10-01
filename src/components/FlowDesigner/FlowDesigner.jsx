@@ -27,12 +27,12 @@ import * as api from "../../api/client.js";
 
 import "./FlowDesigner.css";
 
-// Clave local para React: las fases y etapas nuevas todavía no tienen id del servidor.
+/** Clave local para React: las fases y etapas nuevas todavía no tienen id del servidor. */
 function nuevaClave() {
     return `${Date.now()}-${Math.random()}`;
 }
 
-// El organigrama es un árbol; aquí se necesita una lista de áreas con sus miembros.
+/** El organigrama es un árbol; aquí se necesita una lista de áreas con sus miembros. */
 function aplanar(nodos, acumulado = []) {
     for (const nodo of nodos) {
         acumulado.push({ id: nodo.id, name: nodo.name, members: nodo.members ?? [] });
@@ -41,7 +41,7 @@ function aplanar(nodos, acumulado = []) {
     return acumulado;
 }
 
-// "Manual de identidad" -> "manual_identidad": un código sugerido a partir del nombre.
+/** "Manual de identidad" -> "manual_identidad": un código sugerido a partir del nombre. */
 function codigoDesde(nombre) {
     return nombre
         .normalize("NFD")
@@ -62,7 +62,7 @@ function iniciales(nombre) {
         .toUpperCase();
 }
 
-// Lo que manda el servidor, en la forma que usa el lienzo.
+/** Lo que manda el servidor, en la forma que usa el lienzo. */
 function fasesDesde(workflow) {
     return (workflow.phases ?? []).map((fase) => ({
         clave: String(fase.id),
@@ -81,7 +81,7 @@ function fasesDesde(workflow) {
     }));
 }
 
-// Lo que se publica: el flujo completo, en el orden en que se ve.
+/** Lo que se publica: el flujo completo, en el orden en que se ve. */
 function carga(fases) {
     return fases.map((fase) => ({
         name: fase.name,
@@ -116,8 +116,10 @@ function lienzoNuevo() {
     return [{ clave: nuevaClave(), name: "Fase 1", etapas: [] }];
 }
 
-// Una lista de claves de datos: se agregan desde el vocabulario (o escribiendo una nueva) y
-// se quitan una por una.
+/**
+ * Una lista de claves de datos: se agregan desde el vocabulario (o escribiendo una nueva) y
+ * se quitan una por una.
+ */
 function ListaDeClaves({ etiqueta, ayuda, claves, vocabulario, onCambiar }) {
     const [texto, setTexto] = useState("");
 
@@ -161,7 +163,6 @@ function ListaDeClaves({ etiqueta, ayuda, claves, vocabulario, onCambiar }) {
                     value={texto}
                     onChange={(event) => setTexto(event.target.value)}
                     onKeyDown={(event) => {
-                        // Enter agrega la clave en vez de mandar el formulario.
                         if (event.key === "Enter") {
                             event.preventDefault();
                             agregar();
@@ -180,12 +181,10 @@ function ListaDeClaves({ etiqueta, ayuda, claves, vocabulario, onCambiar }) {
 function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
     const deSolicitud = solicitud !== null;
 
-    // Catálogos
     const [plantillas, setPlantillas] = useState([]);
     const [areas, setAreas] = useState([]);
     const [vocabulario, setVocabulario] = useState([]);
 
-    // La plantilla abierta: null es una nueva que todavía no se guarda.
     const [plantillaId, setPlantillaId] = useState(null);
     const [version, setVersion] = useState(null);
     const [fases, setFases] = useState(() =>
@@ -193,15 +192,12 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
     );
     const [cambiado, setCambiado] = useState(false);
 
-    // En una solicitud: la plantilla de la que se partió, mientras no se le cambie nada. Así se
-    // guarda como copia de esa plantilla y la solicitud recuerda de dónde salió su flujo.
     const [origenId, setOrigenId] = useState(null);
 
     const [cargando, setCargando] = useState(true);
     const [ocupado, setOcupado] = useState(false);
     const [error, setError] = useState(null);
 
-    // La ventana abierta, con lo que se está editando en ella, o null.
     const [modal, setModal] = useState(null);
     const [modalError, setModalError] = useState(null);
 
@@ -220,10 +216,8 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
                 setAreas(aplanar(organigrama.roots));
                 setVocabulario(claves.fieldKeys);
 
-                // En una solicitud el lienzo ya trae su flujo; no se abre ninguna plantilla.
                 if (deSolicitud) return;
 
-                // Abre la primera plantilla, si hay alguna.
                 const primera = lista.workflows.find((una) => una.isActive) ?? lista.workflows[0];
                 if (primera) {
                     const respuesta = await api.getWorkflow(primera.id);
@@ -250,7 +244,6 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
         setCambiado(false);
     }
 
-    // Toda llamada al servidor pasa por aquí: marca ocupado y muestra el error si falla.
     async function hacer(accion, { enModal = false } = {}) {
         setOcupado(true);
         setError(null);
@@ -272,7 +265,6 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
         setPlantillas(lista.workflows);
     }
 
-    // Cambiar de plantilla descarta lo que no se guardó, así que primero se pregunta.
     function puedeDescartar() {
         return !cambiado || window.confirm("Hay cambios sin guardar. ¿Descartarlos?");
     }
@@ -305,8 +297,6 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
         setModalError(null);
     }
 
-    // --- Guardar ---
-
     function guardar() {
         if (deSolicitud) {
             guardarEnSolicitud();
@@ -323,8 +313,6 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
         });
     }
 
-    // El flujo de la solicitud se reemplaza entero. Si es una plantilla tal cual, se guarda
-    // como copia de ella para que la solicitud recuerde de dónde salió.
     function guardarEnSolicitud() {
         hacer(async () => {
             const cuerpo = origenId !== null ? { workflowId: origenId } : { phases: carga(fases) };
@@ -339,8 +327,6 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
         onCerrar?.();
     }
 
-    // En una solicitud, partir de una plantilla carga su última versión en el lienzo; no se
-    // crea nada en el servidor hasta guardar.
     function abrirCargarPlantilla() {
         if (!puedeDescartar()) return;
         const activa = plantillas.find((una) => una.isActive);
@@ -351,7 +337,6 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
         event.preventDefault();
         const hecho = await hacer(async () => {
             const respuesta = await api.getWorkflow(Number(modal.origenId));
-            // Claves nuevas: son etapas de esta solicitud, no las de la plantilla.
             setFases(fasesDesde(respuesta.workflow).map((fase) => ({
                 ...fase,
                 clave: nuevaClave(),
@@ -381,8 +366,6 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
         if (hecho) cerrarModal();
     }
 
-    // --- Partir de una plantilla ---
-
     function abrirClonar() {
         if (!puedeDescartar()) return;
         setModal({ tipo: "clonar", origenId: plantillaId ?? plantillas[0]?.id ?? "", name: "", code: "", codeTocado: false });
@@ -398,12 +381,9 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
         if (hecho) cerrarModal();
     }
 
-    // El código se sugiere desde el nombre hasta que alguien lo escribe a mano.
     function cambiarNombreModal(name) {
         setModal({ ...modal, name, code: modal.codeTocado ? modal.code : codigoDesde(name) });
     }
-
-    // --- Fases ---
 
     function abrirFase(fase = null) {
         setModal({ tipo: "fase", faseClave: fase?.clave ?? null, name: fase?.name ?? "" });
@@ -427,8 +407,6 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
         cambiarFases(fases.filter((otra) => otra.clave !== fase.clave));
     }
 
-    // --- Etapas ---
-
     function abrirEtapa(fase, etapa = null) {
         setModal({
             tipo: "etapa",
@@ -440,7 +418,6 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
 
     function cambiarEtapa(clave, valor) {
         const etapa = { ...modal.etapa, [clave]: valor };
-        // Si la persona sugerida no es del área nueva, se quita.
         if (clave === "areaId") {
             const area = areas.find((una) => String(una.id) === String(valor));
             const sigue = area?.members.some((m) => String(m.id) === String(etapa.defaultAssigneeId));
@@ -470,8 +447,6 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
         ));
     }
 
-    // --- Lo que se muestra ---
-
     function nombreDeArea(areaId) {
         return areas.find((area) => String(area.id) === String(areaId))?.name ?? "Área";
     }
@@ -488,7 +463,6 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
 
     const areasDistintas = new Set(fases.flatMap((fase) => fase.etapas.map((etapa) => String(etapa.areaId)))).size;
 
-    // Las etapas de una fase trabajan a la vez, así que la fase dura lo que su etapa más larga.
     const totalDays = fases.reduce(
         (total, fase) => total + Math.max(0, ...fase.etapas.map((etapa) => Number(etapa.estimatedDays) || 0)),
         0
@@ -519,7 +493,6 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
                         {cambiado ? " · CAMBIOS SIN GUARDAR" : ""}
                     </span>
 
-                    {/* La plantilla abierta */}
                     {!deSolicitud && (
                         <select
                             className="flow-template-picker"
@@ -580,8 +553,6 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
 
             {error && <p className="flow-error">{error}</p>}
 
-            {/* resumen */}
-
             <div className="flow-summary">
                 <div className="summary-text">
                     <span>
@@ -601,14 +572,12 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
                 )}
             </div>
 
-            {/* canvas*/}
             <main className="flow-canvas">
                 <div className="phase-columns">
 
                     {fases.map((fase) => (
                         <section className="phase-column" key={fase.clave}>
 
-                            {/* titulo de fase */}
                             <div className="phase-title">
                                 <span>{fase.name}</span>
                                 <button
@@ -629,7 +598,6 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
                                 </button>
                             </div>
 
-                            {/* tarjetas */}
                             {fase.etapas.map((etapa) => {
                                 const persona = nombreDePersona(etapa.areaId, etapa.defaultAssigneeId);
                                 const dias = Number(etapa.estimatedDays);
@@ -651,7 +619,6 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
                                 );
                             })}
 
-                            {/*agregar etapa*/}
                             <button
                                 type="button"
                                 className="add-area-button"
@@ -664,7 +631,6 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
                         </section>
                     ))}
 
-                    {/*agregar fase */}
                     <section className="add-phase-column">
                         <button
                             type="button"
@@ -682,10 +648,6 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
                 </div>
             </main>
 
-            {/* =================================================
-                FOOTER
-                ================================================= */}
-
             <footer className="flow-footer">
                 <span>
                     Ninguna área avanza sin entregar su salida
@@ -701,7 +663,6 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
                 </button>
             </footer>
 
-            {/* Las claves que ya existen en algún formato, para elegirlas en vez de inventarlas. */}
             <datalist id="flujo-vocabulario">
                 {vocabulario.map((una) => (
                     <option key={una.key} value={una.key}>
@@ -709,10 +670,6 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
                     </option>
                 ))}
             </datalist>
-
-            {/* =================================================
-                MODAL DE ETAPA
-                ================================================= */}
 
             {modal?.tipo === "etapa" && (
                 <FlowModal
@@ -750,7 +707,6 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
                     </div>
 
                     <div className="modal-field">
-                        {/* En una solicitud es quien la va a hacer; en una plantilla, una sugerencia. */}
                         <label htmlFor="etapa-persona">
                             {deSolicitud ? "Persona responsable" : "Persona sugerida"}
                         </label>
@@ -766,8 +722,6 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
                         </select>
                     </div>
 
-                    {/* Qué recibe y qué entrega la etapa, de dos maneras: como datos que el
-                        sistema revisa, o como una nota que solo se lee. */}
                     <p className="flow-field-help">
                         Lo que la etapa recibe y entrega se puede anotar de dos formas. Los
                         <strong> datos</strong> son valores que se capturan en el proyecto, como
@@ -862,10 +816,6 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
                 </FlowModal>
             )}
 
-            {/* =================================================
-                MODAL DE FASE
-                ================================================= */}
-
             {modal?.tipo === "fase" && (
                 <FlowModal
                     type="phase"
@@ -898,10 +848,6 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
                     </div>
                 </FlowModal>
             )}
-
-            {/* =================================================
-                MODAL DE PLANTILLA NUEVA (guardar como)
-                ================================================= */}
 
             {modal?.tipo === "plantilla" && (
                 <FlowModal
@@ -947,10 +893,6 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
                 </FlowModal>
             )}
 
-            {/* =================================================
-                MODAL DE CARGAR UNA PLANTILLA (en una solicitud)
-                ================================================= */}
-
             {modal?.tipo === "cargar" && (
                 <FlowModal
                     type="phase"
@@ -983,10 +925,6 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
                     </div>
                 </FlowModal>
             )}
-
-            {/* =================================================
-                MODAL DE PARTIR DE UNA PLANTILLA
-                ================================================= */}
 
             {modal?.tipo === "clonar" && (
                 <FlowModal

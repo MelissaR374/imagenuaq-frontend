@@ -1,9 +1,3 @@
-import { Fragment, useEffect, useState } from "react";
-
-import * as api from "../../api/client.js";
-import Mapping from "./mapping.jsx";
-import "./importPipeline.css";
-
 // La canalización de importación de un libro, de principio a fin (RF-MIG-01, RF-MIG-02).
 //
 // Antes esto vivía dentro de una celda de la tabla de libros: mapear, importar y el historial se
@@ -15,6 +9,12 @@ import "./importPipeline.css";
 // importó alguna vez—. La cuarta no: repartir pasa en la bandeja, sobre las solicitudes, no sobre
 // el libro. Se muestra como entrega y no como palomita, porque afirmar aquí que ya se repartió
 // sería inventarlo.
+import { Fragment, useEffect, useState } from "react";
+
+import * as api from "../../api/client.js";
+import { letraDeColumna } from "../shared/formato.js";
+import Mapping from "./mapping.jsx";
+import "./importPipeline.css";
 
 const ETAPAS = [
   {
@@ -43,22 +43,11 @@ const ETAPAS = [
   },
 ];
 
-// La letra de columna de Excel para un índice base cero: 0 → A, 25 → Z, 26 → AA.
-function letraDeColumna(indice) {
-  let letra = "";
-  let n = indice;
-  while (n >= 0) {
-    letra = String.fromCharCode(65 + (n % 26)) + letra;
-    n = Math.floor(n / 26) - 1;
-  }
-  return letra;
-}
-
 function fechaLarga(valor) {
   return new Date(valor).toLocaleString();
 }
 
-// En qué está cada etapa. `hecho` pinta la palomita; `actual` es la que toca.
+/** En qué está cada etapa. `hecho` pinta la palomita; `actual` es la que toca. */
 function estadoDeEtapas(sheet, abierta) {
   const hechos = {
     registro: true,
@@ -86,7 +75,7 @@ function estadoDeEtapas(sheet, abierta) {
   });
 }
 
-// El riel. Cada etapa es un botón: abre su panel sin perder de vista las demás.
+/** El riel. Cada etapa es un botón: abre su panel sin perder de vista las demás. */
 function Riel({ etapas, onAbrir }) {
   return (
     <ol className="pipeline-rail">
@@ -117,8 +106,10 @@ function Riel({ etapas, onAbrir }) {
   );
 }
 
-// La hoja como se ve en Excel: los encabezados son el renglón 1 y debajo van las de muestra. El
-// teal es el color que este sistema reserva para la hoja de cálculo, aquí y en el mapeo.
+/**
+ * La hoja como se ve en Excel: los encabezados son el renglón 1 y debajo van las de muestra. El
+ * teal es el color que este sistema reserva para la hoja de cálculo, aquí y en el mapeo.
+ */
 function CuadriculaDeLaHoja({ vista }) {
   const columnas = vista.headers;
 
@@ -156,7 +147,6 @@ function CuadriculaDeLaHoja({ vista }) {
             {vista.rows.map((fila, renglon) => (
               <tr key={renglon}>
                 <th className="sheet-preview-row">{renglon + 2}</th>
-                {/* Se recorren los encabezados para que cada fila tenga las mismas celdas */}
                 {columnas.map((_, columna) => (
                   <td className="sheet-preview-cell" key={columna}>
                     {fila[columna] == null ? "" : String(fila[columna])}
@@ -171,7 +161,7 @@ function CuadriculaDeLaHoja({ vista }) {
   );
 }
 
-// Etapa 1. Lo que se sabe del libro sin llamar a Microsoft, y la hoja en vivo si se pide.
+/** Etapa 1. Lo que se sabe del libro sin llamar a Microsoft, y la hoja en vivo si se pide. */
 function PanelDeRegistro({ sheet, vista, cargando, onVer }) {
   let cuadricula = null;
   if (vista !== null) {
@@ -228,10 +218,12 @@ function PanelDeRegistro({ sheet, vista, cargando, onVer }) {
   );
 }
 
-// Etapa 3. Correr la importación, el resumen de la corrida y el historial.
-// Marcar las filas de hoy como ya vistas, sin volverlas solicitudes. Es lo que hace utilizable un
-// rastreador que ya lleva meses: lo viejo se deja atrás de una vez, y de ahí en adelante sólo
-// entra lo que alguien agregue.
+/**
+ * Etapa 3. Correr la importación, el resumen de la corrida y el historial.
+ * Marcar las filas de hoy como ya vistas, sin volverlas solicitudes. Es lo que hace utilizable un
+ * rastreador que ya lleva meses: lo viejo se deja atrás de una vez, y de ahí en adelante sólo
+ * entra lo que alguien agregue.
+ */
 function Arranque({ sheet, marcando, onMarcar, onContar, onDeshacer }) {
   const marcadas = sheet.markedRows ?? 0;
 
@@ -331,7 +323,6 @@ function PanelDeImportacion({
         <ul className="pipeline-errors">
           {corrida.errors.map((fallo) => (
             <li key={fallo.index}>
-              {/* +2: el renglón 1 de la hoja es el encabezado */}
               Renglón {fallo.index + 2}: {fallo.message}
             </li>
           ))}
@@ -417,9 +408,11 @@ function Acciones({ importando, onImportar, onProbarEnSeco }) {
   );
 }
 
-// El historial. Los motivos de cada corrida se guardaron en `sheet_imports.errors`, así que
-// «¿por qué no entraron esas diez?» se contesta al día siguiente y no sólo en el momento: por eso
-// un renglón con errores se abre.
+/**
+ * El historial. Los motivos de cada corrida se guardaron en `sheet_imports.errors`, así que
+ * «¿por qué no entraron esas diez?» se contesta al día siguiente y no sólo en el momento: por eso
+ * un renglón con errores se abre.
+ */
 function Historial({ corridas }) {
   const [abierta, setAbierta] = useState(null);
 
@@ -469,7 +462,6 @@ function Historial({ corridas }) {
                     <ul className="pipeline-errors">
                       {una.errors.map((fallo) => (
                         <li key={fallo.index}>
-                          {/* +2: el renglón 1 de la hoja es el encabezado */}
                           Renglón {fallo.index + 2}: {fallo.message}
                         </li>
                       ))}
@@ -500,7 +492,7 @@ function Historial({ corridas }) {
   );
 }
 
-// Etapa 4. No es un estado del libro: es dónde sigue el trabajo.
+/** Etapa 4. No es un estado del libro: es dónde sigue el trabajo. */
 function PanelDeReparto({ sheet }) {
   let cuando = "todavía no se ha importado";
   if (sheet.lastImportedAt !== null) {
@@ -522,8 +514,10 @@ function PanelDeReparto({ sheet }) {
   );
 }
 
-// La etapa con la que abre el libro: la que toca. Se calcula al montar y desde ahí la manda quien
-// usa la pantalla --- no es algo que haya que volver a sincronizar en cada render.
+/**
+ * La etapa con la que abre el libro: la que toca. Se calcula al montar y desde ahí la manda quien
+ * usa la pantalla --- no es algo que haya que volver a sincronizar en cada render.
+ */
 function etapaInicial(sheet) {
   if (!sheet.mapped) {
     return "mapeo";
@@ -545,7 +539,6 @@ function ImportPipeline({ sheet, onCerrar, onCambio }) {
   const [marcado, setMarcado] = useState(null);
   const [error, setError] = useState(null);
 
-  // El historial se pide una vez y se refresca tras cada corrida.
   useEffect(() => {
     let cancelado = false;
 
@@ -613,8 +606,6 @@ function ImportPipeline({ sheet, onCerrar, onCambio }) {
     }
   }
 
-  // Marcar es una decisión con consecuencia --- esas filas dejan de entrar ---, así que pregunta
-  // primero y dice cuántas son. `dryRun` contesta «¿cuántas serían?» sin escribir nada.
   async function marcar(dryRun) {
     setError(null);
     setMarcado(null);

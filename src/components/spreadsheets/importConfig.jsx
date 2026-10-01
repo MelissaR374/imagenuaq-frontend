@@ -1,9 +1,3 @@
-import { useEffect, useState } from "react";
-
-import * as api from "../../api/client.js";
-import ImportPipeline from "./importPipeline.jsx";
-import "./importConfig.css";
-
 // «Configuración de formatos de solicitud»: el mapeo de las columnas de un libro a un formato, y
 // la importación (RF-MIG-02).
 //
@@ -14,12 +8,14 @@ import "./importConfig.css";
 // que la hoja cambia.
 //
 // Se elige el libro primero porque el mapeo no existe sin uno: cada libro tiene los suyos.
+/** En qué va cada libro, en las mismas palabras y colores que usa la canalización. */
+import { useEffect, useState } from "react";
 
-function fechaCorta(valor) {
-  return new Date(valor).toLocaleDateString();
-}
+import * as api from "../../api/client.js";
+import { fechaCorta } from "../shared/formato.js";
+import ImportPipeline from "./importPipeline.jsx";
+import "./importConfig.css";
 
-// En qué va cada libro, en las mismas palabras y colores que usa la canalización.
 function estadoDelLibro(hoja) {
   if (!hoja.mapped) {
     return { texto: "Sin mapear", clase: "is-pendiente" };
@@ -30,8 +26,10 @@ function estadoDelLibro(hoja) {
   return { texto: `Importado el ${fechaCorta(hoja.lastImportedAt)}`, clase: "is-hecho" };
 }
 
-// Un libro en la lista para elegir. Lleva lo que hace falta para decidir si es éste: su nombre, la
-// hoja dentro del libro, la cuenta con la que se lee y en qué va.
+/**
+ * Un libro en la lista para elegir. Lleva lo que hace falta para decidir si es éste: su nombre, la
+ * hoja dentro del libro, la cuenta con la que se lee y en qué va.
+ */
 function LibroElegible({ hoja, onElegir }) {
   const estado = estadoDelLibro(hoja);
 
@@ -116,7 +114,6 @@ function ImportConfig() {
     return <p className="config-loading">Cargando...</p>;
   }
 
-  // El libro elegido se lleva la pantalla: la canalización es larga y no cabe al lado de la lista.
   if (elegido !== null) {
     const vigente = libros.find((hoja) => hoja.id === elegido.id) ?? elegido;
     return (

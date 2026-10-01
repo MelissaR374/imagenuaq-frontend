@@ -1,15 +1,3 @@
-import { useMemo, useState } from "react";
-import {
-  MdSearch,
-  MdWarningAmber,
-  MdMailOutline,
-  MdFolderOpen,
-  MdNotificationsNone,
-  MdCake,
-} from "react-icons/md";
-
-import "./notifications.css";
-
 /*
  * TIPOS DE NOTIFICACIÓN
  * Estos son los tipos que debe manejar el frontend.
@@ -24,6 +12,17 @@ import "./notifications.css";
  * Si llega null, undefined, vacío o un tipo desconocido,
  * se utiliza "generico".
 */
+import { useMemo, useState } from "react";
+import {
+  MdSearch,
+  MdWarningAmber,
+  MdMailOutline,
+  MdFolderOpen,
+  MdNotificationsNone,
+  MdCake,
+} from "react-icons/md";
+
+import "./notifications.css";
 
 const TIPOS_NOTIFICACION = {
   alerta: {
@@ -56,17 +55,6 @@ const TIPOS_NOTIFICACION = {
     nombre: "Birthdays",
   },
 };
-
-
-/*
- * MOCK DE DATOS (PROVISIONALES)
- *
- * Esta estructura está pensada para tener la misma forma
- * que posteriormente devolverá la API.
- *
- * No guardamos "HOY", "AYER" ni "hace 2 h".
- * Guardamos una fecha real y el frontend calcula esos textos.
-*/
 
 const NOTIFICACIONES_INICIALES = [
   {
@@ -181,17 +169,6 @@ const NOTIFICACIONES_INICIALES = [
   },
 ];
 
-
-/*
- * Obtiene un tipo válido.
- * Si la API manda:
- * -null
- * -undefined
- * -""
- *  
- * SE UTILIZA EL ICONO "generico".
-*/
-
 function obtenerTipoNotificacion(tipo) {
   if (tipo && TIPOS_NOTIFICACION[tipo]) {
     return tipo;
@@ -199,18 +176,6 @@ function obtenerTipoNotificacion(tipo) {
 
   return "generico";
 }
-
-
-/*
- * Obtiene el grupo visual de una notificación.
- *
- * Ejemplo:
- *
- * 2026-09-23 -> HOY
- * 2026-09-22 -> AYER
- * últimos 7 días -> ESTA SEMANA
- * resto -> ANTERIORES
-*/
 
 function obtenerGrupoFecha(fecha) {
   const ahora = new Date();
@@ -249,18 +214,6 @@ function obtenerGrupoFecha(fecha) {
   return "ANTERIORES";
 }
 
-/*
- * Convierte una fecha en algo como:
- *
- * hace 2 h
- * hace 5 h
- * hace 1 día
- * hace 41 días
- *
- * Si es reciente:
- * hace unos minutos
-*/
-
 function obtenerTiempoRelativo(fecha){
   const ahora = new Date();
   const fechaNotificacion = new Date(fecha);
@@ -295,23 +248,9 @@ function obtenerTiempoRelativo(fecha){
 }
 
 function Notifications(){
-    /* AHORA TENEMOS datos locales.
-    * Cuando se una con el back se puede usar:
-    * "api.getNotifications()"
-    * sin cambiar el resto de la interfaz.
-    */
     const [notificaciones, setNotificaciones] = useState(NOTIFICACIONES_INICIALES,);
     const [busqueda, setBusqueda] = useState("");
     
-    /*
-    * Filtros:
-    * todas
-    * sin_leer
-    * alerta
-    * mensaje
-    * proyecto
-    * generico
-    */
     const [filtro, setFiltro] = useState("todas");
     const totalNotificaciones = notificaciones.length;
     const totalSinLeer = notificaciones.filter((notificacion) => !notificacion.leida,).length;
@@ -330,7 +269,6 @@ function Notifications(){
         obtenerTipoNotificacion(notificacion.tipo) === "proyecto",
     ).length;
     
-    /*FILTRADO*/
     const notificacionesFiltradas = useMemo(() => {
         return notificaciones.filter((notificacion) => {
             const tipo = obtenerTipoNotificacion(
@@ -354,7 +292,6 @@ function Notifications(){
         });
     }, [notificaciones, busqueda, filtro]);
     
-    /*AGRUPACIÓN POR FECHA*/
     const grupos = [
         "HOY",
         "AYER",
@@ -364,10 +301,6 @@ function Notifications(){
     
     function marcarComoLeida(id) {
         setNotificaciones((actuales) => actuales.map((notificacion) => notificacion.id === id? {...notificacion, leida: true,} : notificacion,),);
-        
-        /*Cuando exista API:
-        * await api.markNotificationAsRead(id);
-        */
     }
     
     function marcarTodasComoLeidas() {
@@ -377,10 +310,6 @@ function Notifications(){
             leida: true,
         })),
         );
-
-        /*Cuando exista API:
-        *await api.markAllNotificationsAsRead();
-        */
     }
     return (
         <section className="notifications-page">

@@ -1,8 +1,3 @@
-import { useEffect, useState } from "react";
-
-import * as api from "../../api/client.js";
-import "./mapping.css";
-
 // El asistente de mapeo (RF-MIG-02): decir a qué formato se parece un libro y qué columna
 // alimenta cada campo, sin tocar código.
 //
@@ -14,6 +9,11 @@ import "./mapping.css";
 //
 // Las columnas se nombran por el texto de su encabezado, así que reordenar la hoja no rompe
 // nada y renombrar una columna sí: el servidor lo dice al guardar, nombrando cuál.
+import { useEffect, useState } from "react";
+
+import * as api from "../../api/client.js";
+import "./mapping.css";
+
 const OPS = [
   { value: "column", label: "De una columna" },
   { value: "constant", label: "Un valor fijo" },
@@ -23,13 +23,15 @@ const OPS = [
 
 const FORMATOS_FECHA = ["DD/MM/YYYY", "MM/DD/YYYY", "YYYY-MM-DD"];
 
-// Una regla vacía, que es lo mismo que "este campo no se llena".
+/** Una regla vacía, que es lo mismo que "este campo no se llena". */
 const SIN_REGLA = { op: "", column: "" };
 
-// Qué acepta cada tipo de campo, dicho en la pantalla y no solo en el código. Los textos siguen
-// a `src/utils/fieldValues.js`, que es quien decide: el **tipo del campo destino** elige la
-// conversión, nunca la regla del mapeo. Una celda que no cuadra no se guarda a medias --- la fila
-// entera se reporta y no entra.
+/**
+ * Qué acepta cada tipo de campo, dicho en la pantalla y no solo en el código. Los textos siguen
+ * a `src/utils/fieldValues.js`, que es quien decide: el **tipo del campo destino** elige la
+ * conversión, nunca la regla del mapeo. Una celda que no cuadra no se guarda a medias --- la fila
+ * entera se reporta y no entra.
+ */
 const QUE_ACEPTA = {
   text: "Cualquier texto.",
   location: "Cualquier texto.",
@@ -47,7 +49,7 @@ const QUE_ACEPTA = {
   cotizacion: "El folio de la cotización. Se captura tal cual.",
 };
 
-// Lo que se dice de un campo del formato: su tipo y qué acepta.
+/** Lo que se dice de un campo del formato: su tipo y qué acepta. */
 function aceptaDe(campo) {
   const dicho = QUE_ACEPTA[campo.type] ?? QUE_ACEPTA[campo.baseType];
   if (dicho === undefined) {
@@ -56,9 +58,11 @@ function aceptaDe(campo) {
   return dicho;
 }
 
-// Una regla lista para mandar, o `undefined` si no se llenó. Se queda solo con las llaves que su
-// operación usa, igual que hace el servidor al guardarla: una regla que todavía recuerda la
-// columna que alguien intentó primero se lee como una regla que la usa.
+/**
+ * Una regla lista para mandar, o `undefined` si no se llenó. Se queda solo con las llaves que su
+ * operación usa, igual que hace el servidor al guardarla: una regla que todavía recuerda la
+ * columna que alguien intentó primero se lee como una regla que la usa.
+ */
 const LLAVES_DE_REGLA = ["column", "columns", "value", "separator", "index", "from", "format", "default"];
 
 function limpiarRegla(regla) {
@@ -78,8 +82,10 @@ function limpiarRegla(regla) {
   return limpia;
 }
 
-// Los campos de un formato, como una sola lista: la clave es única entre las dos secciones, así
-// que para mapear no hace falta distinguirlas.
+/**
+ * Los campos de un formato, como una sola lista: la clave es única entre las dos secciones, así
+ * que para mapear no hace falta distinguirlas.
+ */
 function camposDe(formato) {
   if (!formato) return [];
   return [
@@ -88,8 +94,10 @@ function camposDe(formato) {
   ];
 }
 
-// Las reglas con las que arranca el asistente: lo que ya estaba guardado se conserva y lo demás
-// empieza vacío.
+/**
+ * Las reglas con las que arranca el asistente: lo que ya estaba guardado se conserva y lo demás
+ * empieza vacío.
+ */
 function reglasDe(campos, guardado = {}) {
   const reglas = {
     title: guardado.title ?? { ...SIN_REGLA },
@@ -106,9 +114,11 @@ function reglasDe(campos, guardado = {}) {
   };
 }
 
-// El selector de columna que usan todas las reglas. Vive aquí y no dentro del componente
-// porque una función que devuelve JSX declarada en cada render es un componente nuevo cada vez:
-// React lo desmonta y lo vuelve a montar, y el campo pierde el foco mientras se escribe.
+/**
+ * El selector de columna que usan todas las reglas. Vive aquí y no dentro del componente
+ * porque una función que devuelve JSX declarada en cada render es un componente nuevo cada vez:
+ * React lo desmonta y lo vuelve a montar, y el campo pierde el foco mientras se escribe.
+ */
 function SelectorDeColumna({ headers, valor, onChange }) {
   return (
     <select className="mapping-input" value={valor ?? ""} onChange={(e) => onChange(e.target.value)}>
@@ -122,9 +132,11 @@ function SelectorDeColumna({ headers, valor, onChange }) {
   );
 }
 
-// Una fila de regla: de dónde sale el valor, lo que ese "de dónde" necesita saber, y qué acepta
-// el destino --- esto último para que nadie tenga que adivinar si una columna de texto cabe en un
-// campo de número.
+/**
+ * Una fila de regla: de dónde sale el valor, lo que ese "de dónde" necesita saber, y qué acepta
+ * el destino --- esto último para que nadie tenga que adivinar si una columna de texto cabe en un
+ * campo de número.
+ */
 function FilaDeRegla({ etiqueta, ayuda, tipo, acepta, obligatorio, regla, headers, onCambio }) {
   const actual = regla ?? SIN_REGLA;
 
@@ -212,8 +224,6 @@ function FilaDeRegla({ etiqueta, ayuda, tipo, acepta, obligatorio, regla, header
         ) : null}
       </td>
       <td>
-        {/* Una fecha escrita a mano necesita decir en qué orden está; una fecha de verdad llega
-            como número de Excel y no lo necesita. */}
         {actual.op !== "" && (tipo === "date" || tipo === "datetime") ? (
           <select
             className="mapping-input"
@@ -241,8 +251,6 @@ function FilaDeRegla({ etiqueta, ayuda, tipo, acepta, obligatorio, regla, header
         ) : null}
       </td>
       <td>
-        {/* Un valor de respaldo sirve justo cuando el campo es obligatorio y la hoja trae la celda
-            vacía: sin esto el renglón se rechaza y no hay nada que decidir. */}
         {actual.op === "column" || actual.op === "concat" || actual.op === "split" ? (
           <input
             className="mapping-input"
@@ -257,8 +265,10 @@ function FilaDeRegla({ etiqueta, ayuda, tipo, acepta, obligatorio, regla, header
   );
 }
 
-// Lo que pasaría con las filas de muestra, en una línea. Va junto al botón porque es la
-// respuesta a haberlo pulsado.
+/**
+ * Lo que pasaría con las filas de muestra, en una línea. Va junto al botón porque es la
+ * respuesta a haberlo pulsado.
+ */
 function ResumenDePrueba({ rows }) {
   const entran = rows.filter((fila) => fila.ok && !fila.alreadyImported);
   const yaEstaban = rows.filter((fila) => fila.alreadyImported);
@@ -292,8 +302,10 @@ function ResumenDePrueba({ rows }) {
   );
 }
 
-// Las primeras filas ya transformadas. Es lo que hace juzgable un mapeo: la pregunta «¿esta
-// columna es el tiraje?» es sobre los datos, no sobre la regla.
+/**
+ * Las primeras filas ya transformadas. Es lo que hace juzgable un mapeo: la pregunta «¿esta
+ * columna es el tiraje?» es sobre los datos, no sobre la regla.
+ */
 function VistaPrevia({ rows }) {
   return (
     <div className="mapping-preview">
@@ -319,7 +331,7 @@ function VistaPrevia({ rows }) {
   );
 }
 
-// Una fila de la prueba, con su veredicto.
+/** Una fila de la prueba, con su veredicto. */
 function FilaDePrueba({ fila }) {
   let veredicto = "No entraría";
   if (fila.alreadyImported) {
@@ -332,7 +344,6 @@ function FilaDePrueba({ fila }) {
 
   return (
     <tr className="mapping-row">
-      {/* +2: la fila 1 de la hoja es el encabezado */}
       <td>{fila.index + 2}</td>
       <td>{fila.title ?? "—"}</td>
       <td>{fila.requester ?? "—"}</td>
@@ -366,7 +377,6 @@ function Mapping({ sheet, onGuardado, onCerrar }) {
   const [estatus, setEstatus] = useState([]);
   const [versionId, setVersionId] = useState("");
 
-  // Las reglas, por destino: "title", "requester", "status" y cada clave de campo.
   const [reglas, setReglas] = useState({});
   const [hashColumns, setHashColumns] = useState([]);
   const [tablaEstatus, setTablaEstatus] = useState([]);
@@ -391,7 +401,6 @@ function Mapping({ sheet, onGuardado, onCerrar }) {
         setFormatos(usables);
         setEstatus(statuses);
 
-        // Un libro ya mapeado abre en su formato, con su mapeo cargado.
         const ya = usables.find(
           (uno) => String(uno.schemaVersionId) === String(sheet.schemaVersionId ?? ""),
         );
@@ -415,7 +424,6 @@ function Mapping({ sheet, onGuardado, onCerrar }) {
     };
   }, [sheet.schemaVersionId, sheet.columnMap]);
 
-  // Los encabezados reales del libro, leídos en vivo: son las opciones de cada selector.
   useEffect(() => {
     let cancelado = false;
 
@@ -442,15 +450,12 @@ function Mapping({ sheet, onGuardado, onCerrar }) {
   const formato = formatos.find((uno) => String(uno.schemaVersionId) === String(versionId));
   const campos = camposDe(formato);
 
-  // Elegir formato rehace las reglas: son los campos de ese formato y de ningún otro.
   function elegirVersion(valor) {
     setVersionId(valor);
     setPrueba(null);
 
     const elegido = formatos.find((uno) => String(uno.schemaVersionId) === String(valor));
 
-    // El mapeo guardado solo sirve para el formato al que el libro ya apunta; para otro formato se
-    // empieza de cero, porque sus claves son otras.
     let guardado = {};
     if (String(sheet.schemaVersionId ?? "") === String(valor)) {
       guardado = sheet.columnMap ?? {};
@@ -466,7 +471,6 @@ function Mapping({ sheet, onGuardado, onCerrar }) {
     setReglas((actual) => ({ ...actual, [destino]: { ...actual[destino], ...cambios } }));
   }
 
-  // Las reglas vacías no se mandan: un campo sin regla simplemente no se llena.
   function armarMapa() {
     const fields = {};
     for (const campo of campos) {
@@ -476,7 +480,6 @@ function Mapping({ sheet, onGuardado, onCerrar }) {
       }
     }
 
-    // La tabla de equivalencias viaja dentro de la regla de estatus, y solo las filas completas.
     const status = limpiarRegla(reglas.status);
     if (status !== undefined) {
       const equivalencias = {};
@@ -574,8 +577,6 @@ function Mapping({ sheet, onGuardado, onCerrar }) {
 
       {bloqueDeAviso}
 
-      {/* Cómo se importan los datos, dicho antes de pedir que se mapee nada: es la pregunta que
-          la pantalla dejaba sin contestar. */}
       <details className="mapping-explainer" open>
         <summary>Cómo se importan los datos</summary>
         <ul>
@@ -759,8 +760,6 @@ function Mapping({ sheet, onGuardado, onCerrar }) {
               </button>
             </div>
 
-            {/* El rechazo del servidor va aquí, no arriba: el botón está al final de una lista
-                larga y un mensaje a treinta casillas de distancia no se ve. */}
             {bloqueDeError}
             {resumen}
           </>

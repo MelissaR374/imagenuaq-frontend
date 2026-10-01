@@ -1,10 +1,3 @@
-import { useEffect, useState } from "react";
-
-import * as api from "../../api/client.js";
-import RequestDetail from "./requestDetail.jsx";
-import RequestForm from "./requestForm.jsx";
-import "./inbox.css";
-
 // La bandeja de solicitudes (RF-SOL-04): ordenada y filtrable, para que nadie tenga que
 // revisar correo, Excel, Teams y WhatsApp para saber qué le toca. Los filtros son los que
 // RF-SOL-05 nombra: nombre, entidad, folio, responsable y estatus.
@@ -19,6 +12,15 @@ import "./inbox.css";
 // Cuántas se ven de un jalón. Una importación mete decenas de renglones de golpe, así que la
 // bandeja se pagina: el total viene del servidor (`total`, que cuenta lo filtrado y no la página),
 // de modo que se puede decir cuánto falta por ver en lugar de adivinarlo.
+import { useEffect, useState } from "react";
+
+import * as api from "../../api/client.js";
+import { oGuion } from "../shared/formato.js";
+import FiltroSelect from "../shared/filtroSelect.jsx";
+import RequestDetail from "./requestDetail.jsx";
+import RequestForm from "./requestForm.jsx";
+import "./inbox.css";
+
 const POR_PAGINA = 20;
 
 const FILTROS_VACIOS = {
@@ -30,8 +32,10 @@ const FILTROS_VACIOS = {
   sort: "priority",
 };
 
-// Los pasos del recorrido en los que puede estar una solicitud, con lo que le falta para pasar al
-// siguiente. El paso 1 (nacer) ya ocurrió si está en la lista.
+/**
+ * Los pasos del recorrido en los que puede estar una solicitud, con lo que le falta para pasar al
+ * siguiente. El paso 1 (nacer) ya ocurrió si está en la lista.
+ */
 const PASOS = {
   sinRepartir: {
     etiqueta: "Sin flujo",
@@ -47,9 +51,11 @@ const PASOS = {
   },
 };
 
-// En qué paso está una solicitud. El orden de las preguntas importa: una convertida ya pasó por
-// el reparto, aunque hoy su estatus siga diciendo «Recibido» (DATAMODEL.md §8.4, costura 1). Una
-// con área asignada a mano, de antes de los flujos, cuenta como repartida.
+/**
+ * En qué paso está una solicitud. El orden de las preguntas importa: una convertida ya pasó por
+ * el reparto, aunque hoy su estatus siga diciendo «Recibido» (DATAMODEL.md §8.4, costura 1). Una
+ * con área asignada a mano, de antes de los flujos, cuenta como repartida.
+ */
 function pasoDe(solicitud) {
   if (solicitud.projectId !== null) {
     return PASOS.convertida;
@@ -60,7 +66,9 @@ function pasoDe(solicitud) {
   return PASOS.repartida;
 }
 
-// Las áreas que la tienen en su bandeja: las de la primera fase de su flujo, o la asignada a mano.
+/**
+ * Las áreas que la tienen en su bandeja: las de la primera fase de su flujo, o la asignada a mano.
+ */
 function areasDe(solicitud) {
   if (solicitud.hasFlow && solicitud.firstPhaseAreas.length > 0) {
     return solicitud.firstPhaseAreas.join(", ");
@@ -68,32 +76,7 @@ function areasDe(solicitud) {
   return solicitud.areaName;
 }
 
-// Un valor que puede venir vacío, como se escribe en una tabla.
-function oGuion(valor) {
-  if (valor === null || valor === undefined || valor === "") {
-    return "—";
-  }
-  return valor;
-}
-
-// Un filtro de lista desplegable. Las opciones llegan ya armadas porque unas salen de un catálogo
-// del servidor y otras están escritas a mano aquí.
-function FiltroSelect({ etiqueta, valor, opciones, onCambio }) {
-  return (
-    <label className="inbox-filter">
-      {etiqueta}
-      <select value={valor} onChange={(evento) => onCambio(evento.target.value)}>
-        {opciones.map((opcion) => (
-          <option value={opcion.valor} key={opcion.valor}>
-            {opcion.texto}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
-
-// Un renglón de la bandeja.
+/** Un renglón de la bandeja. */
 function FilaDeSolicitud({ solicitud, onAbrir, onEliminar, ocupado }) {
   const paso = pasoDe(solicitud);
 
@@ -102,8 +85,6 @@ function FilaDeSolicitud({ solicitud, onAbrir, onEliminar, ocupado }) {
     marcaDeDuplicado = <span className="inbox-badge"> posible duplicado</span>;
   }
 
-  // Ya convertida no se borra: el proyecto perdería lo que contesta, y el servidor lo rechaza.
-  // Se deja el botón a la vista, apagado y diciendo por qué, en lugar de desaparecerlo.
   const yaEsProyecto = solicitud.projectId !== null;
 
   let ayudaDeBorrado = "Quita la solicitud de la bandeja";
@@ -133,7 +114,6 @@ function FilaDeSolicitud({ solicitud, onAbrir, onEliminar, ocupado }) {
         <button type="button" onClick={() => onAbrir(solicitud)}>
           Abrir
         </button>
-        {/* Borrar desde aquí: una fila mal importada se descarta en el momento, sin abrirla. */}
         <button
           className="inbox-action-danger"
           type="button"
@@ -161,7 +141,6 @@ function Inbox() {
   const [capturando, setCapturando] = useState(false);
   const [borrando, setBorrando] = useState(false);
 
-  // Sube cada vez que algo cambia, para volver a pedir la lista.
   const [version, setVersion] = useState(0);
 
   useEffect(() => {
@@ -263,8 +242,6 @@ function Inbox() {
     setAbierta(null);
   }
 
-  // Borrar desde la bandeja. Pregunta primero porque el botón queda a un clic de «Abrir» y el
-  // renglón desaparece de la lista; nombra el folio para que se vea cuál se va.
   async function eliminar(solicitud) {
     const seguro = window.confirm(
       `¿Eliminar ${solicitud.folio} — ${solicitud.title}?
@@ -290,9 +267,6 @@ Se quita de la bandeja. Lo importado de Excel se puede volver a traer importando
     }
   }
 
-  // Las opciones de cada filtro. «Sin flujo ni área» es el paso 2 del recorrido: lo importado de
-  // Excel llega así y aquí es donde se encuentra para darle su flujo. Un área muestra lo que la
-  // tiene en la primera fase de su flujo, y lo que se le asignó a mano.
   const opcionesDeArea = [
     { valor: "", texto: "Todas" },
     { valor: "none", texto: "Sin flujo ni área" },
@@ -337,7 +311,6 @@ Se quita de la bandeja. Lo importado de Excel se puede volver a traer importando
     bloqueVacio = <p className="inbox-empty">No hay solicitudes con esos filtros.</p>;
   }
 
-  // El rango se cuenta desde uno porque se lee, no se indexa.
   const primera = total === 0 ? 0 : pagina * POR_PAGINA + 1;
   const ultima = pagina * POR_PAGINA + solicitudes.length;
   const hayMas = ultima < total;
@@ -361,8 +334,6 @@ Se quita de la bandeja. Lo importado de Excel se puede volver a traer importando
     );
   }
 
-  // Cuántas esperan el paso 2 **en esta página**. Con páginas, contar lo que se ve y llamarlo
-  // total sería mentir; para el total del sistema está el filtro «Sin flujo ni área», que lo dice.
   const sinRepartir = solicitudes.filter((solicitud) => pasoDe(solicitud) === PASOS.sinRepartir);
 
   let avisoDeReparto = null;
@@ -421,6 +392,7 @@ Se quita de la bandeja. Lo importado de Excel se puede volver a traer importando
         </label>
 
         <FiltroSelect
+          clase="inbox-filter"
           etiqueta="Área"
           valor={filtros.areaId}
           opciones={opcionesDeArea}
@@ -428,6 +400,7 @@ Se quita de la bandeja. Lo importado de Excel se puede volver a traer importando
         />
 
         <FiltroSelect
+          clase="inbox-filter"
           etiqueta="Estatus"
           valor={filtros.statusId}
           opciones={opcionesDeEstatus}
@@ -435,6 +408,7 @@ Se quita de la bandeja. Lo importado de Excel se puede volver a traer importando
         />
 
         <FiltroSelect
+          clase="inbox-filter"
           etiqueta="Convertidas"
           valor={filtros.converted}
           opciones={opcionesDeConversion}
@@ -442,6 +416,7 @@ Se quita de la bandeja. Lo importado de Excel se puede volver a traer importando
         />
 
         <FiltroSelect
+          clase="inbox-filter"
           etiqueta="Duplicados"
           valor={filtros.duplicates}
           opciones={opcionesDeDuplicados}
@@ -449,6 +424,7 @@ Se quita de la bandeja. Lo importado de Excel se puede volver a traer importando
         />
 
         <FiltroSelect
+          clase="inbox-filter"
           etiqueta="Orden"
           valor={filtros.sort}
           opciones={opcionesDeOrden}

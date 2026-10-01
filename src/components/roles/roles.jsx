@@ -1,13 +1,13 @@
+// El mismo límite que el servidor: se pone en el input para no mandar algo que va a
+// rechazar.
 import { Fragment, useEffect, useState } from "react";
 
 import * as api from "../../api/client.js";
 import "./roles.css";
 
-// El mismo límite que el servidor: se pone en el input para no mandar algo que va a
-// rechazar.
 const ROL_NOMBRE_MAX = 50;
 
-// El formulario vacío: sirve para empezar y para limpiarlo después de registrar un rol.
+/** El formulario vacío: sirve para empezar y para limpiarlo después de registrar un rol. */
 const FORMULARIO_VACIO = { name: "", description: "" };
 
 function Roles() {
@@ -15,20 +15,16 @@ function Roles() {
   const [permisos, setPermisos] = useState([]);
   const [cargando, setCargando] = useState(true);
 
-  // Sube de uno en uno para volver a pedir las listas después de crear, editar o borrar.
   const [recarga, setRecarga] = useState(0);
 
-  // El formulario de alta
   const [form, setForm] = useState(FORMULARIO_VACIO);
   const [guardando, setGuardando] = useState(false);
   const [errorForm, setErrorForm] = useState(null);
 
   const [edicion, setEdicion] = useState(null);
 
-  // El rol cuyo panel de permisos está desplegado: null si ninguno.
   const [abierto, setAbierto] = useState(null);
 
-  // Los códigos marcados en el panel desplegado; se llenan con los que el rol ya tiene.
   const [seleccion, setSeleccion] = useState([]);
   const [cargandoPermisos, setCargandoPermisos] = useState(false);
   const [guardandoPermisos, setGuardandoPermisos] = useState(false);
@@ -56,8 +52,6 @@ function Roles() {
       cancelado = true;
     };
   }, [recarga]);
-
-  // --- Roles ---
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -127,8 +121,6 @@ function Roles() {
     }
   }
 
-  // --- Permisos de un rol ---
-
   async function handleDesplegar(rol) {
     setError(null);
 
@@ -185,7 +177,6 @@ function Roles() {
         </p>
       </header>
 
-      {/* FORMULARIO DE ALTA */}
       <form className="role-form" onSubmit={handleCrear}>
         <h2 className="role-form-title">Registrar un rol</h2>
 
@@ -234,7 +225,6 @@ function Roles() {
         {error}
       </p>
 
-      {/* TABLA */}
       <table className="roles-table">
         <thead>
           <tr>
@@ -248,7 +238,6 @@ function Roles() {
         <tbody>
           {roles.map((rol) =>
             edicion && edicion.id === rol.id ? (
-              // La fila en edición: los mismos campos que el formulario de alta.
               <tr className="roles-row editing" key={rol.id}>
                 <td className="roles-cell-name">
                   <input
@@ -262,9 +251,6 @@ function Roles() {
                     onChange={handleEdicionChange}
                   />
 
-                  {/* El servidor compara el nombre del rol con el que trae la sesión, así
-                      que renombrarlo deja fuera a quienes lo tienen hasta que vuelvan a
-                      entrar. */}
                   <p className="roles-edit-hint">
                     Al renombrar un rol, quienes lo tienen deben volver a iniciar
                     sesión.
@@ -285,8 +271,6 @@ function Roles() {
                 <td className="roles-cell-permissions">—</td>
 
                 <td className="roles-cell-actions">
-                  {/* El <form> vive aquí y los inputs de las otras celdas lo referencian con
-                      `form=`: un <form> no puede envolver varios <td>. */}
                   <form id={`role-edit-${rol.id}`} onSubmit={handleGuardar}>
                     <button className="roles-action" type="submit">
                       Guardar
@@ -324,8 +308,6 @@ function Roles() {
                     </button>
                   </td>
 
-                  {/* El rol admin no se edita ni se borra: es el que administra este
-                      catálogo, y el servidor también lo rechaza. */}
                   <td className="roles-cell-actions">
                     <button
                       className="roles-action"
@@ -341,8 +323,6 @@ function Roles() {
                       Editar
                     </button>
 
-                    {/* El servidor rechaza borrar un rol que alguien todavía tiene y dice
-                        cuántas personas son; ese mensaje se muestra tal cual arriba. */}
                     <button
                       className="roles-action roles-action-danger"
                       type="button"
@@ -359,7 +339,6 @@ function Roles() {
                   </td>
                 </tr>
 
-                {/* PANEL DE PERMISOS DEL ROL */}
                 {abierto === rol.id && (
                   <tr className="roles-grants-row">
                     <td className="roles-grants-panel" colSpan={4}>
@@ -371,9 +350,6 @@ function Roles() {
                         <p className="roles-grants-loading">Cargando...</p>
                       )}
 
-                      {/* Quitarle permisos al rol admin es quitárselos a quien administra
-                          los permisos: si se pierde area.manage, por ejemplo, ya nadie puede
-                          devolverlo desde la aplicación. */}
                       {rol.name === "admin" && (
                         <p className="roles-grants-hint">
                           Este es el rol que administra el sistema. Si le quitas un
@@ -455,9 +431,6 @@ function Roles() {
         <p className="roles-empty">Todavía no hay roles registrados.</p>
       )}
 
-      {/* CATÁLOGO DE PERMISOS: solo lectura. Los códigos los define el sistema, porque cada
-          uno es lo que una ruta del servidor compara para dejar pasar o no; aquí se listan
-          para saber qué significa cada casilla del panel de arriba. */}
       <section className="permissions-panel">
         <header className="permissions-header">
           <h2 className="permissions-title">Catálogo de permisos</h2>

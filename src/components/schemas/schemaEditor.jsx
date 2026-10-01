@@ -1,7 +1,3 @@
-import { useState } from "react";
-
-import "./schemaEditor.css";
-
 // El armado de campos de un formato (RF-SOL-01). Son dos secciones y cada una un arreglo:
 // `deliverables` es lo que hay que producir, `information` lo que hay que declarar.
 //
@@ -14,6 +10,10 @@ import "./schemaEditor.css";
 // llenan solos y quedan bloqueados, porque el valor se guarda bajo esa clave en todo el sistema
 // y si aquí fuera de otro tipo, el proyecto acabaría con dos cosas distintas bajo un nombre. El
 // servidor rechaza publicarla con otro tipo, así que el bloqueo es lo que evita el viaje.
+import { useState } from "react";
+
+import "./schemaEditor.css";
+
 const SECCIONES = [
   { clave: "deliverables", titulo: "Entregables", ayuda: "Lo que el área tiene que producir" },
   { clave: "information", titulo: "Información", ayuda: "Lo que el solicitante declara" },
@@ -21,7 +21,7 @@ const SECCIONES = [
 
 const CAMPO_VACIO = { code: "", name: "", type: "text", note: "", required: false };
 
-// Un nombre a un código propuesto: sin acentos, en minúsculas y con guiones bajos.
+/** Un nombre a un código propuesto: sin acentos, en minúsculas y con guiones bajos. */
 function codigoSugerido(nombre) {
   return nombre
     .normalize("NFD")
@@ -32,9 +32,11 @@ function codigoSugerido(nombre) {
     .slice(0, 100);
 }
 
-// Por qué un campo quedó bloqueado. La clave es vocabulario compartido (DATAMODEL.md §2.13b): ya
-// tiene valores capturados debajo, así que su nombre y su tipo son los que ya se publicaron y
-// cambiarlos volvería mentira lo capturado. Se puede reusar; no se puede redefinir.
+/**
+ * Por qué un campo quedó bloqueado. La clave es vocabulario compartido (DATAMODEL.md §2.13b): ya
+ * tiene valores capturados debajo, así que su nombre y su tipo son los que ya se publicaron y
+ * cambiarlos volvería mentira lo capturado. Se puede reusar; no se puede redefinir.
+ */
 function textoDeReuso(publicada) {
   if (publicada === undefined) {
     return "";
@@ -60,7 +62,6 @@ function SchemaEditor({
   error,
   guardando,
 }) {
-  // La clave a su definición publicada, para saber cuándo un campo está reusando una.
   const publicadas = new Map(vocabulario.map((una) => [una.key, una]));
   const [campos, setCampos] = useState(
     inicial ?? { deliverables: [{ ...CAMPO_VACIO }], information: [] },
@@ -86,7 +87,6 @@ function SchemaEditor({
     }));
   }
 
-  // Mueve un campo dentro de su sección: el orden del arreglo es el orden de captura.
   function mover(seccion, indice, salto) {
     const destino = indice + salto;
     setCampos((actual) => {
@@ -97,7 +97,6 @@ function SchemaEditor({
     });
   }
 
-  // Los códigos repetidos se marcan aquí para no mandar algo que el servidor va a rechazar.
   const todos = [...campos.deliverables, ...campos.information].map((campo) => campo.code);
   const repetidos = new Set(todos.filter((code, i) => code !== "" && todos.indexOf(code) !== i));
   const vacio = todos.length === 0;
@@ -139,7 +138,6 @@ function SchemaEditor({
                       readOnly={publicadas.has(campo.code)}
                       onChange={(evento) => {
                         const name = evento.target.value;
-                        // La clave se propone del nombre mientras nadie la haya tecleado.
                         const code = campo.code === "" ? codigoSugerido(name) : campo.code;
                         cambiarCampo(seccion.clave, indice, { name, code });
                       }}
@@ -154,7 +152,6 @@ function SchemaEditor({
                       onChange={(evento) => {
                         const code = evento.target.value;
                         const publicada = publicadas.get(code);
-                        // Al caer en una clave que ya existe, su definición manda.
                         cambiarCampo(
                           seccion.clave,
                           indice,
@@ -240,7 +237,6 @@ function SchemaEditor({
         </fieldset>
       ))}
 
-      {/* El vocabulario completo: una clave elegida de aquí se reusa con su definición. */}
       <datalist id="schema-vocabulario">
         {vocabulario.map((una) => (
           <option value={una.key} key={una.key}>

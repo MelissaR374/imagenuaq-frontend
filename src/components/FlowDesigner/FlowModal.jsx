@@ -1,11 +1,11 @@
+// Ventana emergente del diseñador. Quien la abre decide el título, la descripción y el error
+// que se muestra; `type` solo cambia la clase de la ventana.
 import {
     MdClose,
 } from "react-icons/md";
 
 import "./FlowModal.css";
 
-// Ventana emergente del diseñador. Quien la abre decide el título, la descripción y el error
-// que se muestra; `type` solo cambia la clase de la ventana.
 function FlowModal({
     type,
     titulo,
@@ -32,10 +32,6 @@ function FlowModal({
                 }
             >
 
-                {/* =================================================
-                   HEADER
-                   ================================================= */}
-
                 <div className="modal-header">
 
                     <div>
@@ -52,7 +48,6 @@ function FlowModal({
 
                     </div>
 
-
                     <button
                         type="button"
                         className="modal-close"
@@ -64,14 +59,8 @@ function FlowModal({
 
                 </div>
 
-
-                {/* =================================================
-                   CONTENIDO
-                   ================================================= */}
-
                 <form onSubmit={onSubmit}>
 
-                    {/* El servidor explica por qué no aceptó lo que se mandó. */}
                     {error && (
                         <p className="flow-modal-error">
                             {error}
@@ -87,6 +76,5 @@ function FlowModal({
         </div>
     );
 }
-
 
 export default FlowModal;

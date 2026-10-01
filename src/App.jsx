@@ -23,7 +23,7 @@ import * as api from "./api/client.js";
 import { MICROSOFT_PARAM } from "./config.js";
 import "./App.css";
 
-// El menú usa nombres de rol en español y el servidor los manda en inglés.
+/** El menú usa nombres de rol en español y el servidor los manda en inglés. */
 const ROLES = {
   admin: "admin",
   area_lead: "lider",
@@ -31,8 +31,10 @@ const ROLES = {
   worker: "trabajador",
 };
 
-// El cambio de foto como actualizador de estado: libera el object URL anterior y crea el
-// del Blob nuevo, o deja null para quitarla.
+/**
+ * El cambio de foto como actualizador de estado: libera el object URL anterior y crea el
+ * del Blob nuevo, o deja null para quitarla.
+ */
 function reemplazarFoto(blob) {
   return (anterior) => {
     if (anterior) URL.revokeObjectURL(anterior);
@@ -41,16 +43,13 @@ function reemplazarFoto(blob) {
 }
 
 function App() {
-  // Quién entró; null mientras nadie lo haya hecho.
   const [usuario, setUsuario] = useState(null);
-  // Si venimos de iniciar sesión con Microsoft, abrir directo la pestaña que lo pidió.
   const [pestana, setPestana] = useState(() =>
     new URLSearchParams(window.location.search).has(MICROSOFT_PARAM)
       ? "Formatos de solicitud"
       : null,
   );
 
-  //MODO OSCURO Y CLARO
   const [modoOscuro, setModoOscuro] = useState(() => {
     const savedTheme = localStorage.getItem("theme");
     if (savedTheme) {
@@ -69,11 +68,8 @@ function App() {
     }
   }, [modoOscuro]);
 
-  // La foto de perfil como object URL, o null si no hay. Vive aquí porque la barra
-  // lateral y la pestaña "Mi perfil" la muestran las dos.
   const [foto, setFoto] = useState(null);
 
-  // Si no hay token guardado no hay nada que verificar y se entra directo al login.
   const [verificando, setVerificando] = useState(() => Boolean(api.getToken()));
 
   useEffect(() => {
@@ -86,8 +82,6 @@ function App() {
       .finally(() => setVerificando(false));
   }, []);
 
-  // Al entrar alguien se pide su foto una vez (no cada vez que edita su nombre); 404
-  // significa que no tiene.
   const usuarioId = usuario?.id ?? null;
 
   useEffect(() => {
@@ -107,13 +101,10 @@ function App() {
     };
   }, [usuarioId]);
 
-  // Lo que la pestaña "Mi perfil" llama al subir o quitar la foto.
   function cambiarFoto(blob) {
     setFoto(reemplazarFoto(blob));
   }
 
-  // La pestaña "Mi perfil" avisa cuando cambian los datos, para que el nombre del
-  // encabezado y de la barra lateral se actualicen sin volver a entrar.
   function actualizarUsuario(datos) {
     setUsuario({ ...usuario, fullName: datos.fullName, email: datos.email });
   }
@@ -128,7 +119,6 @@ function App() {
   if (verificando) return <p className="app-booting">Cargando...</p>;
   if (!usuario) return <Login onEntrar={setUsuario} />;
 
-  // Pestaña de inicio según el rol, hasta que la persona elija otra.
   const activa =
     pestana ?? (usuario.role === "admin" ? "Empleados" : "Notificaciones");
 
@@ -149,7 +139,6 @@ function App() {
 
       <main className="main-content">
         <header className="main-header">
-          {/* El nombre abre "Mi perfil", igual que el usuario de la barra lateral. */}
           <button
             className="main-user"
             type="button"
@@ -182,13 +171,6 @@ function App() {
           </div>
         </header>
 
-        {/* Las pestañas con pantalla: "Notificaciones" (todavía con datos de prueba, sin
-            backend), "Mi perfil", "Empleados", "Áreas y usuarios", "Roles y permisos",
-            "Formatos de solicitud" (da de alta las cuentas y los libros de Excel), "Esquemas de
-            datos" (qué datos lleva un proyecto), "Configuración de formatos de solicitud" (mapea
-            las columnas de un libro e importa sus filas), "Bandeja de solicitudes", "Proyectos"
-            y "Diseñador de flujos" (las plantillas de flujo). Las demás muestran su
-            nombre. */}
         {activa === "Notificaciones" ? (
           <Notifications />
         ) : activa === "Mi perfil" ? (

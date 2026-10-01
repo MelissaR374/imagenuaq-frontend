@@ -1,11 +1,3 @@
-import { useEffect, useState } from "react";
-
-import * as api from "../../api/client.js";
-import FieldInput from "../shared/fieldInput.jsx";
-import FlowDesigner from "../FlowDesigner/FlowDesigner.jsx";
-import RequesterInput from "./requesterInput.jsx";
-import "./requestDetail.css";
-
 // Una solicitud con todo lo que trae, y el paso a proyecto.
 //
 // La tira de «Recorrido» es el de DATAMODEL.md §8.2 visto desde una sola solicitud: en qué paso
@@ -17,9 +9,18 @@ import "./requestDetail.css";
 // de hoy: una versión publicada no se edita, así que una solicitud vieja se sigue leyendo como
 // se llenó. Lo que venga de una hoja trae además el renglón crudo, con las columnas que el
 // mapeo ignoró (RF-SOL-06).
+import { useEffect, useState } from "react";
 
-// Los pasos del recorrido que le tocan a una solicitud. El 1 ya pasó si estamos viéndola; del 5
-// en adelante son del proyecto y se ven en su propia pantalla.
+import * as api from "../../api/client.js";
+import FieldInput from "../shared/fieldInput.jsx";
+import FlowDesigner from "../FlowDesigner/FlowDesigner.jsx";
+import RequesterInput from "./requesterInput.jsx";
+import "./requestDetail.css";
+
+/**
+ * Los pasos del recorrido que le tocan a una solicitud. El 1 ya pasó si estamos viéndola; del 5
+ * en adelante son del proyecto y se ven en su propia pantalla.
+ */
 const RECORRIDO = [
   {
     clave: "nacio",
@@ -45,14 +46,15 @@ const RECORRIDO = [
   },
 ];
 
-// Cuál de los pasos es el actual. Una convertida ya pasó por todos, aunque su estatus siga
-// diciendo «Recibido» (DATAMODEL.md §8.4, costura 1). Una con área asignada a mano, de antes de
-// los flujos, cuenta como repartida.
+/**
+ * Cuál de los pasos es el actual. Una convertida ya pasó por todos, aunque su estatus siga
+ * diciendo «Recibido» (DATAMODEL.md §8.4, costura 1). Una con área asignada a mano, de antes de
+ * los flujos, cuenta como repartida.
+ */
 function pasoActualDe(detalle) {
   if (detalle.projectId !== null) {
     return "convertir";
   }
-  // La fila de la bandeja trae `hasFlow`; el detalle ya cargado trae `flow`.
   const tieneFlujo = Boolean(detalle.flow) || Boolean(detalle.hasFlow);
   if (!tieneFlujo && detalle.areaId === null) {
     return "repartir";
@@ -60,7 +62,7 @@ function pasoActualDe(detalle) {
   return "atender";
 }
 
-// Un valor capturado como texto legible: los booleanos como sí/no y lo demás tal cual.
+/** Un valor capturado como texto legible: los booleanos como sí/no y lo demás tal cual. */
 function formatearValor(valor) {
   if (valor === null || valor === undefined || valor === "") {
     return "—";
@@ -77,8 +79,10 @@ function formatearValor(valor) {
   return String(valor);
 }
 
-// La tira del recorrido. El paso actual va marcado y es el único que explica qué lo mueve: los
-// demás ya pasaron o todavía no tocan.
+/**
+ * La tira del recorrido. El paso actual va marcado y es el único que explica qué lo mueve: los
+ * demás ya pasaron o todavía no tocan.
+ */
 function Recorrido({ pasoActual }) {
   const indiceActual = RECORRIDO.findIndex((paso) => paso.clave === pasoActual);
 
@@ -109,8 +113,10 @@ function Recorrido({ pasoActual }) {
   );
 }
 
-// Lo capturado, en el orden del formato, y debajo lo que la captura trae pero el formato ya no
-// pide: no se pierde nada.
+/**
+ * Lo capturado, en el orden del formato, y debajo lo que la captura trae pero el formato ya no
+ * pide: no se pierde nada.
+ */
 function ValoresCapturados({ campos, data }) {
   const capturado = data ?? {};
   const codigosDelFormato = campos.map((campo) => campo.code);
@@ -138,16 +144,7 @@ function ValoresCapturados({ campos, data }) {
   );
 }
 
-// Corregir lo capturado antes de que se vuelva proyecto.
-//
-// Quien llena la hoja de Excel se equivoca --- deja un campo obligatorio vacío, escribe una fecha
-// en la casilla del tiraje --- y hasta ahora la única salida era vivir con el dato malo o volver a
-// importar. Al convertir, cada valor pasa a `project_field_values` y ahí ya lo leen la orden de
-// impresión y facturación, así que **éste es el momento de arreglarlo**: después la solicitud se
-// cierra a los cambios justamente para que el proyecto no pierda lo que contesta.
-//
-// Se corrige contra los campos de la versión con la que se capturó, no con el formato de hoy: una
-// versión publicada no se edita, así que una solicitud vieja se sigue leyendo como se llenó.
+/** Corregir lo capturado antes de que se vuelva proyecto. */
 function EditorDeCaptura({ campos, data, ocupado, onGuardar, onCancelar }) {
   const [valores, setValores] = useState(() => ({ ...(data ?? {}) }));
 
@@ -195,7 +192,7 @@ function EditorDeCaptura({ campos, data, ocupado, onGuardar, onCancelar }) {
   );
 }
 
-// El renglón como lo tenía la hoja, columnas ignoradas incluidas (RF-SOL-06).
+/** El renglón como lo tenía la hoja, columnas ignoradas incluidas (RF-SOL-06). */
 function RenglonOriginal({ sourceData }) {
   const [abierto, setAbierto] = useState(false);
 
@@ -234,8 +231,10 @@ function RenglonOriginal({ sourceData }) {
   );
 }
 
-// El paso 4 del recorrido. Lo que se deje vacío lo toma de la solicitud; las etapas salen de
-// su flujo.
+/**
+ * El paso 4 del recorrido. Lo que se deje vacío lo toma de la solicitud; las etapas salen de
+ * su flujo.
+ */
 function FormularioDeConversion({ datos, flujo, ocupado, onCambiar, onEnviar, onCancelar }) {
   function cambiar(clave, valor) {
     onCambiar({ ...datos, [clave]: valor });
@@ -317,8 +316,10 @@ function FormularioDeConversion({ datos, flujo, ocupado, onCambiar, onEnviar, on
   );
 }
 
-// El paso 2 del recorrido: el flujo decide a qué bandejas cae la solicitud (DATAMODEL.md §2.5).
-// Con flujo se resume fase por fase; sin él se ofrece aplicar una plantilla o diseñarlo.
+/**
+ * El paso 2 del recorrido: el flujo decide a qué bandejas cae la solicitud (DATAMODEL.md §2.5).
+ * Con flujo se resume fase por fase; sin él se ofrece aplicar una plantilla o diseñarlo.
+ */
 function FlujoDeLaSolicitud({ flujo, areaName, convertida, plantillas, ocupado, onAplicar, onDisenar, onQuitar }) {
   const activas = plantillas.filter((una) => una.isActive);
   const [elegida, setElegida] = useState("");
@@ -343,11 +344,9 @@ function FlujoDeLaSolicitud({ flujo, areaName, convertida, plantillas, ocupado, 
       </>
     );
   } else if (areaName) {
-    // Una repartida a mano antes de que hubiera flujos.
     resumen = <p className="request-detail-flow-empty">Sin flujo; asignada a {areaName}.</p>;
   }
 
-  // Ya convertida, el flujo es del proyecto: aquí solo se muestra.
   if (convertida) {
     return <div className="request-detail-flow">{resumen}</div>;
   }
@@ -405,11 +404,9 @@ function RequestDetail({ solicitud, onCerrar, onCambio }) {
 
   const [corrigiendo, setCorrigiendo] = useState(false);
 
-  // El formulario de conversión: null mientras no se abre.
   const [convertir, setConvertir] = useState(null);
   const [conflictos, setConflictos] = useState([]);
 
-  // Las plantillas que se pueden aplicar, y si se está diseñando el flujo en el diseñador.
   const [plantillas, setPlantillas] = useState([]);
   const [disenando, setDisenando] = useState(false);
 
@@ -417,8 +414,6 @@ function RequestDetail({ solicitud, onCerrar, onCambio }) {
     let cancelado = false;
 
     async function cargar() {
-      // El catálogo de estatus depende del área: los globales siempre, los del área solo si la
-      // solicitud es de esa área.
       let filtroDeEstatus = {};
       if (solicitud.areaId !== null) {
         filtroDeEstatus = { areaId: solicitud.areaId };
@@ -500,9 +495,6 @@ function RequestDetail({ solicitud, onCerrar, onCambio }) {
     setDetalle({ ...detalle, title });
   }
 
-  // El título de lo importado lo escribió una columna de Excel, así que puede llegar vacío de
-  // sentido («Solicitud», «-», el nombre de quien llenó el formulario). Se corrige aquí, antes de
-  // convertir: la bandeja lista por título, y el proyecto nace con este mismo.
   async function corregirTitulo() {
     setError(null);
     try {
@@ -514,7 +506,6 @@ function RequestDetail({ solicitud, onCerrar, onCambio }) {
     }
   }
 
-  // Paso 2 del recorrido: se le da un flujo, y con él las bandejas en las que cae.
   async function aplicarPlantilla(workflowId) {
     setOcupado(true);
     setError(null);
@@ -544,7 +535,6 @@ function RequestDetail({ solicitud, onCerrar, onCambio }) {
     }
   }
 
-  // El diseñador devuelve la solicitud ya con su flujo nuevo.
   async function flujoGuardado() {
     setDisenando(false);
     await recargar();
@@ -580,7 +570,6 @@ function RequestDetail({ solicitud, onCerrar, onCambio }) {
   async function convertirEnProyecto(evento) {
     evento.preventDefault();
 
-    // Las etapas no se mandan: el proyecto se lleva el flujo de la solicitud, si tiene.
     setOcupado(true);
     setError(null);
     try {
@@ -602,7 +591,6 @@ function RequestDetail({ solicitud, onCerrar, onCambio }) {
 
   const yaEsProyecto = detalle.projectId !== null;
 
-  // Los campos del formato, en el orden en que se capturaron.
   let campos = [];
   if (detalle.fields !== null && detalle.fields !== undefined) {
     campos = [...detalle.fields.deliverables, ...detalle.fields.information];
@@ -613,7 +601,6 @@ function RequestDetail({ solicitud, onCerrar, onCambio }) {
     bloqueDeError = <p className="request-detail-error">{error}</p>;
   }
 
-  // Diseñar el flujo ocupa la pantalla entera; al guardar o volver se regresa a la solicitud.
   if (disenando) {
     return (
       <FlowDesigner
@@ -639,7 +626,6 @@ function RequestDetail({ solicitud, onCerrar, onCambio }) {
     );
   }
 
-  // Ya convertida, el título es historia: lo que se lee es el del proyecto.
   let bloqueDeTitulo = <dd>{detalle.title}</dd>;
   if (!yaEsProyecto) {
     bloqueDeTitulo = (
@@ -673,7 +659,6 @@ function RequestDetail({ solicitud, onCerrar, onCambio }) {
     );
   }
 
-  // Corregir sólo mientras no sea proyecto: después la solicitud ya no se edita.
   let botonDeCorreccion = null;
   if (!yaEsProyecto && campos.length > 0 && !corrigiendo) {
     botonDeCorreccion = (
@@ -718,7 +703,6 @@ function RequestDetail({ solicitud, onCerrar, onCambio }) {
     );
   }
 
-  // Las acciones del paso 4, o la razón por la que ya no hay ninguna.
   let bloqueDeAcciones;
   if (yaEsProyecto) {
     bloqueDeAcciones = (

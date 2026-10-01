@@ -1,10 +1,3 @@
-import { useEffect, useState } from "react";
-
-import * as api from "../../api/client.js";
-import FieldInput from "../shared/fieldInput.jsx";
-import RequesterInput from "../requests/requesterInput.jsx";
-import "./projectForm.css";
-
 // Captura directa de un proyecto: lo que no entra por una solicitud.
 //
 // La llave se genera si se deja vacía (PRY-000001), así que nadie tiene que inventar un nombre
@@ -18,6 +11,13 @@ import "./projectForm.css";
 // sin tocar el catálogo. El precio, dicho: una clave escrita a mano no la valida nadie contra el
 // vocabulario, y dos personas pueden inventar dos nombres para lo mismo. Cuando la clave vaya a
 // repetirse, el lugar correcto es el formato.
+import { useEffect, useState } from "react";
+
+import * as api from "../../api/client.js";
+import FieldInput from "../shared/fieldInput.jsx";
+import RequesterInput from "../requests/requesterInput.jsx";
+import "./projectForm.css";
+
 function ProjectForm({ areas, onCreado, onCancelar }) {
   const [formatos, setFormatos] = useState([]);
   const [formatoId, setFormatoId] = useState("");
@@ -72,7 +72,6 @@ function ProjectForm({ areas, onCreado, onCancelar }) {
         hasCost: cabecera.hasCost,
         dueOn: cabecera.dueOn || undefined,
         schemaVersionId: formato ? formato.schemaVersionId : undefined,
-        // Los valores capturados se guardan con la clave de su campo, y los extra con la suya.
         fieldValues: [
           ...Object.entries(valores)
             .filter(([, valor]) => valor !== "" && valor !== undefined && valor !== null)
@@ -111,7 +110,6 @@ function ProjectForm({ areas, onCreado, onCancelar }) {
     setExtras(extras.filter((_, i) => i !== indice));
   }
 
-  // Una clave repetida perdería el valor de una de las dos: el proyecto las guarda por clave.
   const clavesDelFormato = campos.map((campo) => campo.code);
   const clavesExtra = extras.map((extra) => extra.key.trim()).filter((clave) => clave !== "");
   const repetidas = new Set(

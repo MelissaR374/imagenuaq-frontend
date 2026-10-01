@@ -1,14 +1,14 @@
-import { useEffect, useState } from "react";
-
-import * as api from "../../api/client.js";
-import "./statusCatalog.css";
-
 // El catálogo de estatus (RF-EST-02), editable desde aquí porque es donde se usa.
 //
 // Sin área es el catálogo global, del que parten todas; con área, los de esa área, que puede
 // reusar un código global. Nada se borra: los proyectos y las solicitudes apuntan a estas
 // filas, así que dar de baja es desactivar, y ni el código ni el área se editan —son bajo lo
 // que se archivó lo anterior—.
+import { useEffect, useState } from "react";
+
+import * as api from "../../api/client.js";
+import "./statusCatalog.css";
+
 const NUEVO_VACIO = { code: "", label: "", sortOrder: 0, isTerminal: false };
 
 function StatusCatalog({ areas }) {
@@ -162,7 +162,6 @@ function StatusCatalog({ areas }) {
               </td>
               <td>{uno.isGlobal ? "Global" : uno.areaName}</td>
               <td>
-                {/* Un estatus global solo se toca desde el catálogo global. */}
                 <button type="button" onClick={() => cambiarActivo(uno)}>
                   {uno.isActive ? "Desactivar" : "Reactivar"}
                 </button>

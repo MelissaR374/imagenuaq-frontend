@@ -9,10 +9,11 @@
 import { Fragment, useEffect, useState } from "react";
 
 import * as api from "../../api/client.js";
+import { letraDeColumna } from "../shared/formato.js";
 import { MICROSOFT_PARAM } from "../../config.js";
 import "./spreadsheets.css";
 
-// Lo que dejó el servidor en la URL al volver de Microsoft, o null si no venimos de ahí.
+/** Lo que dejó el servidor en la URL al volver de Microsoft, o null si no venimos de ahí. */
 function resultadoEnLaUrl() {
   const params = new URLSearchParams(window.location.search);
   const resultado = params.get(MICROSOFT_PARAM);
@@ -25,22 +26,13 @@ function resultadoEnLaUrl() {
   };
 }
 
-// La letra de columna de Excel para un índice base cero: 0 → A, 25 → Z, 26 → AA.
-function letraDeColumna(indice) {
-  let letra = "";
-  let n = indice;
-  while (n >= 0) {
-    letra = String.fromCharCode(65 + (n % 26)) + letra;
-    n = Math.floor(n / 26) - 1;
-  }
-  return letra;
-}
-
-// El formulario de registro vacío: sirve para empezar y para limpiarlo al terminar.
+/** El formulario de registro vacío: sirve para empezar y para limpiarlo al terminar. */
 const FORMULARIO_VACIO = { accountId: "", url: "", tableName: "", name: "" };
 
-// El formulario del registro de aplicación de Azure. El secreto siempre empieza vacío:
-// el servidor nunca lo devuelve, y vacío significa "conservar el que ya está".
+/**
+ * El formulario del registro de aplicación de Azure. El secreto siempre empieza vacío:
+ * el servidor nunca lo devuelve, y vacío significa "conservar el que ya está".
+ */
 const APP_VACIA = { tenantId: "common", clientId: "", clientSecret: "" };
 
 function Spreadsheets() {
@@ -49,32 +41,26 @@ function Spreadsheets() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
 
-  // Sube de uno en uno para volver a pedir las listas después de cada cambio.
   const [recarga, setRecarga] = useState(0);
 
-  // El aviso de "cuenta conectada" o el error con el que Microsoft nos regresó.
   const [aviso, setAviso] = useState(resultadoEnLaUrl);
 
-  // El formulario de registro: primero el enlace, luego lo que el servidor encontró.
   const [form, setForm] = useState(FORMULARIO_VACIO);
   const [libro, setLibro] = useState(null);
   const [buscando, setBuscando] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [errorForm, setErrorForm] = useState(null);
 
-  // Los encabezados desplegados y unas filas de muestra: { id, kind, name, headers, rows } o null.
   const [vista, setVista] = useState(null);
   const [cargandoVista, setCargandoVista] = useState(false);
 
 
-  // El registro de aplicación de Azure: lo que hay y el formulario para cambiarlo.
   const [app, setApp] = useState(null);
   const [formApp, setFormApp] = useState(APP_VACIA);
   const [editandoApp, setEditandoApp] = useState(false);
   const [guardandoApp, setGuardandoApp] = useState(false);
   const [errorApp, setErrorApp] = useState(null);
 
-  // Limpia la URL una vez leído el resultado, para que recargar no lo repita.
   useEffect(() => {
     if (!aviso) return;
     const limpia = window.location.pathname + window.location.hash;
@@ -108,8 +94,6 @@ function Spreadsheets() {
     };
   }, [recarga]);
 
-  // --- Registro de aplicación ---
-
   function handleEditarApp() {
     setErrorApp(null);
     setFormApp({
@@ -134,7 +118,6 @@ function Spreadsheets() {
       const datos = await api.setMicrosoftApp({
         tenantId: formApp.tenantId.trim() || "common",
         clientId: formApp.clientId.trim(),
-        // Vacío = conservar el secreto guardado; el servidor pide uno la primera vez.
         clientSecret: formApp.clientSecret.trim() || undefined,
       });
       setApp(datos.app);
@@ -163,14 +146,11 @@ function Spreadsheets() {
     }
   }
 
-  // --- Cuentas ---
-
   async function handleConectar() {
     setError(null);
 
     try {
       const { url } = await api.connectMicrosoft();
-      // Nos vamos a Microsoft; el servidor nos trae de vuelta a esta pestaña.
       window.location.href = url;
     } catch (err) {
       setError(err.message);
@@ -193,8 +173,6 @@ function Spreadsheets() {
     }
   }
 
-  // --- Registro de un libro ---
-
   function handleChange(event) {
     const { name, value } = event.target;
     setForm({ ...form, [name]: value });
@@ -212,7 +190,6 @@ function Spreadsheets() {
         form.url.trim(),
       );
       setLibro(encontrado);
-      // La primera tabla como sugerencia, o la primera hoja si no hay tablas.
       const primera = encontrado.tables[0] ?? encontrado.worksheets[0];
       setForm({
         ...form,
@@ -249,8 +226,6 @@ function Spreadsheets() {
       setGuardando(false);
     }
   }
-
-  // --- Libros registrados ---
 
   async function handleVer(hoja) {
     setError(null);
@@ -331,7 +306,6 @@ function Spreadsheets() {
 
       {error && <p className="spreadsheets-error">{error}</p>}
 
-      {/* Registro de aplicación de Azure */}
       <section className="spreadsheets-app">
         <header className="spreadsheets-section-header">
           <h2 className="spreadsheets-subtitle">
@@ -471,7 +445,6 @@ function Spreadsheets() {
         {errorApp && <p className="spreadsheets-form-error">{errorApp}</p>}
       </section>
 
-      {/* Cuentas conectadas */}
       <section className="spreadsheets-accounts">
         <header className="spreadsheets-section-header">
           <h2 className="spreadsheets-subtitle">Cuentas Microsoft</h2>
@@ -530,7 +503,6 @@ function Spreadsheets() {
         )}
       </section>
 
-      {/* Registro de un libro nuevo */}
       <section className="spreadsheets-register">
         <h2 className="spreadsheets-subtitle">Registrar libro</h2>
         <p>
@@ -662,7 +634,6 @@ function Spreadsheets() {
         )}
       </section>
 
-      {/* Libros registrados */}
       <section className="spreadsheets-list">
         <h2 className="spreadsheets-subtitle">Libros registrados</h2>
 
@@ -745,7 +716,6 @@ function Spreadsheets() {
                       </td>
                     </tr>
 
-                    {/* Los encabezados como fila 1 de la hoja y debajo las filas de muestra */}
                     {vista?.id === hoja.id && (
                       <tr className="spreadsheets-headers-row">
                         <td colSpan={6}>
@@ -793,7 +763,6 @@ function Spreadsheets() {
                                       <th className="sheet-preview-row">
                                         {r + 2}
                                       </th>
-                                      {/* Se recorren los encabezados para que cada fila tenga las mismas celdas */}
                                       {vista.headers.map((_, c) => (
                                         <td
                                           key={c}

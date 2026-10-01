@@ -5,7 +5,7 @@ import "./areas.css";
 
 const PERSONAS_MAX = 50;
 
-// Los roles llegan del servidor en inglés; los mismos nombres que usa users.jsx.
+/** Los roles llegan del servidor en inglés; los mismos nombres que usa users.jsx. */
 const ROLES_EN_ESPANOL = {
   admin: "Coordinación",
   area_lead: "Responsable de área",
@@ -13,7 +13,7 @@ const ROLES_EN_ESPANOL = {
   finance: "Finanzas",
 };
 
-// El formulario vacío: sirve para empezar y para limpiarlo después de crear un área.
+/** El formulario vacío: sirve para empezar y para limpiarlo después de crear un área. */
 const FORMULARIO_VACIO = {
   name: "",
   description: "",
@@ -21,8 +21,10 @@ const FORMULARIO_VACIO = {
   leaderUserId: "",
 };
 
-// Recorre el árbol de arriba a abajo y devuelve las áreas en una sola lista, cada una con
-// su `depth` y el nombre de su área superior, en el orden en que se leen en un organigrama.
+/**
+ * Recorre el árbol de arriba a abajo y devuelve las áreas en una sola lista, cada una con
+ * su `depth` y el nombre de su área superior, en el orden en que se leen en un organigrama.
+ */
 function aplanar(nodos, padre = null, acumulado = []) {
   for (const nodo of nodos) {
     acumulado.push({ ...nodo, parentName: padre ? padre.name : null });
@@ -31,8 +33,10 @@ function aplanar(nodos, padre = null, acumulado = []) {
   return acumulado;
 }
 
-// Las áreas que cuelgan de area (ella incluida): un área no puede ser su propia superior
-// ni colgar de una de sus hijas, así que estas se sacan del <select> al editar.
+/**
+ * Las áreas que cuelgan de area (ella incluida): un área no puede ser su propia superior
+ * ni colgar de una de sus hijas, así que estas se sacan del <select> al editar.
+ */
 function descendientes(area) {
   const ids = new Set([area.id]);
   for (const hija of area.children) {
@@ -45,21 +49,17 @@ function Areas() {
   const [areas, setAreas] = useState([]);
   const [cargando, setCargando] = useState(true);
 
-  // Sube de uno en uno para volver a pedir la lista después de crear, editar o borrar.
   const [recarga, setRecarga] = useState(0);
 
   const [personas, setPersonas] = useState([]);
 
-  // El formulario de alta
   const [form, setForm] = useState(FORMULARIO_VACIO);
   const [guardando, setGuardando] = useState(false);
 
   const [edicion, setEdicion] = useState(null);
 
-  // El área cuyo panel de integrantes está desplegado: null si ninguno.
   const [abierta, setAbierta] = useState(null);
 
-  // El formulario de "agregar integrante" del panel desplegado.
   const [nuevoMiembro, setNuevoMiembro] = useState({
     userId: "",
     isAreaLeader: false,
@@ -257,7 +257,6 @@ function Areas() {
         </p>
       </header>
 
-      {/* FORMULARIO DE ALTA */}
       <form className="area-form" onSubmit={handleCrear}>
         <h2 className="area-form-title">Registrar un área</h2>
 
@@ -355,7 +354,6 @@ function Areas() {
         {error}
       </p>
 
-      {/* TABLA */}
       <table className="areas-table">
         <thead>
           <tr>
@@ -371,8 +369,6 @@ function Areas() {
         <tbody>
           {areas.map((area) =>
             edicion && edicion.id === area.id ? (
-              // La fila en edición: los mismos campos que el formulario de alta, menos el
-              // responsable, que se administra desde el panel de integrantes.
               <tr className="areas-row editing" key={area.id}>
                 <td className="areas-cell-name">
                   <input
@@ -426,8 +422,6 @@ function Areas() {
                 <td className="areas-cell-members">{area.memberCount}</td>
 
                 <td className="areas-cell-actions">
-                  {/* El <form> vive aquí y los inputs de las otras celdas lo referencian con
-                      `form=`: un <form> no puede envolver varios <td>. */}
                   <form id={`area-edit-${area.id}`} onSubmit={handleGuardar}>
                     <button className="areas-action" type="submit">
                       Guardar
@@ -486,9 +480,6 @@ function Areas() {
                       Editar
                     </button>
 
-                    {/* El servidor rechaza borrar un área con gente; se deshabilita aquí para
-                        no prometer algo que va a fallar. Primero hay que quitarlos desde el
-                        panel de integrantes. */}
                     <button
                       className="areas-action areas-action-danger"
                       type="button"
@@ -505,7 +496,6 @@ function Areas() {
                   </td>
                 </tr>
 
-                {/* PANEL DE INTEGRANTES */}
                 {abierta === area.id && (
                   <tr className="areas-members-row">
                     <td className="areas-members-panel" colSpan={6}>
@@ -574,7 +564,6 @@ function Areas() {
                         ))}
                       </ul>
 
-                      {/* AGREGAR INTEGRANTE */}
                       <form
                         className="areas-member-form"
                         onSubmit={(event) => handleAgregarMiembro(event, area)}
@@ -596,8 +585,6 @@ function Areas() {
                         >
                           <option value="">Elige a una persona</option>
 
-                          {/* Quienes ya están en el área no se ofrecen: para cambiarles el
-                              cargo están los botones de arriba. */}
                           {personas
                             .filter(
                               (persona) =>
