@@ -1,620 +1,647 @@
-/* =========================================================
-   DETALLE DE UNA SOLICITUD
-   Se abre debajo de la bandeja, así que es un panel con
-   superficie propia y no una pantalla: los mismos tokens del
-   sistema, radio 9, una sola sombra.
-
-   Los colores ya significan algo en este sistema y aquí se
-   respetan: verde lo resuelto, ámbar lo que espera a alguien,
-   azul la acción, rojo el rechazo.
-   ========================================================= */
+/* La solicitud abierta bajo su renglón: una tarjeta blanca sobre el tinte del renglón abierto.
+   Acomodo portado del prototipo «Lienzo». */
 
 .request-detail {
-  margin-top: 20px;
-  padding: 20px 24px 24px;
+  padding: 18px 20px 0;
+
   border: 1px solid var(--border);
-  border-radius: 9px;
+  border-radius: 8px;
+
   background: var(--surface);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
-  transition:
-    background-color 0.3s ease,
-    border-color 0.3s ease;
+  box-shadow: 0 2px 8px rgba(24, 43, 62, 0.05);
+}
+
+.request-detail-loading {
+  margin: 0;
+  padding: 18px;
+
+  color: var(--text-muted);
+
+  font-size: var(--size-small);
 }
 
 /* =========================================================
-   ENCABEZADO
-   ========================================================= */
+   CABEZA
+========================================================= */
 
-.request-detail-header {
+.request-detail-head {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: 10px;
+
+  margin-bottom: 12px;
 }
 
-.request-detail-title {
-  margin: 0;
-  font-size: 16px;
+.request-detail-eyebrow {
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
   font-weight: 600;
-  color: var(--text);
-  overflow-wrap: anywhere;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
 }
 
-.request-detail-header > button {
+.request-detail-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
-  height: 30px;
-  padding: 0 14px;
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  background: var(--surface);
-  color: var(--text-secondary);
-  font-family: inherit;
-  font-size: 11px;
-  font-weight: 600;
+
+  width: 26px;
+  height: 26px;
+
+  border: 0;
+  border-radius: 4px;
+
+  background: var(--surface-secondary);
+  color: var(--text-muted);
+
+  font: inherit;
+  font-size: 15px;
+
   cursor: pointer;
-  transition:
-    border-color 0.15s ease,
-    color 0.15s ease;
 }
 
-.request-detail-header > button:hover {
-  border-color: #3b73b9;
-  color: #3270b5;
+.request-detail-close:hover {
+  color: var(--text);
 }
 
 /* =========================================================
-   EL RECORRIDO (DATAMODEL.md §8.2)
-   Una tira con la línea arriba: el borde superior es la vía y
-   su color dice en qué va cada paso. Los números ya vienen en
-   el texto ("2. Se reparte"), así que no hace falta una marca
-   aparte.
-   ========================================================= */
+   EL RECORRIDO
+========================================================= */
 
 .request-detail-walk {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin: 0 0 20px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+
+  max-width: 720px;
+  margin: 0 0 6px;
   padding: 0;
+
   list-style: none;
 }
 
 .request-detail-walk-step {
-  flex: 1 1 150px;
-  min-width: 0;
-  padding: 10px 0 0;
+  padding-top: 7px;
+
   border-top: 2px solid var(--border);
-  font-size: 12px;
-  font-weight: 600;
+
   color: var(--text-muted);
+
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
 }
 
-.request-detail-walk-help {
-  max-width: 34ch;
-  margin: 5px 0 0;
-  font-size: 11px;
-  font-weight: 400;
-  line-height: 1.5;
-  color: var(--text-secondary);
-}
-
-/* Ya pasó. */
 .request-detail-walk-step.is-hecho {
-  border-top-color: rgba(46, 125, 50, 0.5);
-  color: #2e7d32;
+  border-top-color: var(--success);
+
+  color: var(--success);
 }
 
-/* El paso que toca: es el único que explica qué lo mueve, así que también es el que resalta. */
 .request-detail-walk-step.is-actual {
-  border-top-color: #a8701a;
+  border-top-color: var(--warning);
+
   color: var(--text);
 }
 
-/* Todavía no toca: la vía se ve, apagada. */
 .request-detail-walk-step.is-pendiente {
   border-top-style: dashed;
 }
 
-/* =========================================================
-   LOS DATOS DE LA SOLICITUD
-   ========================================================= */
+.request-detail-walk-says {
+  margin: 0 0 14px;
 
-.request-detail-facts {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  column-gap: 24px;
-  row-gap: 12px;
-  align-items: center;
-  margin: 0 0 20px;
-}
-
-.request-detail-facts dt {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
-.request-detail-facts dd {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
-  min-width: 0;
-  font-size: 12px;
   color: var(--text-secondary);
-  overflow-wrap: anywhere;
+
+  font-size: var(--size-small);
 }
 
-/* Los controles que viven dentro de los datos: el área, el estatus, el solicitante. */
-.request-detail-facts dd select,
-.request-detail-facts dd input {
-  height: 32px;
-  min-width: 180px;
-  padding: 0 10px;
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  background: var(--surface-secondary);
-  color: var(--text);
-  font-family: inherit;
-  font-size: 11px;
-  outline: none;
-  box-sizing: border-box;
-  transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
-}
+.request-detail-dup,
+.request-detail-error {
+  margin: 0 0 12px;
+  padding-left: 9px;
 
-.request-detail-facts dd select:focus,
-.request-detail-facts dd input:focus {
-  border-color: #3b73b9;
-  box-shadow: 0 0 0 2px rgba(59, 115, 185, 0.08);
-}
-
-.request-detail-facts dd select:disabled,
-.request-detail-facts dd input:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-/* El título es una frase, no un nombre: se le da el ancho de la columna en lugar del mínimo. */
-.request-detail-facts dd > .request-detail-title-input {
-  width: 100%;
-  max-width: 52ch;
-  font-size: 12px;
-}
-
-/* Guardar el título o el solicitante: acción de texto, porque corrige un campo y no cierra nada. */
-.request-detail-facts dd > button {
-  padding: 0;
-  border: none;
-  background: transparent;
-  font-family: inherit;
-  font-size: 10px;
-  font-weight: 600;
-  color: #3270b5;
-  cursor: pointer;
-}
-
-.request-detail-facts dd > button:hover:not(:disabled) {
-  text-decoration: underline;
-}
-
-.request-detail-facts dd > button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-/* =========================================================
-   LO CAPTURADO
-   ========================================================= */
-
-.request-detail-subhead {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 10px;
-}
-
-.request-detail-subtitle {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.request-detail-subhead > button {
-  height: 28px;
-  padding: 0 12px;
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  background: var(--surface);
   color: var(--text-secondary);
-  font-family: inherit;
-  font-size: 10px;
-  font-weight: 600;
-  cursor: pointer;
-  transition:
-    border-color 0.15s ease,
-    color 0.15s ease;
+
+  font-size: var(--size-small);
 }
 
-.request-detail-subhead > button:hover:not(:disabled) {
-  border-color: #3b73b9;
-  color: #3270b5;
+.request-detail-dup {
+  border-left: 3px solid var(--warning);
 }
-
-.request-detail-data {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  overflow: hidden;
-  background: var(--surface);
-}
-
-.request-detail-data th,
-.request-detail-data td {
-  padding: 9px 12px;
-  border-bottom: 1px solid var(--border-light);
-  text-align: left;
-  vertical-align: top;
-  font-size: 12px;
-}
-
-.request-detail-data tr:last-child th,
-.request-detail-data tr:last-child td {
-  border-bottom: none;
-}
-
-/* El nombre del campo a la izquierda, angosto; el valor manda. */
-.request-detail-data th {
-  width: 240px;
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-
-.request-detail-data td {
-  color: var(--text);
-  overflow-wrap: anywhere;
-}
-
-/* Fuera del formato: se conserva (RF-SOL-06) pero no se lee como parte del formato. */
-.request-detail-data .request-detail-extra th,
-.request-detail-data .request-detail-extra td {
-  background: var(--surface-secondary);
-  color: var(--text-muted);
-}
-
-.request-detail-data .request-detail-extra th {
-  font-weight: 400;
-  font-style: italic;
-}
-
-/* =========================================================
-   CORREGIR LO CAPTURADO
-   ========================================================= */
-
-.request-detail-capture {
-  margin-top: 4px;
-  padding: 14px 16px 16px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--surface-secondary);
-}
-
-.request-detail-capture-fields {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 12px;
-  margin: 12px 0 0;
-}
-
-/* =========================================================
-   EL RENGLÓN ORIGINAL DE LA HOJA
-   ========================================================= */
-
-.request-detail-raw {
-  margin-top: 16px;
-}
-
-.request-detail-raw > button {
-  height: 28px;
-  margin-bottom: 10px;
-  padding: 0 12px;
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  background: var(--surface);
-  color: var(--text-secondary);
-  font-family: inherit;
-  font-size: 10px;
-  font-weight: 600;
-  cursor: pointer;
-  transition:
-    border-color 0.15s ease,
-    color 0.15s ease;
-}
-
-.request-detail-raw > button:hover {
-  border-color: #3b73b9;
-  color: #3270b5;
-}
-
-/* =========================================================
-   CONFLICTOS AL CONVERTIR
-   Ámbar: no falló nada --- se guardó un valor y se descartó
-   otro, y alguien tiene que saber cuál.
-   ========================================================= */
-
-.request-detail-conflicts {
-  margin-top: 16px;
-  padding: 12px 16px 14px;
-  border: 1px solid rgba(214, 153, 30, 0.4);
-  border-radius: 6px;
-  background: rgba(214, 153, 30, 0.08);
-}
-
-.request-detail-conflicts > h4 {
-  margin: 0 0 8px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #a8701a;
-}
-
-.request-detail-conflicts > ul {
-  margin: 0;
-  padding-left: 18px;
-  font-size: 11px;
-  line-height: 1.7;
-  color: #a8701a;
-}
-
-/* =========================================================
-   AVISOS
-   ========================================================= */
 
 .request-detail-error {
-  max-width: 82ch;
-  margin: 0 0 16px;
-  padding: 10px 14px;
-  border: 1px solid rgba(217, 83, 79, 0.35);
-  border-radius: 6px;
-  background: rgba(217, 83, 79, 0.08);
-  font-size: 12px;
-  line-height: 1.55;
-  color: #b23c38;
-}
+  border-left: 3px solid var(--danger);
 
-.request-detail-help {
-  max-width: 82ch;
-  margin: 0;
-  font-size: 11px;
-  line-height: 1.6;
-  color: var(--text-muted);
-}
-
-/* Ya es proyecto: un hecho, no una advertencia. */
-.request-detail-converted {
-  max-width: 82ch;
-  margin: 0;
-  padding: 10px 14px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--surface-secondary);
-  font-size: 12px;
-  line-height: 1.6;
-  color: var(--text-secondary);
-}
-
-/* =========================================================
-   ACCIONES
-   ========================================================= */
-
-.request-detail-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin-top: 20px;
-}
-
-.request-detail-actions > button[type="submit"] {
-  height: 32px;
-  min-width: 140px;
-  padding: 0 16px;
-  border: none;
-  border-radius: 5px;
-  background: #2864a8;
-  color: #ffffff;
-  font-family: inherit;
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  transition:
-    background 0.15s ease,
-    transform 0.1s ease;
-}
-
-.request-detail-actions > button[type="submit"]:hover:not(:disabled) {
-  background: #205895;
-}
-
-.request-detail-actions > button[type="submit"]:active:not(:disabled) {
-  transform: translateY(1px);
-}
-
-/* Convertir es la acción de esta pantalla, así que va llena. Con clase y no por posición: un
-   botón que se agregue mañana no debería heredar el peso del primero. */
-.request-detail-actions > .request-detail-primary {
-  min-width: 160px;
-  border: none;
-  background: #2864a8;
-  color: #ffffff;
-}
-
-.request-detail-actions > .request-detail-primary:hover:not(:disabled) {
-  border: none;
-  background: #205895;
-  color: #ffffff;
-}
-
-.request-detail-actions > button[type="button"] {
-  height: 32px;
-  padding: 0 16px;
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  background: var(--surface);
-  color: var(--text-secondary);
-  font-family: inherit;
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  transition:
-    border-color 0.15s ease,
-    color 0.15s ease;
-}
-
-.request-detail-actions > button[type="button"]:hover:not(:disabled) {
-  border-color: #3b73b9;
-  color: #3270b5;
-}
-
-.request-detail-actions > button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-/* Eliminar: destructivo, así que se ve distinto sin gritar. */
-.request-detail-actions > .request-detail-danger {
-  border-color: rgba(228, 92, 92, 0.4);
-  background: transparent;
-  color: #e45c5c;
-}
-
-.request-detail-actions > .request-detail-danger:hover:not(:disabled) {
-  border-color: #e45c5c;
-  background: rgba(228, 92, 92, 0.08);
-  color: #e45c5c;
-}
-
-/* =========================================================
-   CONVERTIR EN PROYECTO
-   ========================================================= */
-
-.request-detail-convert {
-  max-width: 640px;
-  margin-top: 20px;
-  padding: 18px 20px 20px;
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  background: var(--surface-secondary);
-}
-
-.request-detail-convert > h4 {
-  margin: 0 0 8px;
-  font-size: 13px;
-  font-weight: 600;
   color: var(--text);
 }
 
-.request-detail-convert > .request-detail-help {
-  margin-bottom: 16px;
+/* =========================================================
+   LAS DOS COLUMNAS Y SUS SECCIONES
+========================================================= */
+
+.request-detail-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 0 28px;
+}
+
+.request-detail-sec {
+  padding: 14px 0 18px;
+
+  border-top: 1px solid var(--border-light);
+}
+
+.request-detail-sec h3 {
+  margin: 0 0 12px;
+
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.request-detail-sub {
+  margin-left: 6px;
+
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.request-detail-sec-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* =========================================================
+   LOS CAMPOS: se leen por su valor
+========================================================= */
+
+.request-detail-grid,
+.request-detail-captured {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
 }
 
 .request-detail-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin-bottom: 14px;
-  font-size: 12px;
-  font-weight: 600;
+  gap: 4px;
+
+  min-width: 0;
+}
+
+.request-detail-label {
   color: var(--text-secondary);
+
+  font-size: var(--size-small);
 }
 
-.request-detail-field input:not([type="checkbox"]),
+.request-detail-field input,
 .request-detail-field select {
-  width: 100%;
-  height: 36px;
-  padding: 0 11px;
+  height: 32px;
+  padding: 0 8px;
+
   border: 1px solid var(--border);
-  border-radius: 5px;
-  background: var(--surface);
+  border-radius: 6px;
+
+  background: var(--field);
   color: var(--text);
-  font-family: inherit;
-  font-size: 11px;
+
+  font: inherit;
+  font-size: var(--size-body);
+  font-weight: 500;
+}
+
+.request-detail-field input:focus-visible,
+.request-detail-field select:focus-visible {
+  border-color: var(--accent-line);
+
   outline: none;
-  box-sizing: border-box;
-  transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
 }
 
-.request-detail-field input::placeholder {
-  color: var(--text-muted);
-}
+.request-detail-value {
+  margin: 0;
+  padding: 6px 0;
 
-.request-detail-field input:not([type="checkbox"]):focus,
-.request-detail-field select:focus {
-  border-color: #3b73b9;
-  box-shadow: 0 0 0 2px rgba(59, 115, 185, 0.08);
-}
-
-/* «Con costo» es una casilla: la etiqueta va a su lado, no encima. */
-.request-detail-field:has(input[type="checkbox"]) {
-  flex-direction: row;
-  align-items: center;
-  gap: 8px;
-  font-weight: 400;
   color: var(--text);
+
+  font-size: var(--size-body);
+  font-weight: 500;
+}
+
+/* Lo cambiado y todavía sin guardar. */
+.request-detail-field.is-changed input,
+.request-detail-field.is-changed select,
+.request-detail-typed.is-changed input,
+.request-detail-typed.is-changed select,
+.request-detail-typed.is-changed textarea {
+  border-color: var(--warning);
+}
+
+.request-detail-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  align-self: end;
+
+  min-height: 34px;
+
+  color: var(--text-secondary);
+
+  font-size: var(--size-small);
+}
+
+.request-detail-note {
+  margin: 0 0 8px;
+
+  color: var(--text-secondary);
+
+  font-size: var(--size-small);
 }
 
 /* =========================================================
-   PANTALLAS ANGOSTAS
-   ========================================================= */
+   EL FLUJO A TODO LO ANCHO
+========================================================= */
 
-@media (max-width: 860px) {
-  .request-detail {
-    padding: 16px;
-  }
+.request-detail-flow-canvas {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
 
-  .request-detail-facts {
-    grid-template-columns: 1fr;
-    row-gap: 4px;
-  }
+  overflow-x: auto;
 
-  .request-detail-facts dd {
-    margin-bottom: 10px;
-  }
+  padding: 14px;
 
-  .request-detail-data th {
-    width: auto;
-  }
+  border: 1px solid var(--border);
+  border-radius: 8px;
+
+  background-color: var(--surface-secondary);
+  background-image: radial-gradient(var(--border) 1px, transparent 1px);
+  background-size: 9px 9px;
 }
 
-/* Solo acomodo: el diseño lo revisa quien lleva el CSS. */
-
-.request-detail-flow {
+.request-detail-flow-phase {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+  flex: 0 0 180px;
 }
 
-.request-detail-flow-phases {
-  margin: 0;
-  padding-left: 18px;
+.request-detail-flow-phase-name {
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: 0.5px;
 }
 
+.request-detail-flow-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  padding: 8px 10px;
+
+  border: 1px solid var(--border);
+  border-radius: 6px;
+
+  background: var(--surface);
+  box-shadow: 0 1px 3px rgba(24, 43, 62, 0.04);
+}
+
+.request-detail-flow-card.is-first {
+  border-color: var(--accent-line);
+}
+
+.request-detail-flow-card-area {
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.request-detail-flow-card strong {
+  color: var(--text);
+
+  font-size: var(--size-body);
+  line-height: 1.3;
+}
+
+.request-detail-flow-card-meta {
+  color: var(--text-secondary);
+
+  font-size: var(--size-caps);
+}
+
+.request-detail-flow-arrow {
+  position: relative;
+  align-self: stretch;
+  flex: 0 0 34px;
+}
+
+.request-detail-flow-arrow::before {
+  content: "";
+
+  position: absolute;
+  top: 44px;
+  right: 8px;
+  left: 8px;
+
+  border-top: 1px solid var(--text-muted);
+}
+
+.request-detail-flow-arrow::after {
+  content: "";
+
+  position: absolute;
+  top: 40px;
+  right: 8px;
+
+  border: 4px solid transparent;
+  border-right: 0;
+  border-left: 6px solid var(--text-muted);
+}
+
+/* Lo que puede crecer va punteado, en el lugar que ocuparía. */
+.request-detail-noflow {
+  padding: 12px;
+
+  border: 1px dashed var(--border);
+  border-radius: 7px;
+
+  background: var(--surface-secondary);
+}
+
+.request-detail-noflow p {
+  margin: 0 0 8px;
+
+  color: var(--text-secondary);
+
+  font-size: var(--size-small);
+}
+
+.request-detail-noflow-actions,
 .request-detail-flow-actions {
   display: flex;
+  align-items: center;
   flex-wrap: wrap;
   gap: 6px;
+}
+
+.request-detail-noflow select {
+  flex: 1 1 140px;
+
+  height: 32px;
+  min-width: 0;
+
+  border: 1px solid var(--border);
+  border-radius: 6px;
+
+  background: var(--surface);
+  color: var(--text);
+
+  font: inherit;
+  font-size: var(--size-small);
+}
+
+.request-detail-or {
+  color: var(--text-muted);
+
+  font-size: var(--size-small);
+}
+
+/* =========================================================
+   EL RENGLÓN DE EXCEL Y LOS CONFLICTOS
+========================================================= */
+
+.request-detail-raw {
+  margin-top: 12px;
+}
+
+.request-detail-raw summary {
+  color: var(--accent-line);
+
+  font-size: var(--size-small);
+
+  cursor: pointer;
+}
+
+.request-detail-raw-list {
+  display: grid;
+  grid-template-columns: minmax(0, 40%) minmax(0, 1fr);
+  gap: 6px 12px;
+
+  margin: 10px 0 0;
+
+  font-size: var(--size-small);
+}
+
+.request-detail-raw-list dt {
+  color: var(--text-muted);
+}
+
+.request-detail-raw-list dd {
+  margin: 0;
+
+  color: var(--text);
+
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.request-detail-conflicts {
+  margin: 0;
+  padding-left: 18px;
+
+  color: var(--text-secondary);
+
+  font-size: var(--size-small);
+}
+
+/* =========================================================
+   CONVERTIR EN PROYECTO
+========================================================= */
+
+.request-detail-convert {
+  padding: 14px 0 18px;
+
+  border-top: 2px solid var(--accent-line);
+}
+
+.request-detail-convert h3 {
+  margin: 0 0 12px;
+
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.request-detail-convert-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+
+  margin-top: 14px;
+}
+
+/* =========================================================
+   BOTONES Y EL PIE
+========================================================= */
+
+.request-detail-btn {
+  height: 32px;
+  padding: 0 12px;
+
+  border: 1px solid var(--border);
+  border-radius: 6px;
+
+  background: var(--surface);
+  color: var(--text);
+
+  font: inherit;
+  font-size: var(--size-small);
+
+  cursor: pointer;
+}
+
+.request-detail-btn:hover:not(:disabled) {
+  border-color: var(--accent-line);
+}
+
+.request-detail-btn:disabled {
+  color: var(--text-muted);
+  cursor: default;
+}
+
+.request-detail-btn.is-primary {
+  border-color: var(--accent);
+
+  background: var(--accent);
+  color: #ffffff;
+
+  font-weight: 600;
+}
+
+.request-detail-btn.is-primary:hover:not(:disabled) {
+  border-color: var(--accent-hover);
+  background: var(--accent-hover);
+}
+
+.request-detail-btn.is-primary:disabled {
+  border-color: var(--border);
+
+  background: var(--surface-secondary);
+  color: var(--text-muted);
+}
+
+.request-detail-btn.is-danger {
+  border-color: var(--danger);
+
+  background: var(--danger);
+  color: #ffffff;
+
+  font-weight: 600;
+}
+
+.request-detail-quiet {
+  padding: 2px 6px;
+
+  border: 1px solid transparent;
+  border-radius: 4px;
+
+  background: transparent;
+  color: var(--accent-line);
+
+  font: inherit;
+  font-size: var(--size-small);
+
+  cursor: pointer;
+}
+
+.request-detail-quiet:hover:not(:disabled) {
+  background: var(--accent-soft);
+}
+
+.request-detail-quiet.is-danger {
+  color: var(--danger);
+}
+
+.request-detail-quiet.is-danger:hover:not(:disabled) {
+  border-color: var(--danger);
+
+  background: var(--danger-soft);
+}
+
+.request-detail-confirm {
+  color: var(--danger);
+
+  font-size: var(--size-small);
+  font-weight: 600;
+}
+
+.request-detail-foot {
+  position: sticky;
+  bottom: 0;
+
+  display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+
+  margin: 0 -20px;
+  padding: 12px 20px;
+
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 8px 8px;
+
+  background: var(--surface);
+}
+
+.request-detail-foot .request-detail-note {
+  margin: 0;
+}
+
+.request-detail-foot-right {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  margin-left: auto;
+}
+
+.request-detail-dirty {
+  color: var(--warning);
+
+  font-size: var(--size-small);
+  font-weight: 600;
+}
+
+@media (max-width: 900px) {
+  .request-detail {
+    padding: 14px 14px 0;
+  }
+
+  .request-detail-foot {
+    margin: 0 -14px;
+    padding: 12px 14px;
+  }
 }

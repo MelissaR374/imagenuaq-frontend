@@ -1,19 +1,26 @@
-// Una solicitud con todo lo que trae, y el paso a proyecto.
+// Una solicitud abierta en su lugar, bajo su renglón de la bandeja, y el paso a proyecto.
 //
 // La tira de «Recorrido» es el de DATAMODEL.md §8.2 visto desde una sola solicitud: en qué paso
 // está y qué falta para el siguiente. Está aquí porque los pasos 2 y 3 los mueve una mano y no un
 // automatismo, así que la pantalla tiene que decir cuál es esa mano y qué le toca; si no, la
 // solicitud se queda quieta y nadie sabe por qué.
 //
+// Todo lo editable se guarda junto, en un solo PATCH: la gente llena los formatos mal y corregir
+// un campo a la vez dejaba medio guardado lo que todavía se estaba pensando. Lo cambiado se marca
+// en ámbar, el pie cuenta los cambios y la acción azul es «Guardar cambios» mientras haya algo
+// que guardar y «Convertir en proyecto» cuando no. El estatus es la excepción: tiene su propio
+// endpoint y se guarda al elegirlo.
+//
 // Lo capturado se muestra con los campos del formato con el que se capturó, no con el formato
 // de hoy: una versión publicada no se edita, así que una solicitud vieja se sigue leyendo como
 // se llenó. Lo que venga de una hoja trae además el renglón crudo, con las columnas que el
 // mapeo ignoró (RF-SOL-06).
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 
 import * as api from "../../api/client.js";
 import FieldInput from "../shared/fieldInput.jsx";
 import FlowDesigner from "../FlowDesigner/FlowDesigner.jsx";
+import Ayuda from "../shared/ayuda.jsx";
 import RequesterInput from "./requesterInput.jsx";
 import "./requestDetail.css";
 
@@ -24,27 +31,35 @@ import "./requestDetail.css";
 const RECORRIDO = [
   {
     clave: "nacio",
-    titulo: "1. Recibida",
+    titulo: "Recibida",
     mueve: "Se capturó a mano o llegó de un libro de Excel.",
   },
   {
     clave: "repartir",
-    titulo: "2. Con flujo",
+    titulo: "Con flujo",
     mueve:
-      "Falta decidir por qué áreas va a pasar. Aplica una plantilla o diseña su flujo en «Flujo», aquí abajo.",
+      "Falta decidir por qué áreas va a pasar: aplícale una plantilla, diséñale su flujo o asígnale un área.",
   },
   {
     clave: "atender",
-    titulo: "3. En atención",
+    titulo: "En atención",
     mueve:
-      "Las áreas de la primera fase la tienen en su bandeja y actualizan el estatus conforme avanza.",
+      "Las áreas de la primera fase la tienen en su bandeja y mueven el estatus conforme avanza.",
   },
   {
     clave: "convertir",
-    titulo: "4. Convertida en proyecto",
+    titulo: "Proyecto",
     mueve: "Ya es un proyecto: se llevó su flujo y todos los datos capturados.",
   },
 ];
+
+/** Cómo llegó, en palabras. */
+const ORIGENES = {
+  manual: "Captura directa",
+  email: "Correo",
+  form: "Formulario",
+  sheet: "Excel",
+};
 
 /**
  * Cuál de los pasos es el actual. Una convertida ya pasó por todos, aunque su estatus siga
@@ -62,10 +77,18 @@ function pasoActualDe(detalle) {
   return "atender";
 }
 
+/** Las áreas de la primera fase del flujo: las que la reciben (DATAMODEL.md §2.5). */
+function areasDeLaPrimeraFase(flujo) {
+  if (!flujo || flujo.phases.length === 0) {
+    return [];
+  }
+  return [...new Set(flujo.phases[0].stages.map((etapa) => etapa.areaId))];
+}
+
 /** Un valor capturado como texto legible: los booleanos como sí/no y lo demás tal cual. */
 function formatearValor(valor) {
   if (valor === null || valor === undefined || valor === "") {
-    return "—";
+    return "Sin valor todavía";
   }
   if (valor === true) {
     return "Sí";
@@ -85,352 +108,197 @@ function formatearValor(valor) {
  */
 function Recorrido({ pasoActual }) {
   const indiceActual = RECORRIDO.findIndex((paso) => paso.clave === pasoActual);
+  const actual = RECORRIDO[indiceActual];
 
   return (
-    <ol className="request-detail-walk">
-      {RECORRIDO.map((paso, indice) => {
-        let estado = "pendiente";
-        if (indice < indiceActual) {
-          estado = "hecho";
-        }
-        if (indice === indiceActual) {
-          estado = "actual";
-        }
+    <>
+      <ol className="request-detail-walk">
+        {RECORRIDO.map((paso, indice) => {
+          let estado = "pendiente";
+          if (indice < indiceActual) {
+            estado = "hecho";
+          }
+          if (indice === indiceActual) {
+            estado = "actual";
+          }
 
-        let explicacion = null;
-        if (estado === "actual") {
-          explicacion = <p className="request-detail-walk-help">{paso.mueve}</p>;
-        }
-
-        return (
-          <li className={`request-detail-walk-step is-${estado}`} key={paso.clave}>
-            {paso.titulo}
-            {explicacion}
-          </li>
-        );
-      })}
-    </ol>
+          return (
+            <li className={`request-detail-walk-step is-${estado}`} key={paso.clave}>
+              {paso.titulo}
+            </li>
+          );
+        })}
+      </ol>
+      <p className="request-detail-walk-says">{actual.mueve}</p>
+    </>
   );
 }
 
 /**
- * Lo capturado, en el orden del formato, y debajo lo que la captura trae pero el formato ya no
- * pide: no se pierde nada.
+ * El flujo a todo lo ancho: fase tras fase, con una tarjeta por etapa y flechas entre fases. Es
+ * el mismo lienzo punteado del diseñador, aquí nada más para leerse.
  */
-function ValoresCapturados({ campos, data }) {
-  const capturado = data ?? {};
-  const codigosDelFormato = campos.map((campo) => campo.code);
-  const sobrantes = Object.keys(capturado).filter(
-    (clave) => !codigosDelFormato.includes(clave),
-  );
-
+function FlujoExtendido({ flujo }) {
   return (
-    <table className="request-detail-data">
-      <tbody>
-        {campos.map((campo) => (
-          <tr key={campo.code}>
-            <th>{campo.name}</th>
-            <td>{formatearValor(capturado[campo.code])}</td>
-          </tr>
-        ))}
-        {sobrantes.map((clave) => (
-          <tr className="request-detail-extra" key={clave}>
-            <th>{clave} (fuera del formato)</th>
-            <td>{formatearValor(capturado[clave])}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-}
-
-/** Corregir lo capturado antes de que se vuelva proyecto. */
-function EditorDeCaptura({ campos, data, ocupado, onGuardar, onCancelar }) {
-  const [valores, setValores] = useState(() => ({ ...(data ?? {}) }));
-
-  function cambiar(code, valor) {
-    setValores({ ...valores, [code]: valor });
-  }
-
-  function enviar(evento) {
-    evento.preventDefault();
-    onGuardar(valores);
-  }
-
-  let textoDelBoton = "Guardar lo corregido";
-  if (ocupado) {
-    textoDelBoton = "Guardando...";
-  }
-
-  return (
-    <form className="request-detail-capture" onSubmit={enviar}>
-      <p className="request-detail-help">
-        El servidor revisa cada valor contra el tipo de su campo, igual que al importar: si algo no
-        corresponde lo dice y no se guarda nada a medias.
-      </p>
-
-      <div className="request-detail-capture-fields">
-        {campos.map((campo) => (
-          <FieldInput
-            key={campo.code}
-            field={campo}
-            value={valores[campo.code]}
-            onChange={(valor) => cambiar(campo.code, valor)}
-          />
-        ))}
-      </div>
-
-      <div className="request-detail-actions">
-        <button type="submit" disabled={ocupado}>
-          {textoDelBoton}
-        </button>
-        <button type="button" onClick={onCancelar} disabled={ocupado}>
-          Cancelar
-        </button>
-      </div>
-    </form>
+    <div className="request-detail-flow-canvas">
+      {flujo.phases.map((fase, indice) => (
+        <Fragment key={fase.id}>
+          {indice > 0 ? <div className="request-detail-flow-arrow" /> : null}
+          <div className="request-detail-flow-phase">
+            <span className="request-detail-flow-phase-name">
+              FASE {indice + 1} · {fase.name}
+            </span>
+            {fase.stages.map((etapa) => (
+              <article
+                className={
+                  indice === 0
+                    ? "request-detail-flow-card is-first"
+                    : "request-detail-flow-card"
+                }
+                key={etapa.id}
+              >
+                <span className="request-detail-flow-card-area">{etapa.areaName}</span>
+                <strong>{etapa.title}</strong>
+                <span className="request-detail-flow-card-meta">
+                  {etapa.defaultAssigneeName ?? "Sin responsable"}
+                  {etapa.estimatedDays === null ? "" : ` · ${etapa.estimatedDays} d`}
+                </span>
+              </article>
+            ))}
+          </div>
+        </Fragment>
+      ))}
+    </div>
   );
 }
 
 /** El renglón como lo tenía la hoja, columnas ignoradas incluidas (RF-SOL-06). */
 function RenglonOriginal({ sourceData }) {
-  const [abierto, setAbierto] = useState(false);
-
-  function alternar() {
-    setAbierto(!abierto);
-  }
-
-  let texto = "Ver el valor original del registro de la hoja";
-  if (abierto) {
-    texto = "Ocultar el renglón original";
-  }
-
-  let tabla = null;
-  if (abierto) {
-    tabla = (
-      <table className="request-detail-data">
-        <tbody>
-          {Object.keys(sourceData).map((columna) => (
-            <tr key={columna}>
-              <th>{columna}</th>
-              <td>{formatearValor(sourceData[columna])}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    );
-  }
-
   return (
-    <div className="request-detail-raw">
-      <button type="button" onClick={alternar}>
-        {texto}
-      </button>
-      {tabla}
-    </div>
+    <details className="request-detail-raw">
+      <summary>El renglón como viene en el libro de Excel</summary>
+      <dl className="request-detail-raw-list">
+        {Object.keys(sourceData).map((columna) => (
+          <Fragment key={columna}>
+            <dt>{columna}</dt>
+            <dd>{formatearValor(sourceData[columna])}</dd>
+          </Fragment>
+        ))}
+      </dl>
+    </details>
   );
 }
 
 /**
- * El paso 4 del recorrido. Lo que se deje vacío lo toma de la solicitud; las etapas salen de
- * su flujo.
+ * El paso 4 del recorrido, en el mismo lugar. Lo que se deje vacío lo toma de la solicitud; las
+ * etapas salen de su flujo. La llave se deja vacía a propósito: la numera el servidor, para que
+ * dos personas convirtiendo a la vez no choquen en la misma.
  */
 function FormularioDeConversion({ datos, flujo, ocupado, onCambiar, onEnviar, onCancelar }) {
   function cambiar(clave, valor) {
     onCambiar({ ...datos, [clave]: valor });
   }
 
-  let avisoDelFlujo = (
-    <p className="request-detail-help">
-      Sin flujo: el proyecto nace sin etapas. Si ya sabes por qué áreas va a pasar, aplica o diseña
-      su flujo antes de convertirla.
-    </p>
-  );
+  let avisoDelFlujo =
+    "Sin flujo: el proyecto nace sin etapas. Si ya sabes por qué áreas va a pasar, aplícale o diséñale su flujo antes de convertirla.";
   if (flujo) {
     const etapas = flujo.phases.reduce((total, fase) => total + fase.stages.length, 0);
-    avisoDelFlujo = (
-      <p className="request-detail-help">
-        El proyecto nace con el flujo de la solicitud: {flujo.phases.length}{" "}
-        {flujo.phases.length === 1 ? "fase" : "fases"} y {etapas}{" "}
-        {etapas === 1 ? "etapa" : "etapas"}. Las de la primera fase empiezan activas.
-      </p>
-    );
-  }
-
-  let textoDelBoton = "Crear el proyecto";
-  if (ocupado) {
-    textoDelBoton = "Convirtiendo...";
+    avisoDelFlujo = `El proyecto nace con el flujo de la solicitud: ${flujo.phases.length} ${
+      flujo.phases.length === 1 ? "fase" : "fases"
+    } y ${etapas} ${etapas === 1 ? "etapa" : "etapas"}. Las de la primera fase empiezan activas.`;
   }
 
   return (
     <form className="request-detail-convert" onSubmit={onEnviar}>
-      <h4>Convertir en proyecto</h4>
-      <p className="request-detail-help">
-        Lo que se deje vacío se toma de la solicitud. Cada valor capturado pasa al proyecto con su
-        clave, para que la orden de impresión y facturación lo lean sin recapturar.
-      </p>
+      <h3>
+        Convertir en proyecto
+        <Ayuda texto="Lo que se deje vacío se toma de la solicitud. Cada valor capturado pasa al proyecto con su clave, para que la orden de impresión y la facturación lo lean sin recapturar." />
+      </h3>
 
-      <label className="request-detail-field">
-        Llave del proyecto (vacío: se genera como PRY-000001)
-        <input
-          value={datos.key}
-          onChange={(evento) => cambiar("key", evento.target.value)}
-          placeholder="PAPEL-FCQ-03"
-        />
-      </label>
+      <div className="request-detail-grid">
+        <label className="request-detail-field">
+          <span className="request-detail-label">
+            Llave del proyecto
+            <Ayuda texto="Si se deja vacía, el servidor la numera como PRY-000001 al crear el proyecto. Escríbela solo si la coordinación ya usa una llave propia." />
+          </span>
+          <input
+            value={datos.key}
+            onChange={(evento) => cambiar("key", evento.target.value)}
+            placeholder="Ej: PAPEL-FCQ-03"
+          />
+        </label>
 
-      <label className="request-detail-field">
-        Título del proyecto
-        <input value={datos.title} onChange={(evento) => cambiar("title", evento.target.value)} />
-      </label>
+        <label className="request-detail-field">
+          <span className="request-detail-label">Título del proyecto</span>
+          <input value={datos.title} onChange={(evento) => cambiar("title", evento.target.value)} />
+        </label>
 
-      <label className="request-detail-field" htmlFor={datos.idDelSolicitante}>
-        Entidad solicitante (este es el momento de corregir el nombre)
-      </label>
-      <RequesterInput
-        id={datos.idDelSolicitante}
-        value={datos.requester}
-        onChange={(requester) => cambiar("requester", requester)}
-      />
+        <div className="request-detail-field">
+          <span className="request-detail-label" id={`convertir-solicitante-${datos.id}-label`}>
+            Entidad solicitante
+            <Ayuda texto="Este es el momento de corregir el nombre: el proyecto se queda con el que se escriba aquí." />
+          </span>
+          <RequesterInput
+            id={`convertir-solicitante-${datos.id}`}
+            value={datos.requester}
+            onChange={(requester) => cambiar("requester", requester)}
+          />
+        </div>
 
-      <label className="request-detail-field">
-        <input
-          type="checkbox"
-          checked={datos.hasCost}
-          onChange={(evento) => cambiar("hasCost", evento.target.checked)}
-        />
-        Con costo
-      </label>
+        <label className="request-detail-check">
+          <input
+            type="checkbox"
+            checked={datos.hasCost}
+            onChange={(evento) => cambiar("hasCost", evento.target.checked)}
+          />
+          Con costo
+        </label>
+      </div>
 
-      {avisoDelFlujo}
+      <p className="request-detail-note">{avisoDelFlujo}</p>
 
-      <div className="request-detail-actions">
-        <button type="submit" disabled={ocupado}>
-          {textoDelBoton}
-        </button>
-        <button type="button" onClick={onCancelar}>
+      <div className="request-detail-convert-actions">
+        <button className="request-detail-btn" type="button" onClick={onCancelar}>
           Cancelar
+        </button>
+        <button className="request-detail-btn is-primary" type="submit" disabled={ocupado}>
+          {ocupado ? "Convirtiendo…" : "Crear el proyecto"}
         </button>
       </div>
     </form>
   );
 }
 
-/**
- * El paso 2 del recorrido: el flujo decide a qué bandejas cae la solicitud (DATAMODEL.md §2.5).
- * Con flujo se resume fase por fase; sin él se ofrece aplicar una plantilla o diseñarlo.
- */
-function FlujoDeLaSolicitud({ flujo, areaName, convertida, plantillas, ocupado, onAplicar, onDisenar, onQuitar }) {
-  const activas = plantillas.filter((una) => una.isActive);
-  const [elegida, setElegida] = useState("");
-
-  let resumen = <p className="request-detail-flow-empty">Sin flujo.</p>;
-  if (flujo) {
-    resumen = (
-      <>
-        {flujo.workflowName && (
-          <p className="request-detail-flow-origin">
-            Copiado de la plantilla «{flujo.workflowName}» (versión {flujo.version}).
-          </p>
-        )}
-        <ol className="request-detail-flow-phases">
-          {flujo.phases.map((fase) => (
-            <li key={fase.id}>
-              <strong>{fase.name}:</strong>{" "}
-              {[...new Set(fase.stages.map((etapa) => etapa.areaName))].join(", ")}
-            </li>
-          ))}
-        </ol>
-      </>
-    );
-  } else if (areaName) {
-    resumen = <p className="request-detail-flow-empty">Sin flujo; asignada a {areaName}.</p>;
-  }
-
-  if (convertida) {
-    return <div className="request-detail-flow">{resumen}</div>;
-  }
-
-  return (
-    <div className="request-detail-flow">
-      {resumen}
-
-      <div className="request-detail-flow-actions">
-        {flujo ? (
-          <>
-            <button type="button" onClick={onDisenar} disabled={ocupado}>
-              Editar flujo
-            </button>
-            <button type="button" onClick={onQuitar} disabled={ocupado}>
-              Quitar flujo
-            </button>
-          </>
-        ) : (
-          <>
-            <select
-              value={elegida}
-              onChange={(evento) => setElegida(evento.target.value)}
-              disabled={ocupado || activas.length === 0}
-            >
-              <option value="">Elige una plantilla</option>
-              {activas.map((una) => (
-                <option value={una.id} key={una.id}>
-                  {una.name}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              onClick={() => onAplicar(Number(elegida))}
-              disabled={ocupado || elegida === ""}
-            >
-              Aplicar plantilla
-            </button>
-            <button type="button" onClick={onDisenar} disabled={ocupado}>
-              Diseñar un flujo nuevo
-            </button>
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function RequestDetail({ solicitud, onCerrar, onCambio }) {
+function RequestDetail({ solicitud, areas, onCerrar, onCambio }) {
   const [detalle, setDetalle] = useState(solicitud);
+  const [borrador, setBorrador] = useState(null);
   const [estatus, setEstatus] = useState([]);
+  const [plantillas, setPlantillas] = useState([]);
+  const [plantillaElegida, setPlantillaElegida] = useState("");
   const [error, setError] = useState(null);
   const [ocupado, setOcupado] = useState(false);
-
-  const [corrigiendo, setCorrigiendo] = useState(false);
-
-  const [convertir, setConvertir] = useState(null);
   const [conflictos, setConflictos] = useState([]);
-
-  const [plantillas, setPlantillas] = useState([]);
+  const [convertir, setConvertir] = useState(null);
   const [disenando, setDisenando] = useState(false);
+  const [confirmandoBorrado, setConfirmandoBorrado] = useState(false);
+  const [confirmandoQuitarFlujo, setConfirmandoQuitarFlujo] = useState(false);
 
   useEffect(() => {
     let cancelado = false;
 
     async function cargar() {
-      let filtroDeEstatus = {};
-      if (solicitud.areaId !== null) {
-        filtroDeEstatus = { areaId: solicitud.areaId };
-      }
-
       try {
-        const [respuestaSolicitud, respuestaEstatus, respuestaPlantillas] = await Promise.all([
+        const [respuestaSolicitud, respuestaPlantillas] = await Promise.all([
           api.getRequest(solicitud.id),
-          api.listStatuses(filtroDeEstatus),
           api.listWorkflows(),
         ]);
         if (cancelado) {
           return;
         }
         setDetalle(respuestaSolicitud.request);
-        setEstatus(respuestaEstatus.statuses);
+        setBorrador(desdeDetalle(respuestaSolicitud.request));
         setPlantillas(respuestaPlantillas.workflows);
+        await cargarEstatus(respuestaSolicitud.request, cancelado);
       } catch (fallo) {
         if (!cancelado) {
           setError(fallo.message);
@@ -438,16 +306,132 @@ function RequestDetail({ solicitud, onCerrar, onCambio }) {
       }
     }
 
+    /**
+     * Los estatus que esta solicitud puede tomar: los globales más los de cada área que la
+     * tiene. Con flujo no hay `areaId`, así que las áreas salen de la primera fase; pedir solo
+     * los globales dejaba fuera los del área que la está atendiendo.
+     */
+    async function cargarEstatus(actual, abortado) {
+      const areaIds = areasDeLaPrimeraFase(actual.flow ?? null);
+      if (actual.areaId !== null) {
+        areaIds.push(actual.areaId);
+      }
+
+      const respuestas = await Promise.all(
+        areaIds.length === 0
+          ? [api.listStatuses()]
+          : [...new Set(areaIds)].map((areaId) => api.listStatuses({ areaId })),
+      );
+      if (abortado) {
+        return;
+      }
+
+      const porId = new Map();
+      for (const respuesta of respuestas) {
+        for (const uno of respuesta.statuses) {
+          porId.set(uno.id, uno);
+        }
+      }
+      setEstatus([...porId.values()]);
+    }
+
     cargar();
     return () => {
       cancelado = true;
     };
-  }, [solicitud.id, solicitud.areaId]);
+  }, [solicitud.id]);
+
+  /** El borrador: lo editable de la solicitud, tal como está guardado. */
+  function desdeDetalle(actual) {
+    return {
+      title: actual.title,
+      requester: actual.requester ?? "",
+      areaId: actual.areaId === null ? "" : String(actual.areaId),
+      priority: String(actual.priority),
+      data: { ...(actual.data ?? {}) },
+    };
+  }
 
   async function recargar() {
     const respuesta = await api.getRequest(detalle.id);
     setDetalle(respuesta.request);
-    onCambio();
+    setBorrador(desdeDetalle(respuesta.request));
+    onCambio(respuesta.request);
+    return respuesta.request;
+  }
+
+  function escribir(clave, valor) {
+    setBorrador((actual) => ({ ...actual, [clave]: valor }));
+  }
+
+  function escribirDato(code, valor) {
+    setBorrador((actual) => ({ ...actual, data: { ...actual.data, [code]: valor } }));
+  }
+
+  const yaEsProyecto = detalle.projectId !== null;
+
+  let campos = [];
+  if (detalle.fields !== null && detalle.fields !== undefined) {
+    campos = [...detalle.fields.deliverables, ...detalle.fields.information];
+  }
+
+  /** Qué está cambiado respecto de lo guardado: es lo que se marca en ámbar y lo que se cuenta. */
+  const cambiados = [];
+  if (borrador !== null) {
+    const guardado = desdeDetalle(detalle);
+    for (const clave of ["title", "requester", "areaId", "priority"]) {
+      if (borrador[clave] !== guardado[clave]) {
+        cambiados.push(clave);
+      }
+    }
+    for (const campo of campos) {
+      const antes = guardado.data[campo.code] ?? "";
+      const ahora = borrador.data[campo.code] ?? "";
+      if (String(antes) !== String(ahora)) {
+        cambiados.push(campo.code);
+      }
+    }
+  }
+  const sucio = cambiados.length > 0;
+
+  function marcar(clave, base) {
+    return cambiados.includes(clave) ? `${base} is-changed` : base;
+  }
+
+  async function guardar() {
+    const guardadoAntes = desdeDetalle(detalle);
+    const cambios = {};
+    if (borrador.title !== guardadoAntes.title) {
+      cambios.title = borrador.title;
+    }
+    if (borrador.requester !== guardadoAntes.requester) {
+      cambios.requester = borrador.requester;
+    }
+    if (borrador.areaId !== guardadoAntes.areaId && borrador.areaId !== "") {
+      cambios.areaId = Number(borrador.areaId);
+    }
+    if (borrador.priority !== guardadoAntes.priority) {
+      cambios.priority = Number(borrador.priority);
+    }
+    if (campos.some((campo) => cambiados.includes(campo.code))) {
+      cambios.data = borrador.data;
+    }
+
+    setOcupado(true);
+    setError(null);
+    try {
+      await api.updateRequest(detalle.id, cambios);
+      await recargar();
+    } catch (fallo) {
+      setError(fallo.message);
+    } finally {
+      setOcupado(false);
+    }
+  }
+
+  function descartar() {
+    setBorrador(desdeDetalle(detalle));
+    setError(null);
   }
 
   async function cambiarEstatus(statusId) {
@@ -463,54 +447,12 @@ function RequestDetail({ solicitud, onCerrar, onCambio }) {
     }
   }
 
-  async function corregirSolicitante() {
-    setError(null);
-    try {
-      await api.updateRequest(detalle.id, { requester: detalle.requester });
-      await recargar();
-    } catch (fallo) {
-      setError(fallo.message);
-    }
-  }
-
-  async function guardarCaptura(data) {
+  async function aplicarPlantilla() {
     setOcupado(true);
     setError(null);
     try {
-      await api.updateRequest(detalle.id, { data });
-      await recargar();
-      setCorrigiendo(false);
-    } catch (fallo) {
-      setError(fallo.message);
-    } finally {
-      setOcupado(false);
-    }
-  }
-
-  function escribirSolicitante(requester) {
-    setDetalle({ ...detalle, requester });
-  }
-
-  function escribirTitulo(title) {
-    setDetalle({ ...detalle, title });
-  }
-
-  async function corregirTitulo() {
-    setError(null);
-    try {
-      await api.updateRequest(detalle.id, { title: detalle.title });
-      await recargar();
-      onCambio();
-    } catch (fallo) {
-      setError(fallo.message);
-    }
-  }
-
-  async function aplicarPlantilla(workflowId) {
-    setOcupado(true);
-    setError(null);
-    try {
-      await api.setRequestFlow(detalle.id, { workflowId });
+      await api.setRequestFlow(detalle.id, { workflowId: Number(plantillaElegida) });
+      setPlantillaElegida("");
       await recargar();
     } catch (fallo) {
       setError(fallo.message);
@@ -520,13 +462,11 @@ function RequestDetail({ solicitud, onCerrar, onCambio }) {
   }
 
   async function quitarFlujo() {
-    if (!window.confirm("¿Quitarle el flujo? Dejará de aparecer en las bandejas de sus áreas.")) {
-      return;
-    }
     setOcupado(true);
     setError(null);
     try {
       await api.clearRequestFlow(detalle.id);
+      setConfirmandoQuitarFlujo(false);
       await recargar();
     } catch (fallo) {
       setError(fallo.message);
@@ -545,7 +485,7 @@ function RequestDetail({ solicitud, onCerrar, onCambio }) {
     setError(null);
     try {
       await api.deleteRequest(detalle.id);
-      onCambio();
+      onCambio(null);
       onCerrar();
     } catch (fallo) {
       setError(fallo.message);
@@ -555,16 +495,12 @@ function RequestDetail({ solicitud, onCerrar, onCambio }) {
 
   function abrirConversion() {
     setConvertir({
+      id: detalle.id,
       key: "",
       title: detalle.title,
       requester: detalle.requester ?? "",
       hasCost: false,
-      idDelSolicitante: `convertir-solicitante-${detalle.id}`,
     });
-  }
-
-  function cerrarConversion() {
-    setConvertir(null);
   }
 
   async function convertirEnProyecto(evento) {
@@ -589,18 +525,6 @@ function RequestDetail({ solicitud, onCerrar, onCambio }) {
     }
   }
 
-  const yaEsProyecto = detalle.projectId !== null;
-
-  let campos = [];
-  if (detalle.fields !== null && detalle.fields !== undefined) {
-    campos = [...detalle.fields.deliverables, ...detalle.fields.information];
-  }
-
-  let bloqueDeError = null;
-  if (error !== null) {
-    bloqueDeError = <p className="request-detail-error">{error}</p>;
-  }
-
   if (disenando) {
     return (
       <FlowDesigner
@@ -611,237 +535,383 @@ function RequestDetail({ solicitud, onCerrar, onCambio }) {
     );
   }
 
-  let origen = detalle.source;
-  if (detalle.sheetName !== null) {
-    origen = `${detalle.source} — ${detalle.sheetName}`;
+  if (borrador === null) {
+    return <p className="request-detail-loading">Abriendo la solicitud…</p>;
   }
 
-  let bloqueDeDuplicado = null;
-  if (detalle.duplicateOfFolio !== null) {
-    bloqueDeDuplicado = (
-      <>
-        <dt>Posible duplicado de</dt>
-        <dd>{detalle.duplicateOfFolio}</dd>
-      </>
-    );
-  }
+  const flujo = detalle.flow ?? null;
+  const activas = plantillas.filter((una) => una.isActive);
 
-  let bloqueDeTitulo = <dd>{detalle.title}</dd>;
-  if (!yaEsProyecto) {
-    bloqueDeTitulo = (
-      <dd>
-        <input
-          className="request-detail-title-input"
-          value={detalle.title}
-          onChange={(evento) => escribirTitulo(evento.target.value)}
-          placeholder="Lo que es este trabajo"
-        />
-        <button
-          type="button"
-          onClick={corregirTitulo}
-          disabled={ocupado || detalle.title.trim() === ""}
-        >
-          Guardar título
-        </button>
-      </dd>
-    );
-  }
-
-  let bloqueDeProyecto = null;
-  if (yaEsProyecto) {
-    bloqueDeProyecto = (
-      <>
-        <dt>Proyecto</dt>
-        <dd>
-          {detalle.projectKey} — {detalle.projectTitle}
-        </dd>
-      </>
-    );
-  }
-
-  let botonDeCorreccion = null;
-  if (!yaEsProyecto && campos.length > 0 && !corrigiendo) {
-    botonDeCorreccion = (
-      <button type="button" onClick={() => setCorrigiendo(true)} disabled={ocupado}>
-        Corregir lo capturado
-      </button>
-    );
-  }
-
-  let bloqueDeCaptura = <ValoresCapturados campos={campos} data={detalle.data} />;
-  if (corrigiendo) {
-    bloqueDeCaptura = (
-      <EditorDeCaptura
-        campos={campos}
-        data={detalle.data}
-        ocupado={ocupado}
-        onGuardar={guardarCaptura}
-        onCancelar={() => setCorrigiendo(false)}
-      />
-    );
-  }
-
-  let bloqueDelRenglon = null;
-  if (detalle.sourceData !== null && detalle.sourceData !== undefined) {
-    bloqueDelRenglon = <RenglonOriginal sourceData={detalle.sourceData} />;
-  }
-
-  let bloqueDeConflictos = null;
-  if (conflictos.length > 0) {
-    bloqueDeConflictos = (
-      <div className="request-detail-conflicts">
-        <h4>Valores que dos solicitudes traían distintos</h4>
-        <ul>
-          {conflictos.map((conflicto) => (
-            <li key={conflicto.key}>
-              <strong>{conflicto.key}</strong>: se guardó «{conflicto.kept}» y se descartó «
-              {conflicto.discarded}» (de {conflicto.folio}).
-            </li>
-          ))}
-        </ul>
-      </div>
-    );
-  }
-
-  let bloqueDeAcciones;
-  if (yaEsProyecto) {
-    bloqueDeAcciones = (
-      <p className="request-detail-converted">
-        Ya es un proyecto, así que no se edita ni se elimina: el proyecto perdería lo que contesta.
-        El solicitante sí se puede corregir; el título ya no, porque el proyecto lleva el suyo.
-      </p>
-    );
-  } else {
-    bloqueDeAcciones = (
-      <>
-        <button
-          className="request-detail-primary"
-          type="button"
-          onClick={abrirConversion}
-          disabled={ocupado}
-        >
-          Convertir en proyecto
-        </button>
-        <button
-          className="request-detail-danger"
-          type="button"
-          onClick={eliminar}
-          disabled={ocupado}
-        >
-          Eliminar
-        </button>
-      </>
-    );
-  }
-
-  let formularioDeConversion = null;
-  if (convertir !== null) {
-    formularioDeConversion = (
-      <FormularioDeConversion
-        datos={convertir}
-        flujo={detalle.flow ?? null}
-        ocupado={ocupado}
-        onCambiar={setConvertir}
-        onEnviar={convertirEnProyecto}
-        onCancelar={cerrarConversion}
-      />
-    );
+  let origen = ORIGENES[detalle.source] ?? detalle.source;
+  if (detalle.sheetName !== null && detalle.sheetName !== undefined) {
+    origen = `${origen} · ${detalle.sheetName}`;
   }
 
   return (
     <section className="request-detail">
-      <header className="request-detail-header">
-        <h3 className="request-detail-title">
-          {detalle.folio} — {detalle.title}
-        </h3>
-        <button type="button" onClick={onCerrar}>
-          Cerrar
+      <header className="request-detail-head">
+        <span className="request-detail-eyebrow">
+          {detalle.folio} · {detalle.schemaName} v{detalle.schemaVersion} · {origen}
+        </span>
+        <button
+          className="request-detail-close"
+          type="button"
+          onClick={onCerrar}
+          aria-label="Cerrar la solicitud"
+        >
+          ✕
         </button>
       </header>
 
-      {bloqueDeError}
-
       <Recorrido pasoActual={pasoActualDe(detalle)} />
 
-      <dl className="request-detail-facts">
-        <dt>Título</dt>
-        {bloqueDeTitulo}
+      {detalle.duplicateOfFolio !== null && detalle.duplicateOfFolio !== undefined ? (
+        <p className="request-detail-dup">
+          Se parece a {detalle.duplicateOfFolio}: puede ser la misma petición capturada dos veces.
+        </p>
+      ) : null}
 
-        <dt>Formato</dt>
-        <dd>
-          {detalle.schemaName} (v{detalle.schemaVersion})
-        </dd>
+      {error !== null ? <p className="request-detail-error">{error}</p> : null}
 
-        <dt>Solicitante</dt>
-        <dd>
-          <RequesterInput
-            id={`solicitante-${detalle.id}`}
-            value={detalle.requester ?? ""}
-            onChange={escribirSolicitante}
-          />
-          <button type="button" onClick={corregirSolicitante} disabled={ocupado}>
-            Guardar solicitante
-          </button>
-        </dd>
+      <div className="request-detail-columns">
+        <section className="request-detail-sec">
+          <h3>Solicitud</h3>
 
-        <dt>Flujo</dt>
-        <dd>
-          <FlujoDeLaSolicitud
-            flujo={detalle.flow ?? null}
-            areaName={detalle.areaName}
-            convertida={yaEsProyecto}
-            plantillas={plantillas}
-            ocupado={ocupado}
-            onAplicar={aplicarPlantilla}
-            onDisenar={() => setDisenando(true)}
-            onQuitar={quitarFlujo}
-          />
-        </dd>
+          <div className="request-detail-grid">
+            <label className={marcar("title", "request-detail-field")}>
+              <span className="request-detail-label">Título</span>
+              {yaEsProyecto ? (
+                <p className="request-detail-value">{detalle.title}</p>
+              ) : (
+                <input
+                  value={borrador.title}
+                  onChange={(evento) => escribir("title", evento.target.value)}
+                  placeholder="Ej: Papelería institucional de la facultad"
+                />
+              )}
+            </label>
 
-        <dt>Estatus</dt>
-        <dd>
-          <select
-            value={detalle.statusId}
-            onChange={(evento) => cambiarEstatus(evento.target.value)}
+            <div className={marcar("requester", "request-detail-field")}>
+              <span className="request-detail-label" id={`solicitante-${detalle.id}-label`}>
+                Entidad solicitante
+                <Ayuda texto="No hay padrón de solicitantes: el nombre es una cadena y el autocompletado es lo que evita que se vuelva cuatro. Se puede corregir incluso después de convertir." />
+              </span>
+              <RequesterInput
+                id={`solicitante-${detalle.id}`}
+                value={borrador.requester}
+                onChange={(requester) => escribir("requester", requester)}
+              />
+            </div>
+
+            <label className={marcar("areaId", "request-detail-field")}>
+              <span className="request-detail-label">
+                Área asignada
+                <Ayuda texto="El área que atiende la solicitud mientras no tiene flujo. Con flujo, la reciben las áreas de su primera fase. Una vez asignada ya no se puede dejar sin área: solo cambiarla." />
+              </span>
+              {yaEsProyecto ? (
+                <p className="request-detail-value">{detalle.areaName ?? "Sin asignar"}</p>
+              ) : (
+                <select
+                  value={borrador.areaId}
+                  onChange={(evento) => escribir("areaId", evento.target.value)}
+                >
+                  <option value="">Sin asignar</option>
+                  {areas.map((area) => (
+                    <option value={area.id} key={area.id}>
+                      {area.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </label>
+
+            <label className="request-detail-field">
+              <span className="request-detail-label">
+                Estatus
+                <Ayuda texto="El estatus se guarda al elegirlo, no con los demás cambios: tiene su propio registro con quién lo movió y cuándo (RF-EST-01). Se ofrecen los globales y los del área que la atiende." />
+              </span>
+              <select
+                value={detalle.statusId}
+                onChange={(evento) => cambiarEstatus(evento.target.value)}
+                disabled={ocupado}
+              >
+                {estatus.map((uno) => (
+                  <option value={uno.id} key={uno.id}>
+                    {uno.label}
+                    {uno.isGlobal ? "" : " (del área)"}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className={marcar("priority", "request-detail-field")}>
+              <span className="request-detail-label">
+                Urgencia
+                <Ayuda texto="Un número: mayor es más urgente. La imprenta y la producción priorizan por urgencia, nunca por orden de llegada (RF-FLW-08)." />
+              </span>
+              {yaEsProyecto ? (
+                <p className="request-detail-value">{detalle.priority}</p>
+              ) : (
+                <input
+                  type="number"
+                  value={borrador.priority}
+                  onChange={(evento) => escribir("priority", evento.target.value)}
+                />
+              )}
+            </label>
+
+            {yaEsProyecto ? (
+              <div className="request-detail-field">
+                <span className="request-detail-label">Proyecto</span>
+                <p className="request-detail-value">
+                  {detalle.projectKey} — {detalle.projectTitle}
+                </p>
+              </div>
+            ) : null}
+          </div>
+        </section>
+
+        <section className="request-detail-sec">
+          <h3>
+            Lo capturado
+            <span className="request-detail-sub">
+              con {detalle.schemaName} v{detalle.schemaVersion}
+            </span>
+          </h3>
+
+          {campos.length === 0 ? (
+            <p className="request-detail-note">Este formato no pide ningún campo.</p>
+          ) : (
+            <div className="request-detail-captured">
+              {campos.map((campo) =>
+                yaEsProyecto ? (
+                  <div className="request-detail-field" key={campo.code}>
+                    <span className="request-detail-label">{campo.name}</span>
+                    <p className="request-detail-value">
+                      {formatearValor(borrador.data[campo.code])}
+                    </p>
+                  </div>
+                ) : (
+                  <div className={marcar(campo.code, "request-detail-typed")} key={campo.code}>
+                    <FieldInput
+                      field={campo}
+                      value={borrador.data[campo.code]}
+                      onChange={(valor) => escribirDato(campo.code, valor)}
+                    />
+                  </div>
+                ),
+              )}
+            </div>
+          )}
+        </section>
+      </div>
+
+      <section className="request-detail-sec">
+        <div className="request-detail-sec-head">
+          <h3>Flujo</h3>
+          {flujo && !yaEsProyecto ? (
+            <div className="request-detail-flow-actions">
+              <button
+                className="request-detail-quiet"
+                type="button"
+                onClick={() => setDisenando(true)}
+                disabled={ocupado}
+              >
+                Editar el flujo
+              </button>
+              {confirmandoQuitarFlujo ? (
+                <>
+                  <span className="request-detail-confirm">
+                    Dejará de aparecer en las bandejas de sus áreas.
+                  </span>
+                  <button
+                    className="request-detail-btn is-danger"
+                    type="button"
+                    onClick={quitarFlujo}
+                    disabled={ocupado}
+                  >
+                    Quitarlo
+                  </button>
+                  <button
+                    className="request-detail-quiet"
+                    type="button"
+                    onClick={() => setConfirmandoQuitarFlujo(false)}
+                  >
+                    Dejarlo
+                  </button>
+                </>
+              ) : (
+                <button
+                  className="request-detail-quiet"
+                  type="button"
+                  onClick={() => setConfirmandoQuitarFlujo(true)}
+                  disabled={ocupado}
+                >
+                  Quitar el flujo
+                </button>
+              )}
+            </div>
+          ) : null}
+        </div>
+
+        {flujo ? (
+          <>
+            {flujo.workflowName ? (
+              <p className="request-detail-note">
+                Copiado de la plantilla «{flujo.workflowName}», versión {flujo.version}.
+              </p>
+            ) : null}
+            <FlujoExtendido flujo={flujo} />
+          </>
+        ) : (
+          <div className="request-detail-noflow">
+            <p>
+              {detalle.areaName === null || detalle.areaName === undefined
+                ? "Sin flujo: todavía no pasa por ninguna área."
+                : `Sin flujo: la atiende ${detalle.areaName} por el área asignada.`}
+            </p>
+            {yaEsProyecto ? null : (
+              <div className="request-detail-noflow-actions">
+                <select
+                  value={plantillaElegida}
+                  onChange={(evento) => setPlantillaElegida(evento.target.value)}
+                  disabled={ocupado || activas.length === 0}
+                >
+                  <option value="">Elige una plantilla</option>
+                  {activas.map((una) => (
+                    <option value={una.id} key={una.id}>
+                      {una.name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  className="request-detail-btn"
+                  type="button"
+                  onClick={aplicarPlantilla}
+                  disabled={ocupado || plantillaElegida === ""}
+                >
+                  Aplicar
+                </button>
+                <span className="request-detail-or">o</span>
+                <button
+                  className="request-detail-btn"
+                  type="button"
+                  onClick={() => setDisenando(true)}
+                  disabled={ocupado}
+                >
+                  Diseñar su flujo
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {detalle.sourceData !== null && detalle.sourceData !== undefined ? (
+          <RenglonOriginal sourceData={detalle.sourceData} />
+        ) : null}
+      </section>
+
+      {conflictos.length > 0 ? (
+        <section className="request-detail-sec">
+          <h3>Valores que dos solicitudes traían distintos</h3>
+          <ul className="request-detail-conflicts">
+            {conflictos.map((conflicto) => (
+              <li key={conflicto.key}>
+                En <strong>{conflicto.key}</strong> se guardó «{conflicto.kept}» y se descartó «
+                {conflicto.discarded}», que venía de {conflicto.folio}.
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {convertir !== null ? (
+        <FormularioDeConversion
+          datos={convertir}
+          flujo={flujo}
+          ocupado={ocupado}
+          onCambiar={setConvertir}
+          onEnviar={convertirEnProyecto}
+          onCancelar={() => setConvertir(null)}
+        />
+      ) : null}
+
+      <footer className="request-detail-foot">
+        {yaEsProyecto ? (
+          <p className="request-detail-note">
+            Ya es un proyecto, así que no se edita ni se elimina: el proyecto perdería lo que
+            contesta. El solicitante sí se puede corregir.
+          </p>
+        ) : confirmandoBorrado ? (
+          <div className="request-detail-flow-actions">
+            <span className="request-detail-confirm">
+              Se quita de la bandeja. Lo que vino de Excel se puede volver a traer importando el
+              libro otra vez.
+            </span>
+            <button
+              className="request-detail-btn is-danger"
+              type="button"
+              onClick={eliminar}
+              disabled={ocupado}
+            >
+              Eliminar
+            </button>
+            <button
+              className="request-detail-quiet"
+              type="button"
+              onClick={() => setConfirmandoBorrado(false)}
+            >
+              Conservarla
+            </button>
+          </div>
+        ) : (
+          <button
+            className="request-detail-quiet is-danger"
+            type="button"
+            onClick={() => setConfirmandoBorrado(true)}
             disabled={ocupado}
           >
-            {estatus.map((uno) => {
-              let sufijo = " (del área)";
-              if (uno.isGlobal) {
-                sufijo = "";
-              }
-              return (
-                <option value={uno.id} key={uno.id}>
-                  {uno.label}
-                  {sufijo}
-                </option>
-              );
-            })}
-          </select>
-        </dd>
+            Eliminar
+          </button>
+        )}
 
-        <dt>Cómo llegó</dt>
-        <dd>{origen}</dd>
-
-        <dt>Urgencia</dt>
-        <dd>{detalle.priority}</dd>
-
-        {bloqueDeDuplicado}
-        {bloqueDeProyecto}
-      </dl>
-
-      <div className="request-detail-subhead">
-        <h4 className="request-detail-subtitle">Lo capturado</h4>
-        {botonDeCorreccion}
-      </div>
-      {bloqueDeCaptura}
-
-      {bloqueDelRenglon}
-      {bloqueDeConflictos}
-
-      <div className="request-detail-actions">{bloqueDeAcciones}</div>
-
-      {formularioDeConversion}
+        {yaEsProyecto ? null : (
+          <div className="request-detail-foot-right">
+            {sucio ? (
+              <>
+                <span className="request-detail-dirty">
+                  {cambiados.length} {cambiados.length === 1 ? "cambio" : "cambios"} sin guardar
+                </span>
+                <button
+                  className="request-detail-btn"
+                  type="button"
+                  onClick={descartar}
+                  disabled={ocupado}
+                >
+                  Descartar
+                </button>
+                <button
+                  className="request-detail-btn is-primary"
+                  type="button"
+                  onClick={guardar}
+                  disabled={ocupado || borrador.title.trim() === ""}
+                >
+                  {ocupado ? "Guardando…" : "Guardar cambios"}
+                </button>
+              </>
+            ) : (
+              <button
+                className="request-detail-btn is-primary"
+                type="button"
+                onClick={abrirConversion}
+                disabled={ocupado || convertir !== null}
+              >
+                Convertir en proyecto
+              </button>
+            )}
+          </div>
+        )}
+      </footer>
     </section>
   );
 }

@@ -1,20 +1,23 @@
 // Captura directa de una solicitud (RF-SOL-08): lo que llega por correo se registra aquí, para
-// que todo el trabajo entre por un solo canal.
+// que todo el trabajo entre por un solo canal. Se abre como el primer renglón de la bandeja, en
+// el lugar que va a ocupar la solicitud nueva.
 //
-// Los campos se dibujan del formato elegido, así que la pantalla no sabe nada de ellos: cambia
-// el formato y cambia el formulario. La conversión de valores la hace el servidor según el
-// tipo de cada campo, de modo que "1,000" y "15/03/2026" llegan bien sin tocar nada aquí.
+// El formato va primero porque es lo que decide el resto del formulario: los campos se dibujan
+// del formato elegido, así que la pantalla no sabe nada de ellos. La conversión de valores la
+// hace el servidor según el tipo de cada campo, de modo que "1,000" y "15/03/2026" llegan bien
+// sin tocar nada aquí.
 import { useEffect, useState } from "react";
 
 import * as api from "../../api/client.js";
 import FieldInput from "../shared/fieldInput.jsx";
+import Ayuda from "../shared/ayuda.jsx";
 import RequesterInput from "./requesterInput.jsx";
 import "./requestForm.css";
 
 const ORIGENES = [
   { value: "manual", label: "Captura directa" },
-  { value: "email", label: "Llegó por correo" },
-  { value: "form", label: "Llegó por formulario" },
+  { value: "email", label: "Correo" },
+  { value: "form", label: "Formulario" },
 ];
 
 function RequestForm({ areas, onCreada, onCancelar }) {
@@ -80,107 +83,135 @@ function RequestForm({ areas, onCreada, onCancelar }) {
 
   return (
     <form className="request-form" onSubmit={guardar}>
-      <h3 className="request-form-title">Nueva solicitud</h3>
-
-      <label className="request-form-field">
-        Formato
-        <select
-          value={formatoId}
-          onChange={(evento) => {
-            setFormatoId(evento.target.value);
-            setValores({});
-          }}
-          required
+      <header className="request-form-head">
+        <span className="request-form-eyebrow">Nueva solicitud</span>
+        <button
+          className="request-form-close"
+          type="button"
+          onClick={onCancelar}
+          aria-label="Cerrar la captura"
         >
-          <option value="">Elige un formato</option>
-          {formatos.map((uno) => (
-            <option value={uno.id} key={uno.id}>
-              {uno.name} (v{uno.version})
-            </option>
-          ))}
-        </select>
-      </label>
+          ✕
+        </button>
+      </header>
 
-      <label className="request-form-field">
-        Título
-        <input
-          value={cabecera.title}
-          onChange={(evento) => setCabecera({ ...cabecera, title: evento.target.value })}
-          required
-        />
-      </label>
+      <div className="request-form-grid">
+        <label className="request-form-field">
+          <span className="request-form-label">
+            Formato
+            <Ayuda texto="Decide qué campos pide esta solicitud. Se captura con la versión publicada hoy y se seguirá leyendo con ella." />
+          </span>
+          <select
+            value={formatoId}
+            onChange={(evento) => {
+              setFormatoId(evento.target.value);
+              setValores({});
+            }}
+            required
+          >
+            <option value="">Elige un formato</option>
+            {formatos.map((uno) => (
+              <option value={uno.id} key={uno.id}>
+                {uno.name} (v{uno.version})
+              </option>
+            ))}
+          </select>
+        </label>
 
-      <label className="request-form-field" htmlFor="solicitante-nuevo">
-        Entidad solicitante
-      </label>
-      <RequesterInput
-        id="solicitante-nuevo"
-        value={cabecera.requester}
-        onChange={(requester) => setCabecera({ ...cabecera, requester })}
-      />
+        <label className="request-form-field">
+          <span className="request-form-label">Título</span>
+          <input
+            value={cabecera.title}
+            onChange={(evento) => setCabecera({ ...cabecera, title: evento.target.value })}
+            placeholder="Ej: Papelería institucional de la facultad"
+            required
+          />
+        </label>
 
-      <label className="request-form-field">
-        Área a la que cae
-        <select
-          value={cabecera.areaId}
-          onChange={(evento) => setCabecera({ ...cabecera, areaId: evento.target.value })}
-        >
-          <option value="">Sin área todavía</option>
-          {areas.map((area) => (
-            <option value={area.id} key={area.id}>
-              {area.name}
-            </option>
-          ))}
-        </select>
-      </label>
+        <div className="request-form-field">
+          <span className="request-form-label">Entidad solicitante</span>
+          <RequesterInput
+            id="solicitante-nuevo"
+            value={cabecera.requester}
+            onChange={(requester) => setCabecera({ ...cabecera, requester })}
+          />
+        </div>
 
-      <label className="request-form-field">
-        Prioridad (mayor es más urgente)
-        <input
-          type="number"
-          value={cabecera.priority}
-          onChange={(evento) => setCabecera({ ...cabecera, priority: evento.target.value })}
-        />
-      </label>
+        <label className="request-form-field">
+          <span className="request-form-label">
+            Área asignada
+            <Ayuda texto="El área que atiende la solicitud mientras no tiene flujo. Con flujo, la reciben las áreas de su primera fase." />
+          </span>
+          <select
+            value={cabecera.areaId}
+            onChange={(evento) => setCabecera({ ...cabecera, areaId: evento.target.value })}
+          >
+            <option value="">Sin asignar</option>
+            {areas.map((area) => (
+              <option value={area.id} key={area.id}>
+                {area.name}
+              </option>
+            ))}
+          </select>
+        </label>
 
-      <label className="request-form-field">
-        Cómo llegó
-        <select
-          value={cabecera.source}
-          onChange={(evento) => setCabecera({ ...cabecera, source: evento.target.value })}
-        >
-          {ORIGENES.map((origen) => (
-            <option value={origen.value} key={origen.value}>
-              {origen.label}
-            </option>
-          ))}
-        </select>
-      </label>
+        <label className="request-form-field">
+          <span className="request-form-label">
+            Urgencia
+            <Ayuda texto="Un número: mayor es más urgente. La imprenta y la producción priorizan por urgencia, nunca por orden de llegada (RF-FLW-08)." />
+          </span>
+          <input
+            type="number"
+            value={cabecera.priority}
+            onChange={(evento) => setCabecera({ ...cabecera, priority: evento.target.value })}
+          />
+        </label>
+
+        <label className="request-form-field">
+          <span className="request-form-label">Cómo llegó</span>
+          <select
+            value={cabecera.source}
+            onChange={(evento) => setCabecera({ ...cabecera, source: evento.target.value })}
+          >
+            {ORIGENES.map((origen) => (
+              <option value={origen.value} key={origen.value}>
+                {origen.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
 
       {formato ? (
-        <fieldset className="request-form-fields">
-          <legend>Datos del formato</legend>
-          {campos.map((campo) => (
-            <FieldInput
-              key={campo.code}
-              field={campo}
-              value={valores[campo.code]}
-              onChange={(valor) => setValores({ ...valores, [campo.code]: valor })}
-            />
-          ))}
-        </fieldset>
+        <section className="request-form-sec">
+          <h3>Lo que pide {formato.name}</h3>
+          <div className="request-form-grid">
+            {campos.map((campo) => (
+              <FieldInput
+                key={campo.code}
+                field={campo}
+                value={valores[campo.code]}
+                onChange={(valor) => setValores({ ...valores, [campo.code]: valor })}
+              />
+            ))}
+          </div>
+        </section>
       ) : null}
 
-      {error ? <p className="request-form-error">{error}</p> : null}
+      {error !== null ? <p className="request-form-error">{error}</p> : null}
 
-      <div className="request-form-actions">
-        <button type="submit" disabled={guardando || formato === null}>
-          {guardando ? "Guardando..." : "Registrar solicitud"}
-        </button>
-        <button type="button" onClick={onCancelar}>
+      <footer className="request-form-foot">
+        <button className="request-form-btn" type="button" onClick={onCancelar}>
           Cancelar
         </button>
-      </div>
+        <button
+          className="request-form-btn is-primary"
+          type="submit"
+          disabled={guardando || formato === null}
+        >
+          {guardando ? "Registrando…" : "Registrar solicitud"}
+        </button>
+      </footer>
     </form>
   );
 }

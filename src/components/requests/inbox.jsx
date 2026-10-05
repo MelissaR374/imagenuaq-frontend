@@ -2,73 +2,82 @@
 // revisar correo, Excel, Teams y WhatsApp para saber qué le toca. Los filtros son los que
 // RF-SOL-05 nombra: nombre, entidad, folio, responsable y estatus.
 //
-// La columna «Paso» sigue el recorrido de DATAMODEL.md §8.2, que es el que describe qué mueve
-// una solicitud al siguiente estado. Se muestra porque los pasos 2 y 3 los mueve una mano: si no
-// se ven, nadie sabe que le toca moverlos, y una solicitud importada se queda sin área para
-// siempre sin que eso se note en ninguna pantalla.
+// Las pestañas son los pasos del recorrido de DATAMODEL.md §8.2, no un filtro más: los pasos 2
+// y 3 los mueve una mano, así que la bandeja tiene que decir cuántas esperan esa mano. «Sin
+// flujo» trae lo que ninguna área tiene todavía (`routed=false` en el servidor) y su cuenta se
+// pone en ámbar mientras no sea cero; una solicitud importada se quedaría ahí para siempre sin
+// que eso se note en ninguna pantalla.
 //
-// Por omisión muestra lo que todavía no se ha convertido, que es lo que un área tiene
-// pendiente; `converted` en el servidor sin valor trae todo, así que aquí se manda explícito.
-// Cuántas se ven de un jalón. Una importación mete decenas de renglones de golpe, así que la
-// bandeja se pagina: el total viene del servidor (`total`, que cuenta lo filtrado y no la página),
-// de modo que se puede decir cuánto falta por ver en lugar de adivinarlo.
-import { useEffect, useState } from "react";
+// Cada cuenta es una llamada aparte con `limit=1`, que es de donde sale `total`: el servidor no
+// tiene un endpoint de cuentas por paso y repetir los filtros aquí los dejaría de coincidir.
+//
+// La solicitud se abre en su lugar, bajo su renglón y a todo lo ancho, porque es sobre todo un
+// formulario: los renglones de arriba y de abajo se quedan donde estaban. Se monta con `key` en
+// el id de la solicitud y nada más, para que nada de lo que pase adentro la vuelva a montar.
+//
+// `firmaDeFiltros` es el JSON de los filtros que las cuatro pestañas comparten: los dos efectos
+// dependen de su contenido y no de un objeto nuevo en cada render.
+import { Fragment, useEffect, useState } from "react";
 
 import * as api from "../../api/client.js";
-import { oGuion } from "../shared/formato.js";
-import FiltroSelect from "../shared/filtroSelect.jsx";
+import { fechaCorta } from "../shared/formato.js";
 import RequestDetail from "./requestDetail.jsx";
 import RequestForm from "./requestForm.jsx";
 import "./inbox.css";
 
 const POR_PAGINA = 20;
 
+/**
+ * Los pasos del recorrido, cada uno con la regla que lo define en una frase y los filtros con
+ * que el servidor lo trae. `routed` es «alguna área ya la tiene»: con flujo o con área asignada.
+ */
+const PESTANAS = [
+  {
+    clave: "sinFlujo",
+    etiqueta: "Sin flujo",
+    regla:
+      "Ninguna área la tiene todavía: falta aplicarle una plantilla, diseñarle un flujo o asignarle un área.",
+    avisa: true,
+    filtros: { converted: "false", routed: "false" },
+  },
+  {
+    clave: "enAtencion",
+    etiqueta: "En atención",
+    regla:
+      "Las áreas de su primera fase ya la tienen en su bandeja y mueven su estatus conforme avanza.",
+    filtros: { converted: "false", routed: "true" },
+  },
+  {
+    clave: "convertidas",
+    etiqueta: "Convertidas",
+    regla: "Ya son proyecto: desde aquí no se editan, salvo el solicitante.",
+    filtros: { converted: "true" },
+  },
+  {
+    clave: "todas",
+    etiqueta: "Todas",
+    regla: "Todo lo que ha entrado, en cualquier paso.",
+    filtros: {},
+  },
+];
+
 const FILTROS_VACIOS = {
   q: "",
   areaId: "",
   statusId: "",
-  converted: "false",
   duplicates: "",
   sort: "priority",
 };
 
-/**
- * Los pasos del recorrido en los que puede estar una solicitud, con lo que le falta para pasar al
- * siguiente. El paso 1 (nacer) ya ocurrió si está en la lista.
- */
-const PASOS = {
-  sinRepartir: {
-    etiqueta: "Sin flujo",
-    ayuda: "Paso 2: falta decidir por qué áreas va a pasar.",
-  },
-  repartida: {
-    etiqueta: "En atención",
-    ayuda: "Paso 3: las áreas de la primera fase la atienden; después se convierte en proyecto.",
-  },
-  convertida: {
-    etiqueta: "Convertida",
-    ayuda: "Paso 4: ya es un proyecto y desde aquí no se edita.",
-  },
+/** Cómo llegó, en palabras: el código es del servidor y no se le muestra a nadie. */
+const ORIGENES = {
+  manual: "Captura directa",
+  email: "Correo",
+  form: "Formulario",
+  sheet: "Excel",
 };
 
-/**
- * En qué paso está una solicitud. El orden de las preguntas importa: una convertida ya pasó por
- * el reparto, aunque hoy su estatus siga diciendo «Recibido» (DATAMODEL.md §8.4, costura 1). Una
- * con área asignada a mano, de antes de los flujos, cuenta como repartida.
- */
-function pasoDe(solicitud) {
-  if (solicitud.projectId !== null) {
-    return PASOS.convertida;
-  }
-  if (!solicitud.hasFlow && solicitud.areaId === null) {
-    return PASOS.sinRepartir;
-  }
-  return PASOS.repartida;
-}
-
-/**
- * Las áreas que la tienen en su bandeja: las de la primera fase de su flujo, o la asignada a mano.
- */
+/** Las áreas que la tienen en su bandeja: las de la primera fase de su flujo, o la asignada. */
 function areasDe(solicitud) {
   if (solicitud.hasFlow && solicitud.firstPhaseAreas.length > 0) {
     return solicitud.firstPhaseAreas.join(", ");
@@ -76,54 +85,58 @@ function areasDe(solicitud) {
   return solicitud.areaName;
 }
 
-/** Un renglón de la bandeja. */
-function FilaDeSolicitud({ solicitud, onAbrir, onEliminar, ocupado }) {
-  const paso = pasoDe(solicitud);
+/** Si nadie la tiene: ni flujo ni área. Es lo que lleva la línea ámbar. */
+function sinRepartir(solicitud) {
+  return solicitud.projectId === null && !solicitud.hasFlow && solicitud.areaId === null;
+}
 
+/** Un valor que puede faltar, dicho en palabras cuando falta. */
+function SinDato({ valor }) {
+  if (valor === null || valor === undefined || valor === "") {
+    return <span className="inbox-none">Sin dato</span>;
+  }
+  return valor;
+}
+
+/** Un renglón de la bandeja. Todo el renglón abre la solicitud. */
+function FilaDeSolicitud({ solicitud, abierta, conProyecto, onAbrir }) {
   let marcaDeDuplicado = null;
   if (solicitud.possibleDuplicateOf !== null) {
-    marcaDeDuplicado = <span className="inbox-badge"> posible duplicado</span>;
+    marcaDeDuplicado = <span className="inbox-dup">Posible duplicado</span>;
   }
 
-  const yaEsProyecto = solicitud.projectId !== null;
-
-  let ayudaDeBorrado = "Quita la solicitud de la bandeja";
-  if (yaEsProyecto) {
-    ayudaDeBorrado = `No se puede: ya es el proyecto ${solicitud.projectKey}`;
+  let clase = "inbox-row";
+  if (abierta) {
+    clase += " is-open";
+  }
+  if (sinRepartir(solicitud)) {
+    clase += " is-pending";
   }
 
   return (
-    <tr className="inbox-row">
-      <td className="inbox-folio">{solicitud.folio}</td>
-      <td>
-        {solicitud.title}
+    <tr className={clase} onClick={() => onAbrir(solicitud)}>
+      <td className="inbox-cell-main">
+        <span className="inbox-folio">{solicitud.folio}</span>
+        <span className="inbox-row-title">{solicitud.title}</span>
         {marcaDeDuplicado}
       </td>
-      <td>{oGuion(solicitud.requester)}</td>
-      <td>{oGuion(areasDe(solicitud))}</td>
-      <td>{solicitud.statusLabel}</td>
       <td>
-        <span className="inbox-step" title={paso.ayuda}>
-          {paso.etiqueta}
-        </span>
+        <SinDato valor={solicitud.requester} />
       </td>
-      <td className="inbox-cell-center">{solicitud.priority}</td>
-      <td>{solicitud.source}</td>
-      <td>{oGuion(solicitud.projectKey)}</td>
-      <td className="inbox-cell-actions">
-        <button type="button" onClick={() => onAbrir(solicitud)}>
-          Abrir
-        </button>
-        <button
-          className="inbox-action-danger"
-          type="button"
-          onClick={() => onEliminar(solicitud)}
-          disabled={yaEsProyecto || ocupado}
-          title={ayudaDeBorrado}
-        >
-          Eliminar
-        </button>
+      <td>
+        <SinDato valor={areasDe(solicitud)} />
       </td>
+      <td>{solicitud.statusLabel}</td>
+      <td className="inbox-arrived">
+        {ORIGENES[solicitud.source] ?? solicitud.source}
+        <span>{fechaCorta(solicitud.createdAt)}</span>
+      </td>
+      <td className="inbox-num">{solicitud.priority}</td>
+      {conProyecto ? (
+        <td>
+          <SinDato valor={solicitud.projectKey} />
+        </td>
+      ) : null}
     </tr>
   );
 }
@@ -132,6 +145,8 @@ function Inbox() {
   const [solicitudes, setSolicitudes] = useState([]);
   const [areas, setAreas] = useState([]);
   const [estatus, setEstatus] = useState([]);
+  const [pestana, setPestana] = useState("sinFlujo");
+  const [cuentas, setCuentas] = useState({});
   const [filtros, setFiltros] = useState(FILTROS_VACIOS);
   const [pagina, setPagina] = useState(0);
   const [total, setTotal] = useState(0);
@@ -139,9 +154,17 @@ function Inbox() {
   const [error, setError] = useState(null);
   const [abierta, setAbierta] = useState(null);
   const [capturando, setCapturando] = useState(false);
-  const [borrando, setBorrando] = useState(false);
 
   const [version, setVersion] = useState(0);
+
+  const activa = PESTANAS.find((una) => una.clave === pestana) ?? PESTANAS[0];
+
+  const firmaDeFiltros = JSON.stringify({
+    q: filtros.q,
+    areaId: filtros.areaId,
+    statusId: filtros.statusId,
+    duplicates: filtros.duplicates,
+  });
 
   useEffect(() => {
     let cancelado = false;
@@ -177,7 +200,9 @@ function Inbox() {
       setCargando(true);
       try {
         const respuesta = await api.listRequests({
-          ...filtros,
+          ...JSON.parse(firmaDeFiltros),
+          ...activa.filtros,
+          sort: filtros.sort,
           limit: POR_PAGINA,
           offset: pagina * POR_PAGINA,
         });
@@ -200,10 +225,61 @@ function Inbox() {
     return () => {
       cancelado = true;
     };
-  }, [filtros, version, pagina]);
+  }, [firmaDeFiltros, filtros.sort, activa, version, pagina]);
+
+  useEffect(() => {
+    let cancelado = false;
+
+    async function cargarCuentas() {
+      const base = JSON.parse(firmaDeFiltros);
+      try {
+        const respuestas = await Promise.all(
+          PESTANAS.map((una) => api.listRequests({ ...base, ...una.filtros, limit: 1 })),
+        );
+        if (cancelado) {
+          return;
+        }
+        const nuevas = {};
+        PESTANAS.forEach((una, indice) => {
+          nuevas[una.clave] = respuestas[indice].total;
+        });
+        setCuentas(nuevas);
+      } catch (fallo) {
+        if (!cancelado) {
+          setError(fallo.message);
+        }
+      }
+    }
+
+    cargarCuentas();
+    return () => {
+      cancelado = true;
+    };
+  }, [firmaDeFiltros, version]);
+
+  useEffect(() => {
+    if (abierta === null && !capturando) {
+      return undefined;
+    }
+
+    function alTeclear(evento) {
+      if (evento.key === "Escape") {
+        setAbierta(null);
+        setCapturando(false);
+      }
+    }
+
+    window.addEventListener("keydown", alTeclear);
+    return () => window.removeEventListener("keydown", alTeclear);
+  }, [abierta, capturando]);
 
   function cambiarFiltro(clave, valor) {
     setFiltros((actual) => ({ ...actual, [clave]: valor }));
+    setPagina(0);
+  }
+
+  function cambiarPestana(clave) {
+    setPestana(clave);
     setPagina(0);
   }
 
@@ -212,24 +288,19 @@ function Inbox() {
     setPagina(0);
   }
 
-  function anterior() {
-    setPagina(pagina - 1);
-  }
-
-  function siguiente() {
-    setPagina(pagina + 1);
-  }
-
   function recargar() {
     setVersion((actual) => actual + 1);
   }
 
-  function abrirCaptura() {
-    setCapturando(true);
+  /** Abrir y cerrar con el mismo renglón: el que ya está abierto se dobla. */
+  function alternarAbierta(solicitud) {
+    setCapturando(false);
+    setAbierta((actual) => (actual !== null && actual.id === solicitud.id ? null : solicitud));
   }
 
-  function cerrarCaptura() {
-    setCapturando(false);
+  function abrirCaptura() {
+    setAbierta(null);
+    setCapturando(true);
   }
 
   function terminarCaptura(solicitud) {
@@ -238,82 +309,43 @@ function Inbox() {
     setAbierta(solicitud);
   }
 
-  function cerrarDetalle() {
-    setAbierta(null);
-  }
-
-  async function eliminar(solicitud) {
-    const seguro = window.confirm(
-      `¿Eliminar ${solicitud.folio} — ${solicitud.title}?
-
-Se quita de la bandeja. Lo importado de Excel se puede volver a traer importando el libro otra vez.`,
-    );
-    if (!seguro) {
+  /**
+   * Una solicitud abierta sigue su paso: al aplicarle un flujo o asignarle un área cambia de
+   * pestaña, y la pestaña se cambia con ella para que el formulario no desaparezca de abajo.
+   */
+  function seguirElPaso(detalle) {
+    recargar();
+    if (detalle === undefined || detalle === null) {
       return;
     }
 
-    setBorrando(true);
-    setError(null);
-    try {
-      await api.deleteRequest(solicitud.id);
-      if (abierta?.id === solicitud.id) {
-        setAbierta(null);
-      }
-      recargar();
-    } catch (fallo) {
-      setError(fallo.message);
-    } finally {
-      setBorrando(false);
+    let destino = "enAtencion";
+    if (detalle.projectId !== null && detalle.projectId !== undefined) {
+      destino = "convertidas";
+    } else if (!detalle.hasFlow && !detalle.flow && detalle.areaId === null) {
+      destino = "sinFlujo";
+    }
+    if (pestana !== "todas" && pestana !== destino) {
+      setPestana(destino);
+      setPagina(0);
     }
   }
 
-  const opcionesDeArea = [
-    { valor: "", texto: "Todas" },
-    { valor: "none", texto: "Sin flujo ni área" },
-  ];
-  for (const area of areas) {
-    opcionesDeArea.push({ valor: String(area.id), texto: area.name });
+  function cerrar() {
+    setAbierta(null);
+    recargar();
   }
 
-  const opcionesDeEstatus = [{ valor: "", texto: "Todos" }];
-  for (const uno of estatus) {
-    opcionesDeEstatus.push({ valor: String(uno.id), texto: uno.label });
-  }
-
-  const opcionesDeConversion = [
-    { valor: "false", texto: "Pendientes" },
-    { valor: "true", texto: "Ya convertidas" },
-    { valor: "", texto: "Todas" },
-  ];
-
-  const opcionesDeDuplicados = [
-    { valor: "", texto: "Todas" },
-    { valor: "true", texto: "Posibles duplicados" },
-  ];
-
-  const opcionesDeOrden = [
-    { valor: "priority", texto: "Por urgencia" },
-    { valor: "created", texto: "Por llegada" },
-  ];
-
-  let bloqueDeError = null;
-  if (error !== null) {
-    bloqueDeError = <p className="inbox-error">{error}</p>;
-  }
-
-  let bloqueDeCarga = null;
-  if (cargando) {
-    bloqueDeCarga = <p className="inbox-loading">Cargando...</p>;
-  }
-
-  let bloqueVacio = null;
-  if (!cargando && solicitudes.length === 0) {
-    bloqueVacio = <p className="inbox-empty">No hay solicitudes con esos filtros.</p>;
-  }
+  const filtrado =
+    filtros.q !== "" ||
+    filtros.areaId !== "" ||
+    filtros.statusId !== "" ||
+    filtros.duplicates !== "";
 
   const primera = total === 0 ? 0 : pagina * POR_PAGINA + 1;
   const ultima = pagina * POR_PAGINA + solicitudes.length;
-  const hayMas = ultima < total;
+  const conProyecto = pestana === "convertidas" || pestana === "todas";
+  const columnas = conProyecto ? 7 : 6;
 
   let paginacion = null;
   if (total > POR_PAGINA) {
@@ -323,10 +355,20 @@ Se quita de la bandeja. Lo importado de Excel se puede volver a traer importando
           {primera}–{ultima} de {total}
         </p>
         <div className="inbox-page-actions">
-          <button type="button" onClick={anterior} disabled={pagina === 0 || cargando}>
+          <button
+            className="inbox-btn"
+            type="button"
+            onClick={() => setPagina(pagina - 1)}
+            disabled={pagina === 0 || cargando}
+          >
             Anteriores
           </button>
-          <button type="button" onClick={siguiente} disabled={!hayMas || cargando}>
+          <button
+            className="inbox-btn"
+            type="button"
+            onClick={() => setPagina(pagina + 1)}
+            disabled={ultima >= total || cargando}
+          >
             Siguientes
           </button>
         </div>
@@ -334,142 +376,181 @@ Se quita de la bandeja. Lo importado de Excel se puede volver a traer importando
     );
   }
 
-  const sinRepartir = solicitudes.filter((solicitud) => pasoDe(solicitud) === PASOS.sinRepartir);
-
-  let avisoDeReparto = null;
-  if (sinRepartir.length > 0) {
-    avisoDeReparto = (
-      <p className="inbox-notice">
-        {sinRepartir.length} de las {solicitudes.length} de esta página todavía no tienen flujo.
-        Ábrelas y aplícales una plantilla o diseña su flujo: mientras no lo tengan, no aparecen en
-        la bandeja de ninguna área. Para verlas todas, filtra por «Sin flujo ni área».
-      </p>
-    );
-  }
-
-  let formularioDeCaptura = null;
-  if (capturando) {
-    formularioDeCaptura = (
-      <RequestForm areas={areas} onCreada={terminarCaptura} onCancelar={cerrarCaptura} />
-    );
-  }
-
-  let detalle = null;
-  if (abierta !== null) {
-    detalle = (
-      <RequestDetail
-        solicitud={abierta}
-        areas={areas}
-        onCerrar={cerrarDetalle}
-        onCambio={recargar}
-      />
+  let renglonVacio = null;
+  if (!cargando && solicitudes.length === 0 && !capturando) {
+    let texto = `Nada en «${activa.etiqueta}».`;
+    if (filtrado) {
+      texto = "Ninguna solicitud coincide con lo que está filtrado.";
+    }
+    renglonVacio = (
+      <tr>
+        <td colSpan={columnas}>
+          <p className="inbox-empty">{texto}</p>
+        </td>
+      </tr>
     );
   }
 
   return (
     <section className="inbox">
-      <header className="inbox-header">
-        <h2 className="inbox-title">Bandeja de solicitudes</h2>
-        <p className="inbox-count">
-          {total} solicitud{total === 1 ? "" : "es"} con estos filtros
-        </p>
-        <button type="button" onClick={abrirCaptura}>
+      {error !== null ? <p className="inbox-error">{error}</p> : null}
+
+      <div className="inbox-bar">
+        <div className="inbox-tabs">
+          {PESTANAS.map((una) => {
+            const cuenta = cuentas[una.clave];
+
+            let clase = "inbox-tab";
+            if (una.clave === pestana) {
+              clase += " is-active";
+            }
+            if (una.avisa && cuenta > 0) {
+              clase += " needs";
+            }
+
+            return (
+              <button
+                className={clase}
+                type="button"
+                onClick={() => cambiarPestana(una.clave)}
+                key={una.clave}
+              >
+                {una.etiqueta}
+                {cuenta === undefined ? null : <span className="inbox-tab-count">{cuenta}</span>}
+              </button>
+            );
+          })}
+        </div>
+
+        <button className="inbox-btn inbox-btn-primary" type="button" onClick={abrirCaptura}>
           Nueva solicitud
-        </button>
-      </header>
-
-      {bloqueDeError}
-      {avisoDeReparto}
-
-      <div className="inbox-filters">
-        <label className="inbox-filter">
-          Buscar
-          <input
-            value={filtros.q}
-            onChange={(evento) => cambiarFiltro("q", evento.target.value)}
-            placeholder="Título o folio"
-          />
-        </label>
-
-        <FiltroSelect
-          clase="inbox-filter"
-          etiqueta="Área"
-          valor={filtros.areaId}
-          opciones={opcionesDeArea}
-          onCambio={(valor) => cambiarFiltro("areaId", valor)}
-        />
-
-        <FiltroSelect
-          clase="inbox-filter"
-          etiqueta="Estatus"
-          valor={filtros.statusId}
-          opciones={opcionesDeEstatus}
-          onCambio={(valor) => cambiarFiltro("statusId", valor)}
-        />
-
-        <FiltroSelect
-          clase="inbox-filter"
-          etiqueta="Convertidas"
-          valor={filtros.converted}
-          opciones={opcionesDeConversion}
-          onCambio={(valor) => cambiarFiltro("converted", valor)}
-        />
-
-        <FiltroSelect
-          clase="inbox-filter"
-          etiqueta="Duplicados"
-          valor={filtros.duplicates}
-          opciones={opcionesDeDuplicados}
-          onCambio={(valor) => cambiarFiltro("duplicates", valor)}
-        />
-
-        <FiltroSelect
-          clase="inbox-filter"
-          etiqueta="Orden"
-          valor={filtros.sort}
-          opciones={opcionesDeOrden}
-          onCambio={(valor) => cambiarFiltro("sort", valor)}
-        />
-
-        <button type="button" onClick={limpiarFiltros}>
-          Limpiar
         </button>
       </div>
 
-      {bloqueDeCarga}
+      <p className={activa.avisa && cuentas[activa.clave] > 0 ? "inbox-rule warn" : "inbox-rule"}>
+        {activa.regla}
+      </p>
 
-      <table className="inbox-table">
-        <thead>
-          <tr>
-            <th>Folio</th>
-            <th>Título</th>
-            <th>Solicitante</th>
-            <th>Área</th>
-            <th>Estatus</th>
-            <th>Paso</th>
-            <th>Urgencia</th>
-            <th>Origen</th>
-            <th>Proyecto</th>
-            <th />
-          </tr>
-        </thead>
-        <tbody>
-          {solicitudes.map((solicitud) => (
-            <FilaDeSolicitud
-              solicitud={solicitud}
-              onAbrir={setAbierta}
-              onEliminar={eliminar}
-              ocupado={borrando}
-              key={solicitud.id}
-            />
+      <div className="inbox-filters">
+        <div className="inbox-search">
+          <input
+            value={filtros.q}
+            onChange={(evento) => cambiarFiltro("q", evento.target.value)}
+            placeholder="Ej: folio, título o solicitante"
+            aria-label="Buscar"
+          />
+        </div>
+
+        <select
+          value={filtros.areaId}
+          onChange={(evento) => cambiarFiltro("areaId", evento.target.value)}
+          aria-label="Área"
+        >
+          <option value="">Todas las áreas</option>
+          {areas.map((area) => (
+            <option value={area.id} key={area.id}>
+              {area.name}
+            </option>
           ))}
-        </tbody>
-      </table>
+        </select>
 
-      {bloqueVacio}
+        <select
+          value={filtros.statusId}
+          onChange={(evento) => cambiarFiltro("statusId", evento.target.value)}
+          aria-label="Estatus"
+        >
+          <option value="">Todos los estatus</option>
+          {estatus.map((uno) => (
+            <option value={uno.id} key={uno.id}>
+              {uno.label}
+            </option>
+          ))}
+        </select>
+
+        <select
+          value={filtros.sort}
+          onChange={(evento) => cambiarFiltro("sort", evento.target.value)}
+          aria-label="Orden"
+        >
+          <option value="priority">Por urgencia</option>
+          <option value="created">Por llegada</option>
+        </select>
+
+        <button
+          className={filtros.duplicates === "true" ? "inbox-chip is-on" : "inbox-chip"}
+          type="button"
+          onClick={() => cambiarFiltro("duplicates", filtros.duplicates === "true" ? "" : "true")}
+        >
+          Posibles duplicados
+        </button>
+
+        {filtrado ? (
+          <button className="inbox-clear" type="button" onClick={limpiarFiltros}>
+            Quitar filtros
+          </button>
+        ) : null}
+      </div>
+
+      <div className="inbox-table-wrap">
+        <table className="inbox-table">
+          <thead>
+            <tr>
+              <th>Solicitud</th>
+              <th>Solicitante</th>
+              <th>Área</th>
+              <th>Estatus</th>
+              <th>Llegó</th>
+              <th className="inbox-num">Urgencia</th>
+              {conProyecto ? <th>Proyecto</th> : null}
+            </tr>
+          </thead>
+          <tbody>
+            {capturando ? (
+              <tr className="inbox-expanded is-new">
+                <td colSpan={columnas}>
+                  <RequestForm
+                    areas={areas}
+                    onCreada={terminarCaptura}
+                    onCancelar={() => setCapturando(false)}
+                  />
+                </td>
+              </tr>
+            ) : null}
+
+            {solicitudes.map((solicitud) => {
+              const estaAbierta = abierta !== null && abierta.id === solicitud.id;
+
+              return (
+                <Fragment key={solicitud.id}>
+                  <FilaDeSolicitud
+                    solicitud={solicitud}
+                    abierta={estaAbierta}
+                    conProyecto={conProyecto}
+                    onAbrir={alternarAbierta}
+                  />
+                  {estaAbierta ? (
+                    <tr className="inbox-expanded">
+                      <td colSpan={columnas}>
+                        <RequestDetail
+                          solicitud={abierta}
+                          areas={areas}
+                          onCerrar={cerrar}
+                          onCambio={seguirElPaso}
+                          key={abierta.id}
+                        />
+                      </td>
+                    </tr>
+                  ) : null}
+                </Fragment>
+              );
+            })}
+
+            {renglonVacio}
+          </tbody>
+        </table>
+      </div>
+
       {paginacion}
-      {formularioDeCaptura}
-      {detalle}
     </section>
   );
 }
