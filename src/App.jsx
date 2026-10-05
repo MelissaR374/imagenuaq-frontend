@@ -18,6 +18,7 @@ import Projects from "./components/projects/projects.jsx";
 import Profile from "./components/profile/profile.jsx";
 import Notifications from "./components/notifications/notifications.jsx";
 import FlowDesigner from "./components/FlowDesigner/FlowDesigner.jsx";
+import StatusCatalog from "./components/projects/statusCatalog.jsx";
 
 import * as api from "./api/client.js";
 import { MICROSOFT_PARAM } from "./config.js";
@@ -43,6 +44,8 @@ const DESCRIPCIONES = {
   "Bandeja de solicitudes":
     "Solicitudes recibidas que todavía no son proyecto.",
   Proyectos: "Los proyectos y el avance de sus etapas.",
+  "Catálogo de estatus":
+    "Los estatus con que se muestran solicitudes y proyectos, globales y por área.",
   "Diseñador de flujos":
     "Las plantillas de flujo: sus fases y las etapas de cada una.",
 };
@@ -211,6 +214,8 @@ function App() {
           <Inbox />
         ) : activa === "Proyectos" && usuario.role === "admin" ? (
           <Projects usuario={usuario} />
+        ) : activa === "Catálogo de estatus" && usuario.role === "admin" ? (
+          <StatusCatalog />
         ) : activa === "Diseñador de flujos" && usuario.role === "admin" ? (
           <FlowDesigner />
         ) : null}

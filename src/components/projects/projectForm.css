@@ -1,141 +1,346 @@
-/* Solo acomodo: el diseño lo revisa quien lleva el CSS. */
+/* La captura de un proyecto, como el primer renglón del tablero. */
 
 .project-form {
-  margin-top: 1rem;
-  padding: 0.75rem;
-  border: 1px solid;
-  max-width: 40rem;
+  padding: 18px 20px 0;
+
+  border: 1px solid var(--border);
+  border-radius: 8px;
+
+  background: var(--surface);
+  box-shadow: 0 2px 8px rgba(24, 43, 62, 0.05);
 }
 
-.project-form-title {
-  margin: 0 0 0.5rem;
+.project-form-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+
+  margin-bottom: 12px;
+}
+
+.project-form-eyebrow {
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.project-form-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  width: 26px;
+  height: 26px;
+
+  border: 0;
+  border-radius: 4px;
+
+  background: var(--surface-secondary);
+  color: var(--text-muted);
+
+  font: inherit;
+  font-size: 15px;
+
+  cursor: pointer;
+}
+
+.project-form-close:hover {
+  color: var(--text);
+}
+
+.project-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
 }
 
 .project-form-field {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  margin-bottom: 0.5rem;
+  gap: 4px;
+
+  min-width: 0;
 }
 
-/* El espacio entre campos vive aquí y no en `.field-input`: es del contenedor, y así una rejilla
-   de dos columnas no arrastra un margen suelto. */
-.project-form-fields {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 12px;
-  margin: 0.75rem 0;
-  padding: 0.5rem;
+.project-form-label {
+  color: var(--text-secondary);
+
+  font-size: var(--size-small);
 }
 
-.project-form-fields > legend,
-.project-form-fields > p {
-  grid-column: 1 / -1;
-}
+.project-form-field input,
+.project-form-field select,
+.project-form-extra input {
+  height: 32px;
+  padding: 0 8px;
 
-.project-form-actions {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.project-form-error,
-.project-form-help {
-  margin: 0.5rem 0;
-}
-
-.project-form-help {
-  font-size: 0.9em;
-}
-
-/* Datos sólo de este proyecto: clave y valor, sin tocar el formato */
-.project-form-extras {
-  margin: 12px 0;
-  padding: 12px 14px 14px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  background: var(--surface-secondary);
-}
 
-.project-form-extras > legend {
-  padding: 0 6px;
-  font-size: 12px;
-  font-weight: 600;
+  background: var(--field);
   color: var(--text);
+
+  font: inherit;
+  font-size: var(--size-body);
+  font-weight: 500;
 }
 
-.project-form-extra {
-  display: grid;
-  grid-template-columns: minmax(140px, 1fr) minmax(140px, 2fr) auto;
+.project-form-field input:focus-visible,
+.project-form-field select:focus-visible {
+  border-color: var(--accent-line);
+
+  outline: none;
+}
+
+.project-form-check {
+  display: flex;
   align-items: center;
+  gap: 6px;
+  align-self: end;
+
+  min-height: 34px;
+
+  color: var(--text-secondary);
+
+  font-size: var(--size-small);
+}
+
+.project-form-sec {
+  margin-top: 16px;
+  padding-top: 14px;
+
+  border-top: 1px solid var(--border-light);
+}
+
+.project-form-sec h3 {
+  margin: 0 0 12px;
+
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+/* La plantilla, como una mirada al flujo que va a copiar. */
+.project-form-flow {
+  display: flex;
+  align-items: flex-start;
+
+  overflow-x: auto;
+
+  margin-top: 12px;
+  padding: 12px;
+
+  border: 1px solid var(--border);
+  border-radius: 8px;
+
+  background-color: var(--surface-secondary);
+  background-image: radial-gradient(var(--border) 1px, transparent 1px);
+  background-size: 9px 9px;
+}
+
+.project-form-phase {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  flex: 0 0 160px;
+}
+
+.project-form-phase-name {
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.project-form-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  padding: 7px 9px;
+
+  border: 1px solid var(--border);
+  border-radius: 6px;
+
+  background: var(--surface);
+}
+
+.project-form-card-area {
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.project-form-card strong {
+  font-size: var(--size-body);
+  line-height: 1.3;
+}
+
+.project-form-arrow {
+  position: relative;
+  align-self: stretch;
+  flex: 0 0 28px;
+}
+
+.project-form-arrow::before {
+  content: "";
+
+  position: absolute;
+  top: 38px;
+  right: 6px;
+  left: 6px;
+
+  border-top: 1px solid var(--text-muted);
+}
+
+.project-form-arrow::after {
+  content: "";
+
+  position: absolute;
+  top: 34px;
+  right: 6px;
+
+  border: 4px solid transparent;
+  border-right: 0;
+  border-left: 6px solid var(--text-muted);
+}
+
+/* Los datos de solo este proyecto. */
+.project-form-extra {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
+
   margin-bottom: 8px;
 }
 
-.project-form-extra > input {
-  height: 32px;
-  padding: 0 10px;
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  background: var(--surface);
-  color: var(--text);
-  font-family: inherit;
-  font-size: 11px;
-  outline: none;
-  box-sizing: border-box;
-}
-
-.project-form-extra > input:focus {
-  border-color: #3b73b9;
-  box-shadow: 0 0 0 2px rgba(59, 115, 185, 0.08);
-}
-
 .project-form-key {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
 }
 
-.project-form-key--bad {
-  border-color: rgba(217, 83, 79, 0.55) !important;
-  background: rgba(217, 83, 79, 0.06) !important;
-  color: #b23c38;
-}
-
-.project-form-extra > button {
-  padding: 0;
-  border: none;
-  background: transparent;
-  font-family: inherit;
-  font-size: 10px;
-  font-weight: 600;
-  color: #e45c5c;
-  cursor: pointer;
-}
-
-.project-form-extra > button:hover {
-  text-decoration: underline;
+.project-form-key.is-bad {
+  border-color: var(--danger);
 }
 
 .project-form-bad {
-  grid-column: 1 / -1;
+  flex: 1 1 100%;
+
   margin: 0;
-  font-size: 10px;
-  color: #b23c38;
+
+  color: var(--danger);
+
+  font-size: var(--size-small);
 }
 
 .project-form-add {
-  height: 30px;
-  padding: 0 14px;
+  padding: 6px 12px;
+
   border: 1px dashed var(--border);
-  border-radius: 5px;
+  border-radius: 6px;
+
   background: transparent;
-  color: var(--text-secondary);
-  font-family: inherit;
-  font-size: 11px;
-  font-weight: 600;
+  color: var(--accent-line);
+
+  font: inherit;
+  font-size: var(--size-small);
+
   cursor: pointer;
 }
 
 .project-form-add:hover {
-  border-color: #3b73b9;
-  border-style: solid;
-  color: #3270b5;
+  border-color: var(--accent-line);
+
+  background: var(--accent-soft);
+}
+
+.project-form-error {
+  margin: 12px 0 0;
+  padding-left: 9px;
+
+  border-left: 3px solid var(--danger);
+
+  color: var(--text);
+
+  font-size: var(--size-small);
+}
+
+.project-form-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+
+  margin: 14px -20px 0;
+  padding: 12px 20px;
+
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 8px 8px;
+
+  background: var(--surface);
+}
+
+.project-form-btn {
+  height: 32px;
+  padding: 0 12px;
+
+  border: 1px solid var(--border);
+  border-radius: 6px;
+
+  background: var(--surface);
+  color: var(--text);
+
+  font: inherit;
+  font-size: var(--size-small);
+
+  cursor: pointer;
+}
+
+.project-form-btn:hover:not(:disabled) {
+  border-color: var(--accent-line);
+}
+
+.project-form-btn.is-primary {
+  border-color: var(--accent);
+
+  background: var(--accent);
+  color: #ffffff;
+
+  font-weight: 600;
+}
+
+.project-form-btn.is-primary:hover:not(:disabled) {
+  border-color: var(--accent-hover);
+  background: var(--accent-hover);
+}
+
+.project-form-btn.is-primary:disabled {
+  border-color: var(--border);
+
+  background: var(--surface-secondary);
+  color: var(--text-muted);
+
+  cursor: default;
+}
+
+@media (max-width: 900px) {
+  .project-form {
+    padding: 14px 14px 0;
+  }
+
+  .project-form-foot {
+    margin: 14px -14px 0;
+    padding: 12px 14px;
+  }
 }

@@ -1,99 +1,105 @@
-// Un proyecto con sus etapas, sus vistos buenos y los valores que cruzan etapas.
+// Un proyecto a pantalla completa, con su flujo vivo, sus etapas, sus valores y las solicitudes
+// que contesta. Se abre encima de la lista y de la barra lateral porque lleva un proceso con
+// muchas partes a la vez y, abierto bajo su renglón, quedaba interrumpido.
 //
-// El bloque «Cómo va» existe por DATAMODEL.md §8.1: hay dos vocabularios de estado y no se
-// tocan. El estatus es el del catálogo que coordinación edita en caliente y lo mueve una mano;
-// el estado del trabajo es la máquina de etapas y lo mueve un visto bueno. Un proyecto puede
-// decir «Recibido» con todas sus etapas concluidas, así que la pantalla los muestra juntos: es
-// la única forma de que la contradicción se vea en lugar de esconderse.
+// Los dos vocabularios de estado existen por DATAMODEL.md §8.1 y no se tocan: el estatus es el
+// del catálogo que coordinación edita en caliente y lo mueve una mano; el estado del trabajo es
+// la máquina de etapas y lo mueve un visto bueno. Un proyecto puede decir «Recibido» con todas
+// sus etapas concluidas, así que la pantalla los muestra juntos: es la única forma de que la
+// contradicción se vea en lugar de esconderse.
 //
-// Un proyecto no tiene «etapa actual»: la etapa actual es el conjunto de etapas activas, porque
-// un mismo proyecto puede estar en dos áreas a la vez (RF-FLW-09). Por eso la lista de etapas se
-// muestra completa, con su intento: cuando un visto bueno rechaza, la etapa se cierra y se abre
-// otra vez con el intento siguiente, y las dos quedan a la vista.
+// Un proyecto no tiene «etapa actual»: la etapa actual es el conjunto de etapas abiertas, porque
+// un mismo proyecto puede estar en dos áreas a la vez (RF-FLW-09). Por eso el flujo se muestra
+// completo, fase por fase y con su intento: cuando un visto bueno rechaza, la etapa se cierra y
+// se abre otra vez con el intento siguiente, y las dos quedan a la vista.
 //
-// `done` no se pone a mano: una etapa la cierra un visto bueno (RF-FLW-03).
-import { useEffect, useState } from "react";
+// `done` no se pone a mano: una etapa la cierra un visto bueno (RF-FLW-03), y un visto bueno que
+// deja su fase sin nada abierto abre la fase siguiente en la misma sentencia (§2.12). Concluir el
+// proyecto vive al final del flujo, no en el pie, porque es el último paso del recorrido.
+//
+// Cancelar una etapa no se ofrece: no es una función del sistema, aunque la API la acepte.
+import { Fragment, useEffect, useState } from "react";
 
 import * as api from "../../api/client.js";
-import { fechaCorta, oGuion } from "../shared/formato.js";
+import { fechaCorta } from "../shared/formato.js";
+import { nombreDeClave } from "../shared/vocabulario.js";
+import Ayuda from "../shared/ayuda.jsx";
+import FieldInput from "../shared/fieldInput.jsx";
 import "./projectDetail.css";
-
-const TRANSICIONES = {
-  pending: [
-    { status: "active", label: "Iniciar" },
-    { status: "cancelled", label: "Cancelar" },
-  ],
-  active: [
-    { status: "waiting_external", label: "Marcar en espera" },
-    { status: "cancelled", label: "Cancelar" },
-  ],
-  waiting_external: [
-    { status: "active", label: "Reanudar" },
-    { status: "cancelled", label: "Cancelar" },
-  ],
-  done: [],
-  cancelled: [],
-};
 
 const ESTADOS_ETAPA = {
   pending: "Pendiente",
   active: "Activa",
-  waiting_external: "En espera de un tercero",
+  waiting_external: "En espera",
   done: "Concluida",
   cancelled: "Cancelada",
 };
 
 const ESTADOS_ABIERTOS = ["active", "waiting_external"];
 
+/** Lo que se espera de un tercero, dicho como lo dice la gente (RF-FLW-07). */
+const MOTIVOS = [
+  "Visto bueno de la entidad",
+  "Información de la entidad",
+  "Material o proveedor",
+  "Pago o anticipo",
+];
+
 /**
- * Las claves que una etapa puede declarar: las que el proyecto ya tiene y las que otras etapas
- * ya nombraron. Es una sugerencia, no un catálogo cerrado: una etapa puede prometer una clave que
- * todavía no existe, que es justamente lo normal —la promete porque la va a producir—.
+ * Dos claves que no salen de ningún formato: las pide finanzas con su propio endpoint y aquí se
+ * leen como cualquier otro valor del proyecto.
  */
-function clavesConocidas(detalle) {
-  const claves = new Set();
-  for (const valor of detalle.fieldValues) {
-    claves.add(valor.key);
+const CLAVES_DE_FINANZAS = {
+  requiere_factura: { name: "Requiere factura", type: "boolean" },
+  requiere_cotizacion: { name: "Requiere cotización", type: "boolean" },
+};
+
+/** El nombre y el tipo de una clave, mirando el vocabulario y las dos de finanzas. */
+function campoDeClave(vocabulario, clave) {
+  const deFinanzas = CLAVES_DE_FINANZAS[clave];
+  if (deFinanzas !== undefined) {
+    return { code: clave, ...deFinanzas };
   }
-  for (const etapa of detalle.stages) {
-    for (const clave of etapa.inputs) {
-      claves.add(clave);
-    }
-    for (const clave of etapa.outputs) {
-      claves.add(clave);
-    }
+  const delVocabulario = vocabulario.get(clave);
+  if (delVocabulario === undefined) {
+    return { code: clave, name: clave, type: "text" };
   }
-  return [...claves].sort();
+  return { code: clave, name: delVocabulario.name, type: delVocabulario.type };
+}
+
+/** Las etapas agrupadas por su fase: el mismo `seq` dos veces son dos etapas en paralelo. */
+function fasesDe(stages) {
+  const fases = new Map();
+  for (const etapa of stages) {
+    if (!fases.has(etapa.seq)) {
+      fases.set(etapa.seq, { seq: etapa.seq, name: etapa.phaseName, stages: [] });
+    }
+    fases.get(etapa.seq).stages.push(etapa);
+  }
+  return [...fases.values()].sort((una, otra) => una.seq - otra.seq);
+}
+
+/** Si una clave ya tiene valor: es lo que el visto bueno exige (RF-FLW-06). */
+function tieneValor(fieldValues, clave) {
+  return fieldValues.some((valor) => valor.key === clave && valor.value !== "");
 }
 
 /**
- * «dependencia, tiraje» a ["dependencia", "tiraje"]. El servidor valida que sean snake_case.
+ * Los dos vocabularios de estado, uno al lado del otro, y el aviso cuando se contradicen. No se
+ * unen a propósito; lo que sí se puede hacer es que se vean.
  */
-function listaDeClaves(texto) {
-  if (texto === null || texto === undefined) {
-    return [];
-  }
-  return texto
-    .split(",")
-    .map((clave) => clave.trim())
-    .filter((clave) => clave !== "");
-}
-
-/**
- * Los dos vocabularios de estado, uno al lado del otro (DATAMODEL.md §8.1), y el aviso cuando se
- * contradicen. No se unen a propósito; lo que sí se puede hacer es que se vean.
- */
-function ComoVa({ detalle }) {
+function ComoVa({ detalle, estatus, ocupado, onEstatus }) {
   const abiertas = detalle.stages.filter((etapa) => ESTADOS_ABIERTOS.includes(etapa.status));
   const concluidas = detalle.stages.filter((etapa) => etapa.status === "done");
 
-  let trabajo = "Todavía sin etapas: las etapas se agregan a mano.";
+  let trabajo = "Todavía sin etapas: se agregan al final del flujo.";
   if (abiertas.length > 0) {
-    const nombres = abiertas.map((etapa) => `${etapa.title} (${etapa.areaName})`);
-    trabajo = `Trabajando en ${nombres.join(", ")}.`;
+    trabajo = `Se trabaja en ${abiertas
+      .map((etapa) => `${etapa.title} (${etapa.areaName})`)
+      .join(", ")}.`;
   } else if (concluidas.length > 0) {
-    trabajo = `Ninguna etapa abierta; ${concluidas.length} concluida${
-      concluidas.length === 1 ? "" : "s"
+    trabajo = `Ninguna etapa abierta; ${concluidas.length} ${
+      concluidas.length === 1 ? "concluida" : "concluidas"
     }.`;
   }
 
@@ -101,426 +107,638 @@ function ComoVa({ detalle }) {
     detalle.stages.length > 0 && abiertas.length === 0 && concluidas.length > 0;
   const estatusLoDice = detalle.statusIsTerminal || detalle.closedAt !== null;
 
-  let aviso = null;
-  if (trabajoTerminado && !estatusLoDice) {
-    aviso = (
-      <p className="project-detail-warning">
-        El trabajo ya no tiene etapas abiertas, pero el estatus sigue en «{detalle.statusLabel}».
-        Nada lo mueve solo: el estatus es el que se muestra a quien preguntó, y lo cambia una
-        persona.
-      </p>
-    );
+  return (
+    <section className="project-how">
+      <div className="project-how-half">
+        <h3>Estatus que se muestra</h3>
+        <select
+          value={detalle.statusId}
+          onChange={(evento) => onEstatus(evento.target.value)}
+          disabled={ocupado}
+        >
+          {estatus.map((uno) => (
+            <option value={uno.id} key={uno.id}>
+              {uno.label}
+              {uno.isGlobal ? "" : ` (${uno.areaName})`}
+            </option>
+          ))}
+        </select>
+        <p className="project-note">
+          Desde {fechaCorta(detalle.statusSince)}. Es lo que se le dice a quien preguntó, y se
+          guarda al elegirlo.
+        </p>
+      </div>
+
+      <div className="project-how-half">
+        <h3>Estado del trabajo</h3>
+        <p className="project-how-work">{trabajo}</p>
+        <p className="project-note">La mueve un visto bueno, no el estatus.</p>
+      </div>
+
+      {trabajoTerminado && !estatusLoDice ? (
+        <p className="project-warn">
+          El trabajo ya no tiene etapas abiertas, pero el estatus sigue en «{detalle.statusLabel}».
+          Nada lo mueve solo.
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
+/** Una tarjeta de etapa en el flujo, con su estado y lo que debe entregar. */
+function TarjetaDeEtapa({ etapa, fieldValues, vocabulario, elegida, onElegir }) {
+  let clase = `project-card is-${etapa.status}`;
+  if (elegida) {
+    clase += " is-selected";
   }
 
   return (
-    <div className="project-detail-how">
-      <div className="project-detail-how-half">
-        <h4 className="project-detail-how-title">Estatus que se muestra</h4>
-        <p>
-          {detalle.statusLabel}, desde {fechaCorta(detalle.statusSince)}
-        </p>
-        <p className="project-detail-help">
-          Del catálogo que coordinación edita. Lo mueve una mano, aquí abajo.
-        </p>
+    <button className={clase} type="button" onClick={() => onElegir(etapa.id)}>
+      <span className="project-card-area">{etapa.areaName}</span>
+      <strong>{etapa.title}</strong>
+      <span className="project-card-meta">
+        {ESTADOS_ETAPA[etapa.status] ?? etapa.status}
+        {etapa.attempt > 1 ? ` · intento ${etapa.attempt}` : ""}
+        {etapa.assignedToName === null ? "" : ` · ${etapa.assignedToName}`}
+      </span>
+      {etapa.outputs.length === 0 ? null : (
+        <span className="project-card-outputs">
+          {etapa.outputs.map((clave) => (
+            <span
+              className={
+                tieneValor(fieldValues, clave) ? "project-owed is-done" : "project-owed"
+              }
+              key={clave}
+            >
+              {nombreDeClave(vocabulario, clave)}
+            </span>
+          ))}
+        </span>
+      )}
+    </button>
+  );
+}
+
+/**
+ * El flujo vivo: fase tras fase, y al final la columna FIN, donde el proyecto se concluye. Es el
+ * mismo lienzo del diseñador, con el estado de cada etapa.
+ */
+function FlujoVivo({
+  detalle, fases, vocabulario, elegida, ocupado, abiertas,
+  onElegir, onAgregar, onConcluir, onArchivarConcluido,
+}) {
+  const [tambienArchivar, setTambienArchivar] = useState(false);
+
+  return (
+    <div className="project-flow">
+      {fases.map((fase, indice) => (
+        <Fragment key={fase.seq}>
+          {indice > 0 ? <div className="project-flow-arrow" /> : null}
+          <div className="project-flow-phase">
+            <span className="project-flow-phase-name">
+              FASE {indice + 1}
+              {fase.name === null ? "" : ` · ${fase.name}`}
+            </span>
+            {fase.stages.map((etapa) => (
+              <TarjetaDeEtapa
+                etapa={etapa}
+                fieldValues={detalle.fieldValues}
+                vocabulario={vocabulario}
+                elegida={etapa.id === elegida}
+                onElegir={onElegir}
+                key={etapa.id}
+              />
+            ))}
+          </div>
+        </Fragment>
+      ))}
+
+      {fases.length > 0 ? <div className="project-flow-arrow" /> : null}
+
+      <div className="project-flow-phase">
+        <span className="project-flow-phase-name">Agregar</span>
+        <button className="project-card-add" type="button" onClick={onAgregar} disabled={ocupado}>
+          + Agregar etapa
+        </button>
       </div>
-      <div className="project-detail-how-half">
-        <h4 className="project-detail-how-title">Estado del trabajo</h4>
-        <p>{trabajo}</p>
-        <p className="project-detail-help">
-          La máquina de etapas. La mueve un visto bueno, no el estatus.
-        </p>
+
+      <div className="project-flow-arrow" />
+
+      <div className="project-flow-phase project-flow-end">
+        <span className="project-flow-phase-name">FIN</span>
+        {detalle.closedAt === null ? (
+          <div className="project-card is-end">
+            <button
+              className="project-btn is-primary"
+              type="button"
+              onClick={() => onConcluir(tambienArchivar)}
+              disabled={ocupado || abiertas.length > 0}
+            >
+              Concluir proyecto
+            </button>
+            <label className="project-check">
+              <input
+                type="checkbox"
+                checked={tambienArchivar}
+                onChange={(evento) => setTambienArchivar(evento.target.checked)}
+              />
+              y archivarlo
+              <Ayuda texto="Concluir dice que el trabajo terminó. Archivar lo quita de en medio sin decir nada del trabajo; se puede archivar después." />
+            </label>
+            {abiertas.length > 0 ? (
+              <span className="project-card-why">
+                {abiertas.length} {abiertas.length === 1 ? "etapa sigue" : "etapas siguen"} abiertas
+              </span>
+            ) : null}
+          </div>
+        ) : (
+          <div className="project-card is-done">
+            <strong>Concluido</strong>
+            <span className="project-card-meta">{fechaCorta(detalle.closedAt)}</span>
+            {detalle.archivedAt === null ? (
+              <button
+                className="project-btn"
+                type="button"
+                onClick={onArchivarConcluido}
+                disabled={ocupado}
+              >
+                Archivar
+              </button>
+            ) : (
+              <span className="project-card-meta">
+                Archivado el {fechaCorta(detalle.archivedAt)}
+              </span>
+            )}
+          </div>
+        )}
       </div>
-      {aviso}
     </div>
   );
 }
 
+/** Qué le toca a quien está viendo, dicho en una frase. */
+function miParteEn(etapa, usuario) {
+  if (usuario === null || usuario === undefined) {
+    return `La atiende ${etapa.areaName}.`;
+  }
+  if (etapa.assignedTo === usuario.id) {
+    return "Te toca esta etapa.";
+  }
+  if (usuario.role === "admin") {
+    return "Coordinas el proyecto.";
+  }
+  if (usuario.role === "finance") {
+    return `Solo consulta: la atiende ${etapa.areaName}.`;
+  }
+  return `La atiende ${etapa.areaName}.`;
+}
+
 /**
- * Las salidas que una etapa prometió, con la que ya tiene valor marcada: el visto bueno se niega
- * mientras falte alguna (RF-FLW-06).
+ * La etapa elegida, bajo el flujo: lo que pide, lo que debe y lo que se puede hacer con ella. Lo
+ * que se puede hacer depende del estado de la etapa y de quién la está viendo.
  */
-function SalidasDeLaEtapa({ outputs, fieldValues }) {
-  if (outputs.length === 0) {
-    return null;
-  }
-
-  return (
-    <p className="project-stage-io">
-      Entrega:{" "}
-      {outputs.map((clave) => {
-        const tiene = fieldValues.some((valor) => valor.key === clave && valor.value !== "");
-
-        let clase = "project-output-missing";
-        let marca = " (falta)";
-        if (tiene) {
-          clase = "project-output-done";
-          marca = " ✓";
-        }
-
-        return (
-          <span className={clase} key={clave}>
-            {clave}
-            {marca}{" "}
-          </span>
-        );
-      })}
-    </p>
-  );
-}
-
-function FilaDeEtapa({ etapa, fieldValues, ocupado, onTransicion, onBloquear, onFirmar }) {
-  let espera = null;
-  if (etapa.blockedReason !== null) {
-    espera = <p className="project-stage-blocked">Espera: {etapa.blockedReason}</p>;
-  }
-
-  let entradas = null;
-  if (etapa.inputs.length > 0) {
-    entradas = <p className="project-stage-io">Necesita: {etapa.inputs.join(", ")}</p>;
-  }
-
-  let vistosBuenos = "—";
-  if (etapa.approvals.length > 0) {
-    vistosBuenos = etapa.approvals.map((visto) => {
-      let verbo = "Rechazó";
-      if (visto.decision === "approved") {
-        verbo = "Aprobó";
-      }
-
-      let comentario = null;
-      if (visto.comment !== null) {
-        comentario = `: ${visto.comment}`;
-      }
-
-      return (
-        <p className="project-approval" key={visto.id}>
-          {verbo} {visto.approverName}
-          {comentario}
-        </p>
-      );
-    });
-  }
-
-  const botones = TRANSICIONES[etapa.status].map((paso) => {
-    if (paso.status === "waiting_external") {
-      return (
-        <button type="button" key={paso.status} onClick={() => onBloquear(etapa)} disabled={ocupado}>
-          {paso.label}
-        </button>
-      );
-    }
-    return (
-      <button
-        type="button"
-        key={paso.status}
-        onClick={() => onTransicion(etapa, paso.status)}
-        disabled={ocupado}
-      >
-        {paso.label}
-      </button>
-    );
-  });
-
-  let botonDeFirma = null;
-  if (ESTADOS_ABIERTOS.includes(etapa.status)) {
-    botonDeFirma = (
-      <button type="button" onClick={() => onFirmar(etapa)} disabled={ocupado}>
-        Visto bueno
-      </button>
-    );
-  }
-
-  return (
-    <tr className="project-stage-row">
-      <td>
-        {etapa.title}
-        {espera}
-        {entradas}
-        <SalidasDeLaEtapa outputs={etapa.outputs} fieldValues={fieldValues} />
-      </td>
-      <td>{etapa.areaName}</td>
-      <td className="project-cell-center">{etapa.attempt}</td>
-      <td>{ESTADOS_ETAPA[etapa.status] ?? etapa.status}</td>
-      <td>{vistosBuenos}</td>
-      <td className="project-stage-actions">
-        {botones}
-        {botonDeFirma}
-      </td>
-    </tr>
-  );
-}
-
-function FormularioDeEtapa({
-  datos, areas, claves, listaId, ocupado, onCambiar, onEnviar, onCancelar,
+function PanelDeEtapa({
+  etapa, detalle, fases, vocabulario, usuario, gente, ocupado, falta, siguienteFase,
+  onResponsable, onEsperar, onReanudar, onIniciar, onFirmar,
 }) {
-  function cambiar(clave, valor) {
-    onCambiar({ ...datos, [clave]: valor });
+  const [motivo, setMotivo] = useState("");
+  const [esperando, setEsperando] = useState(false);
+  const [firma, setFirma] = useState(null);
+
+  const indiceDeFase = fases.findIndex((fase) => fase.seq === etapa.seq);
+
+  let efectoDelVisto = `Aprobar concluye la etapa${
+    siguienteFase === null
+      ? " y, si no queda nada abierto en su fase, el proyecto se puede concluir."
+      : ` y, si no queda nada abierto en su fase, abre la fase ${
+          indiceDeFase + 2
+        } (${siguienteFase.stages.map((una) => una.areaName).join(", ")}).`
+  } Rechazar: la etapa vuelve como intento ${etapa.attempt + 1}.`;
+  if (falta !== null) {
+    efectoDelVisto = `No disponible: falta ${falta}.`;
   }
 
   return (
-    <form className="project-detail-panel" onSubmit={onEnviar}>
-      <label className="project-detail-field">
-        Área
-        <select
-          value={datos.areaId}
-          onChange={(evento) => cambiar("areaId", evento.target.value)}
-          required
-        >
-          {areas.map((area) => (
-            <option value={area.id} key={area.id}>
-              {area.name}
-            </option>
-          ))}
-        </select>
-      </label>
+    <section className="project-stage">
+      <header className="project-stage-head">
+        <span className="project-stage-place">
+          FASE {indiceDeFase + 1}
+          {etapa.phaseName === null ? "" : ` · ${etapa.phaseName}`} · {etapa.areaName}
+        </span>
+        <h3>
+          {etapa.title}
+          <span className={`project-stage-state is-${etapa.status}`}>
+            {ESTADOS_ETAPA[etapa.status] ?? etapa.status}
+            {etapa.attempt > 1 ? ` · intento ${etapa.attempt}` : ""}
+          </span>
+        </h3>
+        <p className="project-stage-mine">{miParteEn(etapa, usuario)}</p>
+      </header>
 
-      <label className="project-detail-field">
-        Nombre de la etapa
-        <input
-          value={datos.title}
-          onChange={(evento) => cambiar("title", evento.target.value)}
-          required
-        />
-      </label>
+      {etapa.status === "waiting_external" ? (
+        <p className="project-warn">
+          En espera desde {fechaCorta(etapa.startedAt)}: {etapa.blockedReason}
+        </p>
+      ) : null}
 
-      <label className="project-detail-field">
-        Orden de presentación
-        <input
-          type="number"
-          value={datos.seq}
-          onChange={(evento) => cambiar("seq", evento.target.value)}
-        />
-      </label>
+      <div className="project-stage-columns">
+        <div>
+          <h4>Lo que pide la etapa</h4>
 
-      <label className="project-detail-field">
-        Empieza
-        <select value={datos.status} onChange={(evento) => cambiar("status", evento.target.value)}>
-          <option value="pending">Pendiente</option>
-          <option value="active">Activa</option>
-        </select>
-      </label>
+          <div className="project-field">
+            <span className="project-label">
+              Responsable
+              <Ayuda texto="Quien atiende la etapa. Se elige entre la gente del área; la responsable del área y coordinación pueden cambiarlo." />
+            </span>
+            <select
+              value={etapa.assignedTo ?? ""}
+              onChange={(evento) => onResponsable(etapa, evento.target.value)}
+              disabled={ocupado || etapa.status === "done"}
+            >
+              <option value="">Sin responsable</option>
+              {gente.map((persona) => (
+                <option value={persona.id} key={persona.id}>
+                  {persona.fullName}
+                </option>
+              ))}
+            </select>
+          </div>
 
-      <label className="project-detail-field">
-        Entradas: qué datos necesita para trabajar
-        <input
-          value={datos.inputs}
-          onChange={(evento) => cambiar("inputs", evento.target.value)}
-          list={listaId}
-          placeholder="dependencia, tiraje"
-        />
-      </label>
+          <h5>Necesita</h5>
+          {etapa.inputs.length === 0 ? (
+            <p className="project-note">Nada de otra etapa.</p>
+          ) : (
+            <ul className="project-io">
+              {etapa.inputs.map((clave) => {
+                const valor = detalle.fieldValues.find((uno) => uno.key === clave);
+                return (
+                  <li key={clave}>
+                    <span className="project-label">{nombreDeClave(vocabulario, clave)}</span>
+                    {valor === undefined || valor.value === "" ? (
+                      <span className="project-missing">sin valor todavía</span>
+                    ) : (
+                      <span className="project-value">{valor.value}</span>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
 
-      <label className="project-detail-field">
-        Salidas: qué datos entrega
-        <input
-          value={datos.outputs}
-          onChange={(evento) => cambiar("outputs", evento.target.value)}
-          list={listaId}
-          placeholder="numero_orden"
-        />
-      </label>
+          <h5>
+            Entrega{" "}
+            {etapa.outputs.length === 0
+              ? ""
+              : `${etapa.outputs.filter((clave) => tieneValor(detalle.fieldValues, clave)).length} de ${etapa.outputs.length}`}
+          </h5>
+          {etapa.outputs.length === 0 ? (
+            <p className="project-note">Nada que otra etapa espere.</p>
+          ) : (
+            <ul className="project-io">
+              {etapa.outputs.map((clave) => {
+                const valor = detalle.fieldValues.find((uno) => uno.key === clave);
+                return (
+                  <li key={clave}>
+                    <span className="project-label">{nombreDeClave(vocabulario, clave)}</span>
+                    {valor === undefined || valor.value === "" ? (
+                      <span className="project-missing">sin valor todavía</span>
+                    ) : (
+                      <span className="project-value">{valor.value}</span>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          <p className="project-note">
+            Los valores se capturan abajo, en «Valores del proyecto», y se guardan con todo lo
+            demás.
+          </p>
+        </div>
 
-      <datalist id={listaId}>
-        {claves.map((clave) => (
-          <option value={clave} key={clave} />
-        ))}
-      </datalist>
+        <div>
+          <h4>Acciones</h4>
 
-      <p className="project-detail-help">
-        Separadas por comas. Las salidas son una promesa: el visto bueno de esta etapa se niega
-        mientras alguna no tenga valor, y por eso la etapa siguiente la encuentra.
-      </p>
-
-      <div className="project-detail-actions">
-        <button type="submit" disabled={ocupado}>
-          Agregar
-        </button>
-        <button type="button" onClick={onCancelar}>
-          Cancelar
-        </button>
-      </div>
-    </form>
-  );
-}
-
-function FormularioDeFirma({ datos, ocupado, onCambiar, onEnviar, onCancelar }) {
-  function cambiar(clave, valor) {
-    onCambiar({ ...datos, [clave]: valor });
-  }
-
-  return (
-    <form className="project-detail-panel" onSubmit={onEnviar}>
-      <h4>Visto bueno de «{datos.stageTitle}»</h4>
-      <p className="project-detail-help">
-        Aprobar concluye la etapa. Rechazar también la concluye y abre otra vez la misma etapa con
-        el intento siguiente, para que el trabajo devuelto quede a la vista. La conformidad del
-        solicitante va en el comentario: el visto bueno es interno.
-      </p>
-      <p className="project-detail-help">
-        Aprobar <strong>no</strong> abre la etapa siguiente: cuál sigue es asunto del flujo, y el
-        flujo declarativo todavía no existe. Por ahora la siguiente se inicia a mano.
-      </p>
-
-      <label className="project-detail-field">
-        Decisión
-        <select
-          value={datos.decision}
-          onChange={(evento) => cambiar("decision", evento.target.value)}
-        >
-          <option value="approved">Aprobar</option>
-          <option value="rejected">Rechazar</option>
-        </select>
-      </label>
-
-      <label className="project-detail-field">
-        Comentario
-        <textarea
-          value={datos.comment}
-          onChange={(evento) => cambiar("comment", evento.target.value)}
-          rows={3}
-        />
-      </label>
-
-      <div className="project-detail-actions">
-        <button type="submit" disabled={ocupado}>
-          Registrar
-        </button>
-        <button type="button" onClick={onCancelar}>
-          Cancelar
-        </button>
-      </div>
-    </form>
-  );
-}
-
-/**
- * Los valores que cruzan de una etapa a otra. Se editan en su lugar: el valor se guarda al salir
- * del campo, y solo si cambió y no quedó vacío —vaciarlo es quitarlo, y eso tiene su botón—.
- */
-function ValoresDelProyecto({ detalle, ocupado, onGuardar, onQuitar }) {
-  function nombreDeLaEtapa(producedByStageId) {
-    if (producedByStageId === null) {
-      return "la solicitud";
-    }
-    const etapa = detalle.stages.find((una) => una.id === producedByStageId);
-    if (etapa === undefined) {
-      return "una etapa";
-    }
-    return etapa.title;
-  }
-
-  function alSalirDelCampo(valor, escrito) {
-    if (escrito !== valor.value && escrito !== "") {
-      onGuardar(valor.key, escrito);
-    }
-  }
-
-  return (
-    <table className="project-values">
-      <thead>
-        <tr>
-          <th>Clave</th>
-          <th>Valor</th>
-          <th>La produjo</th>
-          <th />
-        </tr>
-      </thead>
-      <tbody>
-        {detalle.fieldValues.map((valor) => (
-          <tr key={valor.key}>
-            <td className="project-value-key">{valor.key}</td>
-            <td>
-              <input
-                className="project-value-input"
-                defaultValue={valor.value}
-                onBlur={(evento) => alSalirDelCampo(valor, evento.target.value)}
-              />
-            </td>
-            <td>{nombreDeLaEtapa(valor.producedByStageId)}</td>
-            <td>
-              <button type="button" onClick={() => onQuitar(valor.key)} disabled={ocupado}>
-                Quitar
+          {etapa.status === "pending" ? (
+            <div className="project-action">
+              <button
+                className="project-btn"
+                type="button"
+                onClick={() => onIniciar(etapa)}
+                disabled={ocupado}
+              >
+                Iniciar ahora
               </button>
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+              <p className="project-note">
+                Empieza sola cuando concluya la fase anterior. Iniciar ahora es la excepción.
+              </p>
+            </div>
+          ) : null}
+
+          {etapa.status === "waiting_external" ? (
+            <div className="project-action">
+              <button
+                className="project-btn is-primary"
+                type="button"
+                onClick={() => onReanudar(etapa)}
+                disabled={ocupado}
+              >
+                Ya respondieron: reanudar
+              </button>
+              <p className="project-note">Vuelve a quedar activa, con su mismo intento.</p>
+            </div>
+          ) : null}
+
+          {etapa.status === "active" ? (
+            <div className="project-action">
+              {esperando ? (
+                <form
+                  className="project-wait"
+                  onSubmit={(evento) => {
+                    evento.preventDefault();
+                    onEsperar(etapa, motivo);
+                    setEsperando(false);
+                    setMotivo("");
+                  }}
+                >
+                  <h5>Poner en espera</h5>
+                  <p className="project-note">
+                    La etapa sigue siendo de su área, pero el tiempo que pase esperando queda
+                    dicho, no escondido.
+                  </p>
+                  <div className="project-chips">
+                    {MOTIVOS.map((uno) => (
+                      <button
+                        className={motivo === uno ? "project-chip is-on" : "project-chip"}
+                        type="button"
+                        onClick={() => setMotivo(uno)}
+                        key={uno}
+                      >
+                        {uno}
+                      </button>
+                    ))}
+                  </div>
+                  <input
+                    value={motivo}
+                    onChange={(evento) => setMotivo(evento.target.value)}
+                    placeholder="Ej: esperamos el visto bueno de la facultad"
+                  />
+                  <div className="project-action-row">
+                    <button
+                      className="project-quiet"
+                      type="button"
+                      onClick={() => setEsperando(false)}
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      className="project-btn"
+                      type="submit"
+                      disabled={ocupado || motivo.trim() === ""}
+                    >
+                      Poner en espera
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <>
+                  <button
+                    className="project-btn"
+                    type="button"
+                    onClick={() => setEsperando(true)}
+                    disabled={ocupado}
+                  >
+                    Poner en espera
+                    <Ayuda texto="Para cuando lo que falta no está en nuestras manos: un visto bueno de la entidad, material de un proveedor, un anticipo." />
+                  </button>
+                  <p className="project-note">Pide el motivo y lo deja a la vista.</p>
+                </>
+              )}
+            </div>
+          ) : null}
+
+          {ESTADOS_ABIERTOS.includes(etapa.status) ? (
+            <div className="project-action">
+              {firma === null ? (
+                <>
+                  <button
+                    className="project-btn is-primary"
+                    type="button"
+                    onClick={() => setFirma({ decision: "approved", comment: "" })}
+                    disabled={ocupado || falta !== null}
+                  >
+                    Visto bueno
+                  </button>
+                  <p className={falta === null ? "project-note" : "project-note is-blocked"}>
+                    {efectoDelVisto}
+                  </p>
+                </>
+              ) : (
+                <form
+                  className="project-sign"
+                  onSubmit={(evento) => {
+                    evento.preventDefault();
+                    onFirmar(etapa, firma);
+                    setFirma(null);
+                  }}
+                >
+                  <h5>Visto bueno de «{etapa.title}»</h5>
+                  <div className="project-field">
+                    <span className="project-label">Decisión</span>
+                    <select
+                      value={firma.decision}
+                      onChange={(evento) => setFirma({ ...firma, decision: evento.target.value })}
+                    >
+                      <option value="approved">Aprobar</option>
+                      <option value="rejected">Rechazar</option>
+                    </select>
+                  </div>
+                  <p className="project-note">
+                    {firma.decision === "approved"
+                      ? efectoDelVisto
+                      : `La etapa se cierra y vuelve a abrirse como intento ${
+                          etapa.attempt + 1
+                        }, para que el trabajo devuelto quede a la vista.`}
+                  </p>
+                  <div className="project-field">
+                    <span className="project-label">
+                      Comentario
+                      <Ayuda texto="La conformidad del solicitante va aquí: el visto bueno es interno." />
+                    </span>
+                    <textarea
+                      value={firma.comment}
+                      onChange={(evento) => setFirma({ ...firma, comment: evento.target.value })}
+                      rows={3}
+                    />
+                  </div>
+                  <div className="project-action-row">
+                    <button className="project-quiet" type="button" onClick={() => setFirma(null)}>
+                      Cancelar
+                    </button>
+                    <button className="project-btn is-primary" type="submit" disabled={ocupado}>
+                      Registrar
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          ) : null}
+
+          <h5>Vistos buenos</h5>
+          {etapa.approvals.length === 0 ? (
+            <p className="project-note">Ninguno todavía.</p>
+          ) : (
+            <ul className="project-approvals">
+              {etapa.approvals.map((visto) => (
+                <li key={visto.id}>
+                  <span className="project-label">
+                    {visto.decision === "approved" ? "Aprobó" : "Rechazó"} {visto.approverName} ·{" "}
+                    {fechaCorta(visto.decidedAt)}
+                  </span>
+                  {visto.comment === null ? null : <span>{visto.comment}</span>}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </section>
   );
 }
 
-function PedidoAFinanzas({ datos, ocupado, onCambiar, onEnviar, onRetirar }) {
+/** Agregar una etapa: la fase se elige por su nombre, no por un número de orden. */
+function FormularioDeEtapa({ datos, areas, fases, vocabulario, ocupado, onCambiar, onEnviar, onCancelar }) {
+  const claves = [...vocabulario.entries()];
+
   function cambiar(clave, valor) {
     onCambiar({ ...datos, [clave]: valor });
   }
 
-  return (
-    <form className="project-detail-panel" onSubmit={onEnviar}>
-      <h4>Pedir cotización o factura</h4>
-      <p className="project-detail-help">
-        Queda como un valor del proyecto (`requiere_cotizacion` o `requiere_factura`), así que el
-        tablero lo encuentra filtrando por esa clave. Pedirlo no edita nada más del proyecto.
-      </p>
-
-      <label className="project-detail-field">
-        Qué se necesita
-        <select value={datos.kind} onChange={(evento) => cambiar("kind", evento.target.value)}>
-          <option value="invoice">Factura</option>
-          <option value="quote">Cotización</option>
-        </select>
-      </label>
-
-      <label className="project-detail-field">
-        Nota para quien lleva el proyecto
-        <input
-          value={datos.note}
-          onChange={(evento) => cambiar("note", evento.target.value)}
-          placeholder="Falta el desglose por partida"
-        />
-      </label>
-
-      <div className="project-detail-actions">
-        <button type="submit" disabled={ocupado}>
-          Pedir
-        </button>
-        <button type="button" onClick={onRetirar} disabled={ocupado}>
-          Retirar el pedido
-        </button>
-      </div>
-    </form>
-  );
-}
-
-function SolicitudesQueContesta({ requests }) {
-  if (requests.length === 0) {
-    return (
-      <p className="project-detail-help">
-        Ninguna: este proyecto se capturó directo, no salió de una solicitud.
-      </p>
+  function alternarClave(cual, clave) {
+    const actuales = datos[cual];
+    cambiar(
+      cual,
+      actuales.includes(clave)
+        ? actuales.filter((una) => una !== clave)
+        : [...actuales, clave],
     );
   }
 
   return (
-    <ul className="project-requests">
-      {requests.map((solicitud) => (
-        <li key={solicitud.id}>
-          {solicitud.folio} — {solicitud.title}
-        </li>
-      ))}
-    </ul>
+    <form className="project-stage-form" onSubmit={onEnviar}>
+      <h3>Agregar una etapa</h3>
+
+      <div className="project-grid">
+        <label className="project-field">
+          <span className="project-label">Área</span>
+          <select
+            value={datos.areaId}
+            onChange={(evento) => cambiar("areaId", evento.target.value)}
+            required
+          >
+            {areas.map((area) => (
+              <option value={area.id} key={area.id}>
+                {area.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="project-field">
+          <span className="project-label">Nombre de la etapa</span>
+          <input
+            value={datos.title}
+            onChange={(evento) => cambiar("title", evento.target.value)}
+            placeholder="Ej: Propuesta de diseño"
+            required
+          />
+        </label>
+
+        <label className="project-field">
+          <span className="project-label">
+            En qué fase
+            <Ayuda texto="Dos etapas en la misma fase corren en paralelo: la fase concluye cuando no queda ninguna abierta." />
+          </span>
+          <select value={datos.seq} onChange={(evento) => cambiar("seq", evento.target.value)}>
+            {fases.map((fase, indice) => (
+              <option value={fase.seq} key={fase.seq}>
+                {indice + 1}
+                {fase.name === null ? "" : ` · ${fase.name}`}, en paralelo con lo que ya tiene
+              </option>
+            ))}
+            <option value={fases.length === 0 ? 1 : fases[fases.length - 1].seq + 1}>
+              Fase nueva, al final
+            </option>
+          </select>
+        </label>
+
+        <label className="project-field">
+          <span className="project-label">Empieza</span>
+          <select value={datos.status} onChange={(evento) => cambiar("status", evento.target.value)}>
+            <option value="pending">Pendiente</option>
+            <option value="active">Activa</option>
+          </select>
+        </label>
+      </div>
+
+      <h5>Qué necesita para trabajar</h5>
+      <div className="project-chips">
+        {claves.map(([clave, campo]) => (
+          <button
+            className={datos.inputs.includes(clave) ? "project-chip is-on" : "project-chip"}
+            type="button"
+            onClick={() => alternarClave("inputs", clave)}
+            key={clave}
+          >
+            {campo.name}
+          </button>
+        ))}
+      </div>
+
+      <h5>Qué entrega</h5>
+      <p className="project-note">
+        Es una promesa: el visto bueno de esta etapa se niega mientras alguno no tenga valor, y por
+        eso la etapa siguiente lo encuentra.
+      </p>
+      <div className="project-chips">
+        {claves.map(([clave, campo]) => (
+          <button
+            className={datos.outputs.includes(clave) ? "project-chip is-on" : "project-chip"}
+            type="button"
+            onClick={() => alternarClave("outputs", clave)}
+            key={clave}
+          >
+            {campo.name}
+          </button>
+        ))}
+      </div>
+
+      <div className="project-action-row">
+        <button className="project-quiet" type="button" onClick={onCancelar}>
+          Cancelar
+        </button>
+        <button className="project-btn is-primary" type="submit" disabled={ocupado}>
+          Agregar etapa
+        </button>
+      </div>
+    </form>
   );
 }
 
-function ProjectDetail({ proyecto, areas, usuario, onCerrar, onCambio }) {
+function ProjectDetail({
+  proyecto, areas, estatus: estatusIniciales, vocabulario, usuario,
+  lugar, onAnterior, onSiguiente, onCerrar, onCambio,
+}) {
   const [detalle, setDetalle] = useState(null);
-  const [estatus, setEstatus] = useState([]);
+  const [borrador, setBorrador] = useState(null);
+  const [estatus, setEstatus] = useState(estatusIniciales ?? []);
+  const [gente, setGente] = useState([]);
+  const [elegida, setElegida] = useState(null);
+  const [nuevaEtapa, setNuevaEtapa] = useState(null);
+  const [claveNueva, setClaveNueva] = useState("");
+  const [confirmandoArchivo, setConfirmandoArchivo] = useState(false);
   const [error, setError] = useState(null);
   const [ocupado, setOcupado] = useState(false);
-
-  const [nuevaEtapa, setNuevaEtapa] = useState(null);
-  const [firma, setFirma] = useState(null);
-  const [nuevoValor, setNuevoValor] = useState({ key: "", value: "" });
-  const [pedido, setPedido] = useState({ kind: "invoice", note: "" });
 
   useEffect(() => {
     let cancelado = false;
@@ -532,14 +750,13 @@ function ProjectDetail({ proyecto, areas, usuario, onCerrar, onCambio }) {
           return;
         }
         setDetalle(respuesta.project);
+        setBorrador(desdeDetalle(respuesta.project));
 
-        const areasConEtapa = [...new Set(respuesta.project.stages.map((etapa) => etapa.areaId))];
-        const peticiones = [api.listStatuses()];
-        for (const id of areasConEtapa) {
-          peticiones.push(api.listStatuses({ areaId: id }));
-        }
-
-        const listas = await Promise.all(peticiones);
+        const conEtapa = [...new Set(respuesta.project.stages.map((etapa) => etapa.areaId))];
+        const listas = await Promise.all([
+          api.listStatuses(),
+          ...conEtapa.map((id) => api.listStatuses({ areaId: id })),
+        ]);
         if (cancelado) {
           return;
         }
@@ -564,10 +781,69 @@ function ProjectDetail({ proyecto, areas, usuario, onCerrar, onCambio }) {
     };
   }, [proyecto.id]);
 
+  useEffect(() => {
+    function alTeclear(evento) {
+      if (evento.key === "Escape") {
+        onCerrar();
+      }
+    }
+
+    window.addEventListener("keydown", alTeclear);
+    return () => window.removeEventListener("keydown", alTeclear);
+  }, [onCerrar]);
+
+  const etapaElegida =
+    detalle === null ? null : detalle.stages.find((etapa) => etapa.id === elegida) ?? null;
+  const areaDeLaEtapa = etapaElegida === null ? null : etapaElegida.areaId;
+
+  useEffect(() => {
+    let cancelado = false;
+
+    async function cargarGente() {
+      if (areaDeLaEtapa === null) {
+        return;
+      }
+      try {
+        const respuesta = await api.listUsers({ areaId: areaDeLaEtapa });
+        if (!cancelado) {
+          setGente(respuesta.users);
+        }
+      } catch (fallo) {
+        if (!cancelado) {
+          setError(fallo.message);
+        }
+      }
+    }
+
+    cargarGente();
+    return () => {
+      cancelado = true;
+    };
+  }, [areaDeLaEtapa]);
+
+  /** El borrador: lo editable del proyecto y sus valores, tal como están guardados. */
+  function desdeDetalle(actual) {
+    const valores = {};
+    for (const valor of actual.fieldValues) {
+      valores[valor.key] = valor.value;
+    }
+    return {
+      title: actual.title,
+      requester: actual.requester ?? "",
+      priority: String(actual.priority),
+      startsOn: actual.startsOn ?? "",
+      dueOn: actual.dueOn ?? "",
+      hasCost: actual.hasCost,
+      valores,
+    };
+  }
+
   async function recargar() {
     const respuesta = await api.getProject(proyecto.id);
     setDetalle(respuesta.project);
+    setBorrador(desdeDetalle(respuesta.project));
     onCambio();
+    return respuesta.project;
   }
 
   async function hacer(accion) {
@@ -575,84 +851,119 @@ function ProjectDetail({ proyecto, areas, usuario, onCerrar, onCambio }) {
     setError(null);
     try {
       await accion();
-      await recargar();
-      return true;
+      return await recargar();
     } catch (fallo) {
       setError(fallo.message);
-      return false;
+      return null;
     } finally {
       setOcupado(false);
     }
   }
 
-  function cambiarEstatus(valor) {
-    hacer(() => api.setProjectStatus(detalle.id, Number(valor)));
+  function escribir(clave, valor) {
+    setBorrador((actual) => ({ ...actual, [clave]: valor }));
   }
 
-  function cerrarProyecto() {
-    hacer(() => api.closeProject(detalle.id));
+  function escribirValor(clave, valor) {
+    setBorrador((actual) => ({ ...actual, valores: { ...actual.valores, [clave]: valor } }));
   }
 
-  function archivarProyecto() {
-    hacer(() => api.archiveProject(detalle.id));
-  }
-
-  function moverEtapa(etapa, status) {
-    hacer(() => api.updateProjectStage(detalle.id, etapa.id, { status }));
-  }
-
-  async function bloquearEtapa(etapa) {
-    const motivo = window.prompt("¿Qué se está esperando?");
-    if (motivo === null || motivo.trim() === "") {
+  function agregarClave(clave) {
+    if (clave === "") {
       return;
     }
-    await hacer(() =>
-      api.updateProjectStage(detalle.id, etapa.id, {
-        status: "waiting_external",
-        blockedReason: motivo,
-      }),
+    escribirValor(clave, "");
+    setClaveNueva("");
+  }
+
+  if (detalle === null) {
+    return (
+      <section className="project-full">
+        <p className="project-loading">{error ?? "Abriendo el proyecto…"}</p>
+      </section>
     );
   }
 
-  function abrirFirma(etapa) {
-    setFirma({ stageId: etapa.id, stageTitle: etapa.title, decision: "approved", comment: "" });
+  const guardado = desdeDetalle(detalle);
+  const cambiados = [];
+  for (const clave of ["title", "requester", "priority", "startsOn", "dueOn", "hasCost"]) {
+    if (String(borrador[clave]) !== String(guardado[clave])) {
+      cambiados.push(clave);
+    }
+  }
+  for (const clave of Object.keys(borrador.valores)) {
+    if (String(borrador.valores[clave] ?? "") !== String(guardado.valores[clave] ?? "")) {
+      cambiados.push(clave);
+    }
+  }
+  const sucio = cambiados.length > 0;
+
+  function marcar(clave, base) {
+    return cambiados.includes(clave) ? `${base} is-changed` : base;
   }
 
-  function cerrarFirma() {
-    setFirma(null);
+  async function guardar() {
+    const cambios = {};
+    if (borrador.title !== guardado.title) {
+      cambios.title = borrador.title;
+    }
+    if (borrador.requester !== guardado.requester) {
+      cambios.requester = borrador.requester;
+    }
+    if (borrador.priority !== guardado.priority) {
+      cambios.priority = Number(borrador.priority);
+    }
+    if (borrador.startsOn !== guardado.startsOn) {
+      cambios.startsOn = borrador.startsOn === "" ? null : borrador.startsOn;
+    }
+    if (borrador.dueOn !== guardado.dueOn) {
+      cambios.dueOn = borrador.dueOn === "" ? null : borrador.dueOn;
+    }
+    if (borrador.hasCost !== guardado.hasCost) {
+      cambios.hasCost = borrador.hasCost;
+    }
+
+    await hacer(async () => {
+      if (Object.keys(cambios).length > 0) {
+        await api.updateProject(detalle.id, cambios);
+      }
+      for (const clave of Object.keys(borrador.valores)) {
+        const antes = guardado.valores[clave];
+        const ahora = borrador.valores[clave];
+        if (String(ahora ?? "") === String(antes ?? "")) {
+          continue;
+        }
+        if (ahora === "" || ahora === null || ahora === undefined) {
+          if (antes !== undefined) {
+            await api.deleteFieldValue(detalle.id, clave);
+          }
+          continue;
+        }
+        await api.setFieldValue(detalle.id, clave, String(ahora));
+      }
+    });
   }
 
-  async function firmar(evento) {
-    evento.preventDefault();
-    const hecho = await hacer(() =>
-      api.createApproval(detalle.id, firma.stageId, {
+  async function firmar(etapa, firma) {
+    const despues = await hacer(() =>
+      api.createApproval(detalle.id, etapa.id, {
         decision: firma.decision,
         comment: firma.comment || undefined,
       }),
     );
-    if (hecho) {
-      setFirma(null);
+    if (despues !== null) {
+      const abierta = despues.stages.find((una) => ESTADOS_ABIERTOS.includes(una.status));
+      setElegida(abierta === undefined ? null : abierta.id);
     }
   }
 
-  function abrirEtapa() {
-    let areaId = "";
-    if (areas.length > 0) {
-      areaId = areas[0].id;
-    }
-
-    setNuevaEtapa({
-      areaId,
-      title: "",
-      seq: detalle.stages.length + 1,
-      status: "pending",
-      inputs: "",
-      outputs: "",
+  async function concluir(tambienArchivar) {
+    await hacer(async () => {
+      await api.closeProject(detalle.id);
+      if (tambienArchivar) {
+        await api.archiveProject(detalle.id);
+      }
     });
-  }
-
-  function cerrarEtapa() {
-    setNuevaEtapa(null);
   }
 
   async function agregarEtapa(evento) {
@@ -663,262 +974,377 @@ function ProjectDetail({ proyecto, areas, usuario, onCerrar, onCambio }) {
         title: nuevaEtapa.title,
         seq: Number(nuevaEtapa.seq),
         status: nuevaEtapa.status,
-        inputs: listaDeClaves(nuevaEtapa.inputs),
-        outputs: listaDeClaves(nuevaEtapa.outputs),
+        inputs: nuevaEtapa.inputs,
+        outputs: nuevaEtapa.outputs,
       }),
     );
-    if (hecho) {
+    if (hecho !== null) {
       setNuevaEtapa(null);
     }
   }
 
-  function guardarValorExistente(key, value) {
-    hacer(() => api.setFieldValue(detalle.id, key, value));
-  }
+  const fases = fasesDe(detalle.stages);
+  const abiertas = detalle.stages.filter((etapa) => ESTADOS_ABIERTOS.includes(etapa.status));
 
-  function quitarValor(key) {
-    hacer(() => api.deleteFieldValue(detalle.id, key));
-  }
-
-  async function guardarValorNuevo(evento) {
-    evento.preventDefault();
-    const hecho = await hacer(() =>
-      api.setFieldValue(detalle.id, nuevoValor.key, nuevoValor.value),
+  let falta = null;
+  let siguienteFase = null;
+  if (etapaElegida !== null) {
+    const pendiente = etapaElegida.outputs.find(
+      (clave) => !tieneValor(detalle.fieldValues, clave),
     );
-    if (hecho) {
-      setNuevoValor({ key: "", value: "" });
-    }
+    falta = pendiente === undefined ? null : nombreDeClave(vocabulario, pendiente);
+
+    const indice = fases.findIndex((fase) => fase.seq === etapaElegida.seq);
+    siguienteFase = fases[indice + 1] ?? null;
   }
 
-  async function pedirFinanzas(evento) {
-    evento.preventDefault();
-    const hecho = await hacer(() =>
-      api.requestFinance(detalle.id, {
-        kind: pedido.kind,
-        note: pedido.note || undefined,
-      }),
-    );
-    if (hecho) {
-      setPedido({ ...pedido, note: "" });
-    }
+  const claves = Object.keys(borrador.valores);
+  const porAgregar = [...vocabulario.entries()].filter(([clave]) => !claves.includes(clave));
+
+  let flujoDelProyecto = "sin flujo";
+  if (fases.length > 0) {
+    flujoDelProyecto = `${fases.length} ${fases.length === 1 ? "fase" : "fases"}`;
   }
 
-  function retirarPedido() {
-    hacer(() => api.requestFinance(detalle.id, { kind: pedido.kind, needed: false }));
-  }
-
-  if (detalle === null) {
-    let mensaje = <p>Cargando proyecto...</p>;
-    if (error !== null) {
-      mensaje = <p className="project-detail-error">{error}</p>;
-    }
-    return <section className="project-detail">{mensaje}</section>;
-  }
-
-  let bloqueDeError = null;
-  if (error !== null) {
-    bloqueDeError = <p className="project-detail-error">{error}</p>;
-  }
-
-  let bloqueDeCierre = null;
-  if (detalle.closedAt !== null) {
-    bloqueDeCierre = (
-      <>
-        <dt>Cerrado</dt>
-        <dd>{fechaCorta(detalle.closedAt)}</dd>
-      </>
-    );
-  }
-
-  let formularioDeEtapa = null;
-  if (nuevaEtapa !== null) {
-    formularioDeEtapa = (
-      <FormularioDeEtapa
-        datos={nuevaEtapa}
-        areas={areas}
-        claves={clavesConocidas(detalle)}
-        listaId={`claves-${detalle.id}`}
-        ocupado={ocupado}
-        onCambiar={setNuevaEtapa}
-        onEnviar={agregarEtapa}
-        onCancelar={cerrarEtapa}
-      />
-    );
-  }
-
-  let formularioDeFirma = null;
-  if (firma !== null) {
-    formularioDeFirma = (
-      <FormularioDeFirma
-        datos={firma}
-        ocupado={ocupado}
-        onCambiar={setFirma}
-        onEnviar={firmar}
-        onCancelar={cerrarFirma}
-      />
-    );
-  }
-
-  let rol = null;
-  if (usuario !== null && usuario !== undefined) {
-    rol = usuario.role;
-  }
-
-  let panelDeFinanzas = null;
-  if (rol === "finance" || rol === "admin") {
-    panelDeFinanzas = (
-      <PedidoAFinanzas
-        datos={pedido}
-        ocupado={ocupado}
-        onCambiar={setPedido}
-        onEnviar={pedirFinanzas}
-        onRetirar={retirarPedido}
-      />
-    );
+  let estado = "abierto";
+  if (detalle.archivedAt !== null) {
+    estado = "archivado";
+  } else if (detalle.closedAt !== null) {
+    estado = "concluido";
   }
 
   return (
-    <section className="project-detail">
-      <header className="project-detail-header">
-        <h3 className="project-detail-title">
-          {detalle.key} — {detalle.title}
-        </h3>
-        <button type="button" onClick={onCerrar}>
-          Cerrar
+    <section className="project-full">
+      <header className="project-bar">
+        <button
+          className="project-close"
+          type="button"
+          onClick={onCerrar}
+          aria-label="Volver a la lista"
+        >
+          ✕
         </button>
+
+        <div className="project-bar-text">
+          <span className="project-bar-eyebrow">
+            {detalle.key} · {detalle.requests.length === 0 ? "captura directa" : "de una solicitud"}{" "}
+            · {flujoDelProyecto} · {estado}
+          </span>
+          <h2>{detalle.title}</h2>
+        </div>
+
+        {lugar === null ? null : (
+          <div className="project-bar-move">
+            <span>
+              {lugar.posicion} de {lugar.de}
+            </span>
+            <button
+              className="project-quiet"
+              type="button"
+              onClick={onAnterior}
+              disabled={onAnterior === null}
+              aria-label="Anterior"
+            >
+              ‹
+            </button>
+            <button
+              className="project-quiet"
+              type="button"
+              onClick={onSiguiente}
+              disabled={onSiguiente === null}
+              aria-label="Siguiente"
+            >
+              ›
+            </button>
+          </div>
+        )}
       </header>
 
-      {bloqueDeError}
+      <div className="project-body">
+        {error !== null ? <p className="project-error">{error}</p> : null}
 
-      <ComoVa detalle={detalle} />
+        <ComoVa
+          detalle={detalle}
+          estatus={estatus}
+          ocupado={ocupado}
+          onEstatus={(valor) => hacer(() => api.setProjectStatus(detalle.id, Number(valor)))}
+        />
 
-      <dl className="project-detail-facts">
-        <dt>Solicitante</dt>
-        <dd>{oGuion(detalle.requester)}</dd>
+        <section className="project-sec">
+          <h3>Flujo</h3>
+          <FlujoVivo
+            detalle={detalle}
+            fases={fases}
+            vocabulario={vocabulario}
+            elegida={elegida}
+            ocupado={ocupado}
+            abiertas={abiertas}
+            onElegir={(id) => setElegida(id === elegida ? null : id)}
+            onAgregar={() =>
+              setNuevaEtapa({
+                areaId: areas.length === 0 ? "" : areas[0].id,
+                title: "",
+                seq: fases.length === 0 ? 1 : fases[fases.length - 1].seq + 1,
+                status: "pending",
+                inputs: [],
+                outputs: [],
+              })
+            }
+            onConcluir={concluir}
+            onArchivarConcluido={() => hacer(() => api.archiveProject(detalle.id))}
+          />
+        </section>
 
-        <dt>Estatus</dt>
-        <dd>
-          <select
-            value={detalle.statusId}
-            onChange={(evento) => cambiarEstatus(evento.target.value)}
+        {nuevaEtapa !== null ? (
+          <FormularioDeEtapa
+            datos={nuevaEtapa}
+            areas={areas}
+            fases={fases}
+            vocabulario={vocabulario}
+            ocupado={ocupado}
+            onCambiar={setNuevaEtapa}
+            onEnviar={agregarEtapa}
+            onCancelar={() => setNuevaEtapa(null)}
+          />
+        ) : null}
+
+        {etapaElegida === null ? null : (
+          <PanelDeEtapa
+            etapa={etapaElegida}
+            detalle={detalle}
+            fases={fases}
+            vocabulario={vocabulario}
+            usuario={usuario}
+            gente={gente}
+            ocupado={ocupado}
+            falta={falta}
+            siguienteFase={siguienteFase}
+            onResponsable={(etapa, valor) =>
+              hacer(() =>
+                api.updateProjectStage(detalle.id, etapa.id, {
+                  assignedTo: valor === "" ? null : Number(valor),
+                }),
+              )
+            }
+            onIniciar={(etapa) =>
+              hacer(() => api.updateProjectStage(detalle.id, etapa.id, { status: "active" }))
+            }
+            onEsperar={(etapa, motivo) =>
+              hacer(() =>
+                api.updateProjectStage(detalle.id, etapa.id, {
+                  status: "waiting_external",
+                  blockedReason: motivo,
+                }),
+              )
+            }
+            onReanudar={(etapa) =>
+              hacer(() => api.updateProjectStage(detalle.id, etapa.id, { status: "active" }))
+            }
+            onFirmar={firmar}
+          />
+        )}
+
+        <div className="project-columns">
+          <section className="project-sec">
+            <h3>Proyecto</h3>
+            <div className="project-grid">
+              <label className={marcar("title", "project-field")}>
+                <span className="project-label">Título</span>
+                <input
+                  value={borrador.title}
+                  onChange={(evento) => escribir("title", evento.target.value)}
+                />
+              </label>
+
+              <label className={marcar("requester", "project-field")}>
+                <span className="project-label">Entidad solicitante</span>
+                <input
+                  value={borrador.requester}
+                  onChange={(evento) => escribir("requester", evento.target.value)}
+                />
+              </label>
+
+              <label className={marcar("priority", "project-field")}>
+                <span className="project-label">
+                  Urgencia
+                  <Ayuda texto="Un número: mayor es más urgente. La imprenta y la producción priorizan por urgencia, nunca por orden de llegada (RF-FLW-08)." />
+                </span>
+                <input
+                  type="number"
+                  value={borrador.priority}
+                  onChange={(evento) => escribir("priority", evento.target.value)}
+                />
+              </label>
+
+              <label className={marcar("startsOn", "project-field")}>
+                <span className="project-label">Empieza</span>
+                <input
+                  type="date"
+                  value={borrador.startsOn}
+                  onChange={(evento) => escribir("startsOn", evento.target.value)}
+                />
+              </label>
+
+              <label className={marcar("dueOn", "project-field")}>
+                <span className="project-label">Entrega</span>
+                <input
+                  type="date"
+                  value={borrador.dueOn}
+                  onChange={(evento) => escribir("dueOn", evento.target.value)}
+                />
+              </label>
+
+              <label className={marcar("hasCost", "project-check")}>
+                <input
+                  type="checkbox"
+                  checked={borrador.hasCost}
+                  onChange={(evento) => escribir("hasCost", evento.target.checked)}
+                />
+                Con costo
+              </label>
+            </div>
+          </section>
+
+          <section className="project-sec">
+            <h3>
+              Valores del proyecto
+              <Ayuda texto="Lo que una etapa produce y otra lee sin recapturar (RF-FLW-06): el número de orden, el folio del SIN, el pantone." />
+            </h3>
+
+            {claves.length === 0 ? (
+              <p className="project-note">Todavía ninguno.</p>
+            ) : (
+              <div className="project-grid">
+                {claves.map((clave) => {
+                  const campo = campoDeClave(vocabulario, clave);
+                  const guardadoAqui = detalle.fieldValues.find((uno) => uno.key === clave);
+
+                  let origen = "nuevo, sin guardar";
+                  if (guardadoAqui !== undefined) {
+                    const etapa = detalle.stages.find(
+                      (una) => una.id === guardadoAqui.producedByStageId,
+                    );
+                    origen =
+                      guardadoAqui.producedByStageId === null
+                        ? "de la solicitud"
+                        : `lo produjo ${etapa?.title ?? "una etapa"}`;
+                  }
+
+                  return (
+                    <div className={marcar(clave, "project-typed")} key={clave}>
+                      <FieldInput
+                        field={campo}
+                        value={borrador.valores[clave]}
+                        onChange={(valor) => escribirValor(clave, valor)}
+                      />
+                      <span className="project-origin">{origen}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="project-add-value">
+              <select value={claveNueva} onChange={(evento) => agregarClave(evento.target.value)}>
+                <option value="">Agregar un dato…</option>
+                {porAgregar.map(([clave, campo]) => (
+                  <option value={clave} key={clave}>
+                    {campo.name}
+                  </option>
+                ))}
+                {Object.keys(CLAVES_DE_FINANZAS)
+                  .filter((clave) => !claves.includes(clave))
+                  .map((clave) => (
+                    <option value={clave} key={clave}>
+                      {CLAVES_DE_FINANZAS[clave].name}
+                    </option>
+                  ))}
+              </select>
+            </div>
+          </section>
+        </div>
+
+        <section className="project-sec">
+          <h3>Solicitudes que contesta</h3>
+          {detalle.requests.length === 0 ? (
+            <p className="project-note">
+              Ninguna: este proyecto se capturó directo, no salió de una solicitud.
+            </p>
+          ) : (
+            <ul className="project-requests">
+              {detalle.requests.map((solicitud) => (
+                <li key={solicitud.id}>
+                  <span className="project-label">{solicitud.folio}</span>
+                  {solicitud.title}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
+
+      <footer className="project-foot">
+        {detalle.archivedAt !== null ? (
+          <p className="project-note">Archivado el {fechaCorta(detalle.archivedAt)}.</p>
+        ) : confirmandoArchivo ? (
+          <div className="project-action-row">
+            <span className="project-confirm">
+              Se quita de en medio. No dice nada del trabajo y se puede volver a ver en
+              «Archivados».
+            </span>
+            <button
+              className="project-btn"
+              type="button"
+              onClick={() => hacer(() => api.archiveProject(detalle.id))}
+              disabled={ocupado}
+            >
+              Archivar
+            </button>
+            <button
+              className="project-quiet"
+              type="button"
+              onClick={() => setConfirmandoArchivo(false)}
+            >
+              Dejarlo
+            </button>
+          </div>
+        ) : (
+          <button
+            className="project-quiet"
+            type="button"
+            onClick={() => setConfirmandoArchivo(true)}
             disabled={ocupado}
           >
-            {estatus.map((uno) => {
-              let sufijo = ` (${uno.areaName})`;
-              if (uno.isGlobal) {
-                sufijo = "";
-              }
-              return (
-                <option value={uno.id} key={uno.id}>
-                  {uno.label}
-                  {sufijo}
-                </option>
-              );
-            })}
-          </select>
-        </dd>
+            Archivar
+          </button>
+        )}
 
-        <dt>Con costo</dt>
-        <dd>{detalle.hasCost ? "Sí" : "No"}</dd>
-
-        <dt>Urgencia</dt>
-        <dd>{detalle.priority}</dd>
-
-        <dt>Entrega</dt>
-        <dd>{detalle.dueOn ?? "sin fecha"}</dd>
-
-        {bloqueDeCierre}
-      </dl>
-
-      <div className="project-detail-actions">
-        <button
-          type="button"
-          onClick={cerrarProyecto}
-          disabled={ocupado || detalle.closedAt !== null}
-        >
-          Cerrar el proyecto
-        </button>
-        <button
-          type="button"
-          onClick={archivarProyecto}
-          disabled={ocupado || detalle.archivedAt !== null}
-        >
-          Archivar
-        </button>
-      </div>
-      <p className="project-detail-help">
-        Cerrar se niega mientras alguna etapa siga activa o en espera. Archivar es otra cosa:
-        trabajo terminado contra quitado de en medio.
-      </p>
-
-      <h4 className="project-detail-subtitle">Etapas</h4>
-      <table className="project-stages">
-        <thead>
-          <tr>
-            <th>Etapa</th>
-            <th>Área</th>
-            <th>Intento</th>
-            <th>Estado</th>
-            <th>Vistos buenos</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {detalle.stages.map((etapa) => (
-            <FilaDeEtapa
-              etapa={etapa}
-              fieldValues={detalle.fieldValues}
-              ocupado={ocupado}
-              onTransicion={moverEtapa}
-              onBloquear={bloquearEtapa}
-              onFirmar={abrirFirma}
-              key={etapa.id}
-            />
-          ))}
-        </tbody>
-      </table>
-
-      <button type="button" onClick={abrirEtapa} disabled={ocupado}>
-        Agregar etapa
-      </button>
-
-      {formularioDeEtapa}
-      {formularioDeFirma}
-
-      <h4 className="project-detail-subtitle">Valores del proyecto</h4>
-      <p className="project-detail-help">
-        Lo que una etapa produce y otra lee sin recapturar (RF-FLW-06): el número de orden, el
-        folio del SIN, el pantone.
-      </p>
-      <ValoresDelProyecto
-        detalle={detalle}
-        ocupado={ocupado}
-        onGuardar={guardarValorExistente}
-        onQuitar={quitarValor}
-      />
-
-      <form className="project-detail-inline" onSubmit={guardarValorNuevo}>
-        <input
-          placeholder="numero_orden"
-          value={nuevoValor.key}
-          onChange={(evento) => setNuevoValor({ ...nuevoValor, key: evento.target.value })}
-          required
-        />
-        <input
-          placeholder="A-77"
-          value={nuevoValor.value}
-          onChange={(evento) => setNuevoValor({ ...nuevoValor, value: evento.target.value })}
-          required
-        />
-        <button type="submit" disabled={ocupado}>
-          Guardar valor
-        </button>
-      </form>
-
-      {panelDeFinanzas}
-
-      <h4 className="project-detail-subtitle">Solicitudes que contesta</h4>
-      <SolicitudesQueContesta requests={detalle.requests} />
+        <div className="project-foot-right">
+          {sucio ? (
+            <>
+              <span className="project-dirty">
+                {cambiados.length} {cambiados.length === 1 ? "cambio" : "cambios"} sin guardar
+              </span>
+              <button
+                className="project-btn"
+                type="button"
+                onClick={() => setBorrador(desdeDetalle(detalle))}
+                disabled={ocupado}
+              >
+                Descartar
+              </button>
+            </>
+          ) : null}
+          <button
+            className="project-btn is-primary"
+            type="button"
+            onClick={guardar}
+            disabled={ocupado || !sucio}
+          >
+            {ocupado ? "Guardando…" : "Guardar cambios"}
+          </button>
+        </div>
+      </footer>
     </section>
   );
 }

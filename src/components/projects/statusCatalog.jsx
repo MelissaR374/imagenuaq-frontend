@@ -11,7 +11,8 @@ import "./statusCatalog.css";
 
 const NUEVO_VACIO = { code: "", label: "", sortOrder: 0, isTerminal: false };
 
-function StatusCatalog({ areas }) {
+function StatusCatalog({ areas: areasDadas = null }) {
+  const [areas, setAreas] = useState(areasDadas ?? []);
   const [areaId, setAreaId] = useState("");
   const [estatus, setEstatus] = useState([]);
   const [verInactivos, setVerInactivos] = useState(false);
@@ -19,6 +20,28 @@ function StatusCatalog({ areas }) {
   const [error, setError] = useState(null);
   const [ocupado, setOcupado] = useState(false);
   const [version, setVersion] = useState(0);
+
+  useEffect(() => {
+    if (areasDadas !== null) {
+      return undefined;
+    }
+
+    let cancelado = false;
+
+    async function cargarAreas() {
+      try {
+        const respuesta = await api.listAreas();
+        if (!cancelado) setAreas(respuesta.areas);
+      } catch (fallo) {
+        if (!cancelado) setError(fallo.message);
+      }
+    }
+
+    cargarAreas();
+    return () => {
+      cancelado = true;
+    };
+  }, [areasDadas]);
 
   useEffect(() => {
     let cancelado = false;

@@ -1,307 +1,466 @@
-/* =========================================================
-   TABLERO DE PROYECTOS
-   Mismos tokens que el resto del sistema: Poppins, radios
-   5/6/9/10, una sola sombra, azul para la acción, ámbar para
-   lo que pide atención sin ser un error.
-
-   La llave va monoespaciada, que es cómo este sistema marca un
-   identificador (`inbox.css`, `roles.css`, `users.css`).
-
-   La tabla es ancha --- nueve columnas --- y no se apila en
-   pantallas angostas: se desplaza. Un proyecto se lee
-   comparándolo con el de arriba, y apilarlo pierde eso.
-   ========================================================= */
+/* El tablero de proyectos. Acomodo portado del prototipo «Lienzo»: pestañas por estado, una
+   tabla ligera, y el proyecto que se abre a pantalla completa. */
 
 .projects {
-  padding: 28px 32px 40px;
-  background: var(--background);
-  color: var(--text);
-  transition:
-    background-color 0.3s ease,
-    color 0.3s ease;
+  padding-bottom: 30px;
 }
 
 /* =========================================================
-   ENCABEZADO
-   ========================================================= */
+   PESTAÑAS POR ESTADO Y ALCANCE
+========================================================= */
 
-.projects-header {
+.projects-bar {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-end;
+  justify-content: space-between;
   gap: 12px;
-  margin-bottom: 18px;
+  flex-wrap: wrap;
+
+  margin-bottom: 10px;
+
+  border-bottom: 1px solid var(--border);
 }
 
-.projects-title {
-  margin: 0;
-  font-size: 24px;
-  font-weight: 700;
+.projects-tabs {
+  display: flex;
+  align-items: flex-end;
+  gap: 20px;
+
+  overflow-x: auto;
+}
+
+.projects-tab {
+  position: relative;
+
+  padding: 0 0 10px;
+
+  border: 0;
+
+  background: transparent;
+  color: var(--text-muted);
+
+  font: inherit;
+  font-size: var(--size-body);
+  font-weight: 500;
+
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.projects-tab:hover,
+.projects-tab.is-active {
   color: var(--text);
 }
 
-.projects-header-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-left: auto;
-}
-
-/* «Nuevo proyecto» es la acción de la pantalla; el catálogo es un ajuste, así que va en hueco. */
-.projects-header-actions > button {
-  height: 32px;
-  padding: 0 16px;
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  background: var(--surface);
-  color: var(--text-secondary);
-  font-family: inherit;
-  font-size: 11px;
+.projects-tab.is-active {
   font-weight: 600;
+}
+
+.projects-tab.is-active::after {
+  content: "";
+
+  position: absolute;
+  inset: auto 0 -1px 0;
+  height: 2px;
+
+  border-radius: 2px;
+
+  background: var(--accent-line);
+}
+
+.projects-tab-count {
+  margin-left: 3px;
+
+  font-size: var(--size-small);
+  font-weight: 400;
+}
+
+.projects-scope {
+  display: flex;
+
+  margin-bottom: 8px;
+
+  border: 1px solid var(--border);
+  border-radius: 999px;
+
+  overflow: hidden;
+}
+
+.projects-scope-btn {
+  padding: 4px 12px;
+
+  border: 0;
+
+  background: transparent;
+  color: var(--text-muted);
+
+  font: inherit;
+  font-size: var(--size-small);
+
+  white-space: nowrap;
   cursor: pointer;
-  transition:
-    background 0.15s ease,
-    border-color 0.15s ease,
-    color 0.15s ease,
-    transform 0.1s ease;
 }
 
-.projects-header-actions > button:hover {
-  border-color: #3b73b9;
-  color: #3270b5;
+.projects-scope-btn.is-on {
+  background: var(--accent-soft);
+  color: var(--text);
+
+  font-weight: 600;
 }
 
-.projects-header-actions > button:first-child {
-  min-width: 140px;
-  border-color: transparent;
-  background: #2864a8;
-  color: #ffffff;
-}
+.projects-rule {
+  margin: 0 0 12px;
 
-.projects-header-actions > button:first-child:hover {
-  border-color: transparent;
-  background: #205895;
-  color: #ffffff;
-}
+  color: var(--text-secondary);
 
-.projects-header-actions > button:active {
-  transform: translateY(1px);
+  font-size: var(--size-small);
 }
 
 /* =========================================================
-   AVISOS
-   ========================================================= */
+   BOTONES
+========================================================= */
 
-.projects-error {
-  max-width: 82ch;
-  margin: 0 0 16px;
-  padding: 10px 14px;
-  border: 1px solid rgba(217, 83, 79, 0.35);
+.projects-btn {
+  height: 32px;
+  padding: 0 12px;
+
+  border: 1px solid var(--border);
   border-radius: 6px;
-  background: rgba(217, 83, 79, 0.08);
-  font-size: 12px;
-  color: #b23c38;
+
+  background: var(--surface);
+  color: var(--text);
+
+  font: inherit;
+  font-size: var(--size-small);
+
+  cursor: pointer;
 }
 
-.projects-loading,
-.projects-empty {
-  margin: 12px 0;
-  font-size: 12px;
+.projects-btn:hover:not(:disabled) {
+  border-color: var(--accent-line);
+}
+
+.projects-btn:disabled {
   color: var(--text-muted);
+  cursor: default;
+}
+
+.projects-btn-primary {
+  margin-bottom: 8px;
+
+  border-color: var(--accent);
+
+  background: var(--accent);
+  color: #ffffff;
+
+  font-weight: 600;
+}
+
+.projects-btn-primary:hover:not(:disabled) {
+  border-color: var(--accent-hover);
+  background: var(--accent-hover);
 }
 
 /* =========================================================
    FILTROS
-   Son ocho, así que van en una tarjeta: agrupados se leen como
-   una sola herramienta y no como ocho controles sueltos sobre
-   el fondo.
-   ========================================================= */
+========================================================= */
 
 .projects-filters {
   display: flex;
+  align-items: center;
   flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 12px;
-  margin-bottom: 18px;
-  padding: 14px 16px;
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  background: var(--surface);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  gap: 8px;
+
+  margin-bottom: 12px;
 }
 
-.projects-filter {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  min-width: 0;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-
-.projects-filter > input,
-.projects-filter > select {
+.projects-filters select,
+.projects-search,
+.projects-field-value {
   height: 32px;
-  min-width: 150px;
-  padding: 0 10px;
+  padding: 0 8px;
+
   border: 1px solid var(--border);
-  border-radius: 5px;
-  background: var(--surface-secondary);
+  border-radius: 6px;
+
+  background: var(--field);
   color: var(--text);
-  font-family: inherit;
-  font-size: 11px;
+
+  font: inherit;
+  font-size: var(--size-small);
+}
+
+.projects-search {
+  display: flex;
+  align-items: center;
+
+  width: 220px;
+}
+
+.projects-search input {
+  flex: 1;
+  min-width: 0;
+
+  border: 0;
+
+  background: transparent;
+  color: var(--text);
+
+  font: inherit;
+  font-size: var(--size-small);
+
   outline: none;
-  box-sizing: border-box;
-  transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
 }
 
-.projects-filter > input::placeholder {
-  color: var(--text-muted);
-}
-
-.projects-filter > input:focus,
-.projects-filter > select:focus {
-  border-color: #3b73b9;
-  box-shadow: 0 0 0 2px rgba(59, 115, 185, 0.08);
-}
-
-/* Limpiar: el único botón suelto entre los filtros, así que se alinea con ellos. */
-.projects-filters > button {
+.projects-chip {
   height: 32px;
-  padding: 0 16px;
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  background: var(--surface);
+  padding: 0 12px;
+
+  border: 1px dashed var(--border);
+  border-radius: 999px;
+
+  background: transparent;
   color: var(--text-secondary);
-  font-family: inherit;
-  font-size: 11px;
-  font-weight: 600;
+
+  font: inherit;
+  font-size: var(--size-small);
+
   cursor: pointer;
-  transition:
-    border-color 0.15s ease,
-    color 0.15s ease;
 }
 
-.projects-filters > button:hover {
-  border-color: #3b73b9;
-  color: #3270b5;
+.projects-chip.is-on {
+  border-style: solid;
+  border-color: var(--accent-line);
+
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.projects-clear {
+  border: 0;
+
+  background: transparent;
+  color: var(--accent-line);
+
+  font: inherit;
+  font-size: var(--size-small);
+
+  text-decoration: underline;
+  text-underline-offset: 2px;
+
+  cursor: pointer;
 }
 
 /* =========================================================
    LA TABLA
-   ========================================================= */
+========================================================= */
+
+.projects-table-wrap {
+  overflow-x: auto;
+
+  border: 1px solid var(--border);
+  border-radius: 8px;
+
+  background: var(--surface);
+}
 
 .projects-table {
   width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  background: var(--surface);
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
-  transition:
-    background-color 0.3s ease,
-    border-color 0.3s ease;
+
+  border-collapse: collapse;
+
+  font-size: var(--size-body);
 }
 
-.projects-table > thead > tr > th {
-  height: 32px;
-  padding: 0 14px;
-  border-bottom: 1px solid var(--border-light);
+.projects-table th {
+  padding: 9px 12px;
+
+  border-bottom: 1px solid var(--border);
+
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: 0.6px;
   text-align: left;
-  font-size: 12px;
-  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-secondary);
   white-space: nowrap;
 }
 
-.projects-table > tbody > tr > td {
-  height: 44px;
-  padding: 0 14px;
+.projects-table td {
+  padding: 10px 12px;
+
   border-bottom: 1px solid var(--border-light);
-  font-size: 12px;
-  color: var(--text-secondary);
-  vertical-align: middle;
-}
 
-.projects-table > tbody > tr:last-child > td {
-  border-bottom: none;
-}
-
-.projects-table > tbody > tr:hover > td {
-  background: var(--surface-secondary);
-}
-
-/* El título es lo que se busca al recorrer el tablero. */
-.projects-table .projects-row > td:nth-child(2) {
-  font-weight: 600;
   color: var(--text);
+  vertical-align: top;
 }
 
-/* Las tres columnas de conteo --- urgencia, etapas abiertas, solicitudes --- son números que se
-   comparan en vertical, así que van centradas y tabulares para que no baile la coma. */
-.projects-table .projects-cell-center {
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-}
-
-/* Prefijado con la tabla para ganarle a `.projects-table > tbody > tr > td`, que fija el tamaño. */
-.projects-table .projects-key {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text);
-  white-space: nowrap;
-}
-
-/* La entrega, última columna de dato, no debe partirse en dos renglones. */
-.projects-table > tbody > tr > td:nth-child(8) {
-  white-space: nowrap;
-}
-
-/* «Abrir» es un enlace, no un botón: el botón de la pantalla es «Nuevo proyecto». */
-.projects-table > tbody > tr > td:last-child {
-  text-align: right;
-}
-
-.projects-table > tbody > tr > td > button {
-  padding: 0;
-  border: none;
-  background: transparent;
-  font-family: inherit;
-  font-size: 10px;
-  font-weight: 600;
-  color: #3270b5;
+.projects-row {
   cursor: pointer;
 }
 
-.projects-table > tbody > tr > td > button:hover {
-  text-decoration: underline;
+.projects-row:hover {
+  background: var(--surface-secondary);
 }
 
-/* =========================================================
-   PANTALLAS ANGOSTAS
-   ========================================================= */
+/* Sin etapas abiertas y sin cerrar: trabajo que nadie cerró. */
+.projects-row.is-stale td:first-child {
+  box-shadow: inset 3px 0 0 var(--warning);
+}
 
-@media (max-width: 960px) {
-  .projects {
-    padding: 20px 16px 32px;
-    overflow-x: auto;
-  }
+.projects-cell-main {
+  min-width: 220px;
+}
 
-  .projects-header-actions {
-    margin-left: 0;
-  }
+.projects-key {
+  display: block;
 
-  .projects-table {
-    min-width: 980px;
-  }
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.projects-row-title {
+  display: block;
+
+  font-weight: 600;
+}
+
+.projects-mine {
+  display: inline-block;
+
+  margin-top: 3px;
+
+  color: var(--accent-line);
+
+  font-size: var(--size-caps);
+  font-weight: 600;
+}
+
+.projects-stages {
+  margin: 0;
+  padding: 0;
+
+  list-style: none;
+}
+
+.projects-stage {
+  padding-left: 8px;
+
+  border-left: 2px solid var(--accent-line);
+
+  font-size: var(--size-small);
+}
+
+.projects-stage + .projects-stage {
+  margin-top: 5px;
+}
+
+.projects-stage.is-waiting {
+  border-left-color: var(--warning);
+}
+
+.projects-stage-area {
+  display: block;
+
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+.projects-stale {
+  color: var(--warning);
+
+  font-size: var(--size-small);
+  font-weight: 600;
+}
+
+.projects-none {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.projects-due {
+  white-space: nowrap;
+}
+
+.projects-due-note {
+  display: block;
+
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
+}
+
+.projects-due-note.is-late {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.projects-num {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.projects-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  margin: 0;
+  padding: 30px;
+
+  color: var(--text-muted);
+
+  font-size: var(--size-small);
+  text-align: center;
+}
+
+.projects-error {
+  margin: 0 0 12px;
+  padding: 9px 12px;
+
+  border-left: 3px solid var(--danger);
+  border-radius: 0 6px 6px 0;
+
+  background: var(--danger-soft);
+  color: var(--text);
+
+  font-size: var(--size-small);
+}
+
+.projects-expanded > td {
+  padding: 16px;
+
+  border-bottom: 1px solid var(--border);
+
+  background: var(--accent-soft);
+}
+
+.projects-pages {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.projects-range {
+  margin: 8px 2px 0;
+
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
+}
+
+.projects-page-actions {
+  display: flex;
+  gap: 8px;
 }

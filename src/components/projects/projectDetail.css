@@ -1,163 +1,868 @@
-/* Solo acomodo: el diseño lo revisa quien lleva el CSS. */
+/* El proyecto a pantalla completa, encima de la lista y de la barra lateral. Acomodo portado del
+   prototipo «Lienzo». */
 
-.project-detail {
-  margin-top: 1rem;
-  padding: 0.75rem;
-  border: 1px solid;
+.project-full {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+
+  display: flex;
+  flex-direction: column;
+
+  background: var(--background);
 }
 
-.project-detail-header {
+.project-loading {
+  margin: 0;
+  padding: 30px;
+
+  color: var(--text-muted);
+
+  font-size: var(--size-small);
+}
+
+/* =========================================================
+   LA BARRA
+========================================================= */
+
+.project-bar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
+  gap: 14px;
+  flex-shrink: 0;
+
+  padding: 12px 20px;
+
+  border-bottom: 1px solid var(--border);
+
+  background: var(--surface);
 }
 
-.project-detail-title,
-.project-detail-subtitle {
-  margin: 0 0 0.5rem;
+.project-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  width: 30px;
+  height: 30px;
+
+  border: 1px solid var(--border);
+  border-radius: 6px;
+
+  background: var(--surface-secondary);
+  color: var(--text-muted);
+
+  font: inherit;
+  font-size: 15px;
+
+  cursor: pointer;
 }
 
-.project-detail-subtitle {
-  margin-top: 1.25rem;
+.project-close:hover {
+  border-color: var(--accent-line);
+  color: var(--text);
 }
 
-.project-detail-facts {
+.project-bar-text {
+  min-width: 0;
+}
+
+.project-bar-eyebrow {
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.project-bar-text h2 {
+  margin: 2px 0 0;
+
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.project-bar-move {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  margin-left: auto;
+
+  color: var(--text-muted);
+
+  font-size: var(--size-small);
+  white-space: nowrap;
+}
+
+/* =========================================================
+   EL CUERPO
+========================================================= */
+
+.project-body {
+  flex: 1;
+
+  overflow-y: auto;
+
+  padding: 18px 20px 24px;
+}
+
+.project-sec {
+  padding: 14px 0 18px;
+
+  border-top: 1px solid var(--border-light);
+}
+
+.project-sec h3 {
+  margin: 0 0 12px;
+
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.project-sec h4,
+.project-stage h4 {
+  margin: 0 0 10px;
+
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.project-sec h5,
+.project-stage h5,
+.project-stage-form h5 {
+  margin: 14px 0 6px;
+
+  color: var(--text-secondary);
+
+  font-size: var(--size-small);
+  font-weight: 600;
+}
+
+.project-columns {
   display: grid;
-  grid-template-columns: 12rem 1fr;
-  gap: 0.35rem 1rem;
-  margin: 0.75rem 0;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 0 28px;
 }
 
-.project-detail-facts dt {
-  font-weight: bold;
+.project-note {
+  margin: 6px 0 0;
+
+  color: var(--text-secondary);
+
+  font-size: var(--size-small);
 }
 
-.project-detail-facts dd {
+.project-note.is-blocked {
+  color: var(--warning);
+  font-weight: 600;
+}
+
+.project-warn {
+  margin: 10px 0;
+  padding-left: 9px;
+
+  border-left: 3px solid var(--warning);
+
+  color: var(--text-secondary);
+
+  font-size: var(--size-small);
+}
+
+.project-error {
+  margin: 0 0 12px;
+  padding: 9px 12px;
+
+  border-left: 3px solid var(--danger);
+  border-radius: 0 6px 6px 0;
+
+  background: var(--danger-soft);
+  color: var(--text);
+
+  font-size: var(--size-small);
+}
+
+/* =========================================================
+   LOS DOS VOCABULARIOS DE ESTADO
+========================================================= */
+
+.project-how {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px 28px;
+
+  padding-bottom: 16px;
+}
+
+.project-how h3 {
+  margin: 0 0 6px;
+
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.project-how select {
+  height: 32px;
+  padding: 0 8px;
+
+  border: 1px solid var(--border);
+  border-radius: 6px;
+
+  background: var(--field);
+  color: var(--text);
+
+  font: inherit;
+  font-size: var(--size-body);
+  font-weight: 500;
+}
+
+.project-how-work {
+  margin: 0;
+
+  font-size: var(--size-body);
+  font-weight: 500;
+}
+
+.project-how .project-warn {
+  grid-column: 1 / -1;
+
   margin: 0;
 }
 
-.project-stages,
-.project-values {
-  width: 100%;
-  border-collapse: collapse;
-  margin-bottom: 0.5rem;
-}
+/* =========================================================
+   EL FLUJO VIVO
+========================================================= */
 
-.project-stages th,
-.project-stages td,
-.project-values th,
-.project-values td {
-  padding: 0.3rem;
-  text-align: left;
-  vertical-align: top;
-}
-
-.project-cell-center {
-  text-align: center;
-}
-
-.project-stage-actions {
+.project-flow {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
+  align-items: flex-start;
+
+  overflow-x: auto;
+
+  padding: 14px;
+
+  border: 1px solid var(--border);
+  border-radius: 8px;
+
+  background-color: var(--surface-secondary);
+  background-image: radial-gradient(var(--border) 1px, transparent 1px);
+  background-size: 9px 9px;
 }
 
-.project-stage-blocked,
-.project-approval {
-  margin: 0.15rem 0;
-  font-size: 0.9em;
-}
-
-.project-value-key {
-  font-family: monospace;
-}
-
-.project-value-input {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 0.25rem;
-}
-
-.project-detail-panel {
-  margin-top: 0.75rem;
-  padding: 0.75rem;
-  border: 1px solid;
-  max-width: 34rem;
-}
-
-.project-detail-field {
+.project-flow-phase {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  margin-bottom: 0.5rem;
+  gap: 8px;
+  flex: 0 0 190px;
 }
 
-.project-detail-actions,
-.project-detail-inline {
+.project-flow-phase-name {
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.project-flow-arrow {
+  position: relative;
+  align-self: stretch;
+  flex: 0 0 30px;
+}
+
+.project-flow-arrow::before {
+  content: "";
+
+  position: absolute;
+  top: 44px;
+  right: 6px;
+  left: 6px;
+
+  border-top: 1px solid var(--text-muted);
+}
+
+.project-flow-arrow::after {
+  content: "";
+
+  position: absolute;
+  top: 40px;
+  right: 6px;
+
+  border: 4px solid transparent;
+  border-right: 0;
+  border-left: 6px solid var(--text-muted);
+}
+
+.project-card {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+
+  padding: 8px 10px;
+
+  border: 1px solid var(--border);
+  border-top: 2px solid var(--border);
+  border-radius: 6px;
+
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 3px rgba(24, 43, 62, 0.04);
+
+  font: inherit;
+  text-align: left;
+
+  cursor: pointer;
+}
+
+.project-card.is-active {
+  border-top-color: var(--accent-line);
+}
+
+.project-card.is-waiting_external {
+  border-top-color: var(--warning);
+}
+
+.project-card.is-done {
+  border-top-color: var(--success);
+}
+
+.project-card.is-pending {
+  border-style: dashed;
+}
+
+.project-card.is-cancelled strong {
+  text-decoration: line-through;
+}
+
+.project-card.is-selected {
+  border-color: var(--accent-line);
+
+  background: var(--accent-soft);
+}
+
+.project-card.is-end {
+  cursor: default;
+}
+
+.project-card-area {
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.project-card strong {
+  font-size: var(--size-body);
+  line-height: 1.3;
+}
+
+.project-card-meta,
+.project-card-why {
+  color: var(--text-secondary);
+
+  font-size: var(--size-caps);
+}
+
+.project-card-why {
+  color: var(--warning);
+  font-weight: 600;
+}
+
+.project-card-outputs {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
+  gap: 4px;
+
+  margin-top: 2px;
 }
 
-.project-detail-error,
-.project-detail-help {
-  margin: 0.5rem 0;
+.project-owed {
+  padding: 1px 5px;
+
+  border: 1px solid var(--border);
+  border-radius: 999px;
+
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
 }
 
-.project-detail-help {
-  font-size: 0.9em;
+.project-owed.is-done {
+  border-color: var(--success);
+
+  color: var(--success);
+}
+
+.project-card-add {
+  padding: 14px 10px;
+
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+
+  background: transparent;
+  color: var(--accent-line);
+
+  font: inherit;
+  font-size: var(--size-small);
+
+  cursor: pointer;
+}
+
+.project-card-add:hover:not(:disabled) {
+  border-color: var(--accent-line);
+
+  background: var(--accent-soft);
+}
+
+/* =========================================================
+   LA ETAPA ELEGIDA
+========================================================= */
+
+.project-stage,
+.project-stage-form {
+  margin-top: 14px;
+  padding: 16px 18px;
+
+  border: 1px solid var(--accent-line);
+  border-radius: 8px;
+
+  background: var(--surface);
+}
+
+.project-stage-head h3 {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+
+  margin: 3px 0 0;
+
+  color: var(--text);
+
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.project-stage-place {
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.project-stage-state {
+  padding: 1px 7px;
+
+  border: 1px solid var(--border);
+  border-radius: 999px;
+
+  color: var(--text-secondary);
+
+  font-size: var(--size-caps);
+  font-weight: 600;
+}
+
+.project-stage-state.is-active {
+  border-color: var(--accent-line);
+  color: var(--accent-line);
+}
+
+.project-stage-state.is-waiting_external {
+  border-color: var(--warning);
+  color: var(--warning);
+}
+
+.project-stage-state.is-done {
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.project-stage-mine {
+  margin: 6px 0 0;
+
+  font-size: var(--size-body);
+  font-weight: 500;
+}
+
+.project-stage-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 18px 28px;
+
+  margin-top: 16px;
+  padding-top: 14px;
+
+  border-top: 1px solid var(--border-light);
+}
+
+.project-io {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  margin: 0;
+  padding: 0;
+
+  list-style: none;
+}
+
+.project-io li {
+  display: flex;
+  flex-direction: column;
+}
+
+.project-missing {
+  color: var(--text-muted);
+
+  font-size: var(--size-body);
+  font-style: italic;
+}
+
+.project-value {
+  font-size: var(--size-body);
+  font-weight: 500;
+}
+
+.project-action {
+  padding: 10px 0;
+
+  border-bottom: 1px solid var(--border-light);
+}
+
+.project-action-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+
+  margin-top: 10px;
+}
+
+.project-wait,
+.project-sign {
+  padding: 10px 12px;
+
+  border: 1px solid var(--border);
+  border-radius: 7px;
+
+  background: var(--surface-secondary);
+}
+
+.project-wait input,
+.project-sign textarea,
+.project-sign select {
+  width: 100%;
+  margin-top: 6px;
+  padding: 6px 8px;
+
+  border: 1px solid var(--border);
+  border-radius: 6px;
+
+  background: var(--field);
+  color: var(--text);
+
+  font: inherit;
+  font-size: var(--size-body);
+}
+
+.project-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.project-chip {
+  padding: 3px 10px;
+
+  border: 1px dashed var(--border);
+  border-radius: 999px;
+
+  background: transparent;
+  color: var(--text-secondary);
+
+  font: inherit;
+  font-size: var(--size-small);
+
+  cursor: pointer;
+}
+
+.project-chip.is-on {
+  border-style: solid;
+  border-color: var(--accent-line);
+
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.project-approvals {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  margin: 0;
+  padding: 0;
+
+  font-size: var(--size-small);
+
+  list-style: none;
+}
+
+.project-approvals li {
+  display: flex;
+  flex-direction: column;
+
+  padding-left: 9px;
+
+  border-left: 2px solid var(--border);
+}
+
+/* =========================================================
+   CAMPOS Y VALORES
+========================================================= */
+
+.project-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+}
+
+.project-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  min-width: 0;
+}
+
+.project-label {
+  color: var(--text-secondary);
+
+  font-size: var(--size-small);
+}
+
+.project-field input,
+.project-field select,
+.project-add-value select {
+  height: 32px;
+  padding: 0 8px;
+
+  border: 1px solid var(--border);
+  border-radius: 6px;
+
+  background: var(--field);
+  color: var(--text);
+
+  font: inherit;
+  font-size: var(--size-body);
+  font-weight: 500;
+}
+
+.project-field.is-changed input,
+.project-field.is-changed select,
+.project-check.is-changed,
+.project-typed.is-changed input,
+.project-typed.is-changed select,
+.project-typed.is-changed textarea {
+  border-color: var(--warning);
+}
+
+.project-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  align-self: end;
+
+  min-height: 34px;
+
+  color: var(--text-secondary);
+
+  font-size: var(--size-small);
+}
+
+.project-check.is-changed {
+  border: 1px solid var(--warning);
+  border-radius: 6px;
+
+  padding: 0 8px;
+}
+
+.project-origin {
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
+}
+
+.project-add-value {
+  margin-top: 12px;
 }
 
 .project-requests {
-  margin: 0.25rem 0;
-  padding-left: 1.25rem;
-}
-
-.project-stage-io {
-  margin: 0.15rem 0;
-  font-size: 0.85em;
-}
-
-.project-output-missing {
-  font-weight: bold;
-}
-
-.project-output-done {
-  opacity: 0.8;
-}
-
-.project-stage-io {
-  margin: 0.15rem 0;
-  font-size: 0.85em;
-}
-
-.project-output-missing {
-  font-weight: bold;
-}
-
-.project-output-done {
-  opacity: 0.8;
-}
-
-/* Los dos vocabularios de estado, uno al lado del otro (DATAMODEL.md §8.1) */
-.project-detail-how {
   display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  margin: 8px 0 16px;
-}
+  flex-direction: column;
+  gap: 8px;
 
-.project-detail-how-half {
-  flex: 1 1 240px;
-}
-
-.project-detail-how-title {
-  margin: 0 0 4px;
-}
-
-.project-detail-warning {
-  flex: 1 1 100%;
   margin: 0;
+  padding: 0;
+
+  font-size: var(--size-body);
+
+  list-style: none;
+}
+
+.project-requests li {
+  display: flex;
+  flex-direction: column;
+}
+
+/* =========================================================
+   BOTONES Y EL PIE
+========================================================= */
+
+.project-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+
+  height: 32px;
+  padding: 0 12px;
+
+  border: 1px solid var(--border);
+  border-radius: 6px;
+
+  background: var(--surface);
+  color: var(--text);
+
+  font: inherit;
+  font-size: var(--size-small);
+
+  cursor: pointer;
+}
+
+.project-btn:hover:not(:disabled) {
+  border-color: var(--accent-line);
+}
+
+.project-btn:disabled {
+  color: var(--text-muted);
+  cursor: default;
+}
+
+.project-btn.is-primary {
+  border-color: var(--accent);
+
+  background: var(--accent);
+  color: #ffffff;
+
+  font-weight: 600;
+}
+
+.project-btn.is-primary:hover:not(:disabled) {
+  border-color: var(--accent-hover);
+  background: var(--accent-hover);
+}
+
+.project-btn.is-primary:disabled {
+  border-color: var(--border);
+
+  background: var(--surface-secondary);
+  color: var(--text-muted);
+}
+
+.project-quiet {
+  padding: 2px 8px;
+
+  border: 1px solid transparent;
+  border-radius: 4px;
+
+  background: transparent;
+  color: var(--accent-line);
+
+  font: inherit;
+  font-size: var(--size-small);
+
+  cursor: pointer;
+}
+
+.project-quiet:hover:not(:disabled) {
+  background: var(--accent-soft);
+}
+
+.project-quiet:disabled {
+  color: var(--text-muted);
+  cursor: default;
+}
+
+.project-confirm {
+  color: var(--text-secondary);
+
+  font-size: var(--size-small);
+}
+
+.project-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+
+  padding: 12px 20px;
+
+  border-top: 1px solid var(--border);
+
+  background: var(--surface);
+}
+
+.project-foot .project-note {
+  margin: 0;
+}
+
+.project-foot-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+
+  margin-left: auto;
+}
+
+.project-dirty {
+  color: var(--warning);
+
+  font-size: var(--size-small);
+  font-weight: 600;
+}
+
+@media (max-width: 900px) {
+  .project-bar,
+  .project-foot {
+    padding: 12px 14px;
+  }
+
+  .project-body {
+    padding: 14px 14px 20px;
+  }
 }
