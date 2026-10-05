@@ -17,6 +17,7 @@
   --background: #f5f7fa;
   --surface: #ffffff;
   --surface-secondary: #f8fafc;
+  --field: #ffffff;
 
   --text: #26364d;
   --text-secondary: #68758a;
@@ -24,6 +25,25 @@
 
   --border: #e1e6ec;
   --border-light: #edf0f4;
+
+  /* Un solo azul de acción y uno de líneas y foco. */
+  --accent: #12559b;
+  --accent-hover: #0e4682;
+  --accent-line: #356fa8;
+  --accent-soft: #eaf1f9;
+
+  /* Semánticos: ámbar avisa, rojo es error, verde es terminado. */
+  --warning: #b45309;
+  --warning-soft: #fdf4e7;
+  --danger: #b42318;
+  --danger-soft: #fdf0ef;
+  --success: #15803d;
+  --success-soft: #eef7f0;
+
+  /* Piso legible de tamaños. */
+  --size-caps: 11px;
+  --size-small: 12px;
+  --size-body: 13px;
 
   background-color: var(--background);
   color: var(--text);
@@ -46,17 +66,31 @@
 
 .app-container.dark-mode {
   color-scheme: dark;
-  
-  --background: #111827;
-  --surface: #1f2937;
-  --surface-secondary: #182333;
+
+  /* Tres pasos: suelo, superficies y campos. */
+  --background: #18212e;
+  --surface: #253244;
+  --surface-secondary: #1f2937;
+  --field: #2c3a4e;
 
   --text: #f3f4f6;
-  --text-secondary: #c3ccd8;
-  --text-muted: #9ca8b8;
+  --text-secondary: #d0d8e2;
+  --text-muted: #aab6c5;
 
-  --border: #374151;
-  --border-light: #303b4b;
+  --border: #41506a;
+  --border-light: #35425a;
+
+  --accent: #3b82d6;
+  --accent-hover: #5295e4;
+  --accent-line: #5b8dc4;
+  --accent-soft: #223449;
+
+  --warning: #e0a35c;
+  --warning-soft: #352a1c;
+  --danger: #e8837a;
+  --danger-soft: #3a2422;
+  --success: #6cc38b;
+  --success-soft: #1d3326;
 
   /*SIDEBAR*/
   --sidebar-background: #0b1220;
@@ -96,9 +130,9 @@
 
 .main-header {
   display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
 
   margin-bottom: 24px;
   padding-bottom: 12px;
@@ -114,58 +148,26 @@
     border-color 0.3s ease;
 }
 
-/* Es un botón: abre "Mi perfil". */
-.main-user {
-  padding: 6px 10px;
-
-  border: none;
-  border-radius: 6px;
-
-  background: transparent;
-  color: var(--text);
-
-  font: inherit;
-  font-size: 14px;
-
-  cursor: pointer;
-
-  transition:
-    background-color 0.2s ease,
-    color 0.3s ease;
+.main-header-text {
+  min-width: 0;
 }
 
-.main-user:hover {
-  background-color: var(--surface);
+.main-title {
+  margin: 0;
+
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.3;
 }
 
-/* =========================================================
-   BOTÓN CERRAR SESIÓN
-========================================================= */
+.main-description {
+  margin: 4px 0 0;
+  max-width: 68ch;
 
-.main-logout {
-  padding: 7px 14px;
+  color: var(--text-secondary);
 
-  border: 1px solid #244a6d;
-  border-radius: 6px;
-
-  background: #244a6d;
-  color: #dce3eb;
-
-  font: inherit;
-  font-size: 13px;
-
-  cursor: pointer;
-
-  transition:
-    background-color 0.2s ease,
-    border-color 0.2s ease,
-    color 0.2s ease;
-}
-
-.main-logout:hover {
-  border-color: #e66a4c;
-  background-color: #e66a4c;
-  color: #ffffff;
+  font-size: var(--size-body);
+  line-height: 1.45;
 }
 
 /* =========================================================

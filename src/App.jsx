@@ -23,6 +23,30 @@ import * as api from "./api/client.js";
 import { MICROSOFT_PARAM } from "./config.js";
 import "./App.css";
 
+/**
+ * Lo que es cada vista, en una frase declarativa: el encabezado nombra la pantalla y la
+ * sitúa en el proceso, sin instrucciones ni controles.
+ */
+const DESCRIPCIONES = {
+  Notificaciones: "Lo que pasó en tus solicitudes, proyectos y etapas.",
+  "Mi perfil": "Tus datos de cuenta y tu foto.",
+  Empleados: "Las personas registradas y el rol de cada una.",
+  "Áreas y usuarios":
+    "El organigrama de la coordinación y quién está en cada área.",
+  "Roles y permisos": "Lo que puede hacer cada rol.",
+  "Formatos de solicitud":
+    "Los libros de Excel registrados y la conexión con Microsoft.",
+  "Esquemas de datos":
+    "Los formatos con que se capturan las solicitudes y sus versiones.",
+  "Configuración de formatos de solicitud":
+    "El mapeo de cada libro de Excel y la importación de sus filas.",
+  "Bandeja de solicitudes":
+    "Solicitudes recibidas que todavía no son proyecto.",
+  Proyectos: "Los proyectos y el avance de sus etapas.",
+  "Diseñador de flujos":
+    "Las plantillas de flujo: sus fases y las etapas de cada una.",
+};
+
 /** El menú usa nombres de rol en español y el servidor los manda en inglés. */
 const ROLES = {
   admin: "admin",
@@ -139,13 +163,12 @@ function App() {
 
       <main className="main-content">
         <header className="main-header">
-          <button
-            className="main-user"
-            type="button"
-            onClick={() => setPestana("Mi perfil")}
-          >
-            {usuario.fullName}
-          </button>
+          <div className="main-header-text">
+            <h1 className="main-title">{activa}</h1>
+            {DESCRIPCIONES[activa] ? (
+              <p className="main-description">{DESCRIPCIONES[activa]}</p>
+            ) : null}
+          </div>
 
           <div className="header-actions">
             <button
@@ -159,14 +182,6 @@ function App() {
               <span className="theme-icon">
                 {modoOscuro ? <MdDarkMode /> : <MdLightMode />}
               </span>
-            </button>
-
-            <button
-              className="main-logout"
-              type="button"
-              onClick={cerrarSesion}
-            >
-              Cerrar sesión
             </button>
           </div>
         </header>
@@ -198,9 +213,7 @@ function App() {
           <Projects usuario={usuario} />
         ) : activa === "Diseñador de flujos" && usuario.role === "admin" ? (
           <FlowDesigner />
-        ) : (
-          <h1>{activa}</h1>
-        )}
+        ) : null}
       </main>
     </div>
   );
