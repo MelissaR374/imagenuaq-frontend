@@ -1,12 +1,12 @@
-/* La lista de formatos de solicitud. Acomodo portado del prototipo «Lienzo»: pestañas por alta,
-   una tabla ligera y ningún botón por renglón. */
+/* The list of request formats. Layout ported from the "Lienzo" prototype: tabs by whether they
+   are active, a light table and no buttons per row. */
 
 .schemas {
   padding-bottom: 30px;
 }
 
 /* =========================================================
-   PESTAÑAS
+   TABS
 ========================================================= */
 
 .schemas-bar {
@@ -82,7 +82,7 @@
 }
 
 /* =========================================================
-   BOTONES Y BÚSQUEDA
+   BUTTONS AND SEARCH
 ========================================================= */
 
 .schemas-btn {
@@ -165,7 +165,7 @@
 }
 
 /* =========================================================
-   LA TABLA
+   THE TABLE
 ========================================================= */
 
 .schemas-table-wrap {
@@ -237,7 +237,7 @@
   font-weight: 600;
 }
 
-/* Las versiones importan al actualizar y al mirar atrás, no al elegir. */
+/* Versions matter when updating and when looking back, not when choosing. */
 .schemas-version-line {
   display: block;
 

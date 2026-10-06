@@ -1,88 +1,87 @@
-// Captura directa de una solicitud (RF-SOL-08): lo que llega por correo se registra aquí, para
-// que todo el trabajo entre por un solo canal. Se abre como el primer renglón de la bandeja, en
-// el lugar que va a ocupar la solicitud nueva.
+// Capturing a request by hand (RF-SOL-08): what arrives by mail is written down here, so every
+// piece of work enters through one channel. It opens as the inbox's first row, in the place the
+// new request is going to occupy.
 //
-// El formato va primero porque es lo que decide el resto del formulario: los campos se dibujan
-// del formato elegido, así que la pantalla no sabe nada de ellos. La conversión de valores la
-// hace el servidor según el tipo de cada campo, de modo que "1,000" y "15/03/2026" llegan bien
-// sin tocar nada aquí.
+// The format comes first because it decides the rest of the form: the fields are drawn from the
+// chosen format, so this screen knows nothing about them. The server converts the values by each
+// field's type, so "1,000" and "15/03/2026" arrive right without anything here touching them.
 import { useEffect, useState } from "react";
 
 import * as api from "../../api/client.js";
 import FieldInput from "../shared/fieldInput.jsx";
-import Ayuda from "../shared/ayuda.jsx";
+import Help from "../shared/help.jsx";
 import RequesterInput from "./requesterInput.jsx";
 import "./requestForm.css";
 
-const ORIGENES = [
+const SOURCES = [
   { value: "manual", label: "Captura directa" },
   { value: "email", label: "Correo" },
   { value: "form", label: "Formulario" },
 ];
 
 function RequestForm({ areas, onCreada, onCancelar }) {
-  const [formatos, setFormatos] = useState([]);
-  const [formatoId, setFormatoId] = useState("");
-  const [cabecera, setCabecera] = useState({
+  const [formats, setFormatos] = useState([]);
+  const [formatId, setFormatoId] = useState("");
+  const [header, setCabecera] = useState({
     title: "",
     requester: "",
     areaId: "",
     priority: 0,
     source: "manual",
   });
-  const [valores, setValores] = useState({});
+  const [values, setValores] = useState({});
   const [error, setError] = useState(null);
-  const [guardando, setGuardando] = useState(false);
+  const [saving, setGuardando] = useState(false);
 
   useEffect(() => {
-    let cancelado = false;
+    let cancelled = false;
 
-    async function cargar() {
+    async function load() {
       try {
         const { schemas } = await api.listSchemas();
-        if (cancelado) return;
-        setFormatos(schemas.filter((formato) => formato.isActive && formato.fields !== null));
-      } catch (fallo) {
-        if (!cancelado) setError(fallo.message);
+        if (cancelled) return;
+        setFormatos(schemas.filter((format) => format.isActive && format.fields !== null));
+      } catch (failure) {
+        if (!cancelled) setError(failure.message);
       }
     }
 
-    cargar();
+    load();
     return () => {
-      cancelado = true;
+      cancelled = true;
     };
   }, []);
 
-  const formato = formatos.find((uno) => String(uno.id) === String(formatoId)) ?? null;
-  const campos = formato
-    ? [...formato.fields.deliverables, ...formato.fields.information]
+  const format = formats.find((one) => String(one.id) === String(formatId)) ?? null;
+  const fields = format
+    ? [...format.fields.deliverables, ...format.fields.information]
     : [];
 
-  async function guardar(evento) {
-    evento.preventDefault();
+  async function save(event) {
+    event.preventDefault();
     setGuardando(true);
     setError(null);
 
     try {
       const { request } = await api.createRequest({
-        schemaId: Number(formatoId),
-        title: cabecera.title,
-        requester: cabecera.requester || undefined,
-        areaId: cabecera.areaId === "" ? undefined : Number(cabecera.areaId),
-        priority: Number(cabecera.priority),
-        source: cabecera.source,
-        data: valores,
+        schemaId: Number(formatId),
+        title: header.title,
+        requester: header.requester || undefined,
+        areaId: header.areaId === "" ? undefined : Number(header.areaId),
+        priority: Number(header.priority),
+        source: header.source,
+        data: values,
       });
       onCreada(request);
-    } catch (fallo) {
-      setError(fallo.message);
+    } catch (failure) {
+      setError(failure.message);
     } finally {
       setGuardando(false);
     }
   }
 
   return (
-    <form className="request-form" onSubmit={guardar}>
+    <form className="request-form" onSubmit={save}>
       <header className="request-form-head">
         <span className="request-form-eyebrow">Nueva solicitud</span>
         <button
@@ -99,20 +98,20 @@ function RequestForm({ areas, onCreada, onCancelar }) {
         <label className="request-form-field">
           <span className="request-form-label">
             Formato
-            <Ayuda texto="Decide qué campos pide esta solicitud. Se captura con la versión publicada hoy y se seguirá leyendo con ella." />
+            <Help text="Decide qué campos pide esta solicitud. Se captura con la versión publicada hoy y se seguirá leyendo con ella." />
           </span>
           <select
-            value={formatoId}
-            onChange={(evento) => {
-              setFormatoId(evento.target.value);
+            value={formatId}
+            onChange={(event) => {
+              setFormatoId(event.target.value);
               setValores({});
             }}
             required
           >
             <option value="">Elige un formato</option>
-            {formatos.map((uno) => (
-              <option value={uno.id} key={uno.id}>
-                {uno.name} (v{uno.version})
+            {formats.map((one) => (
+              <option value={one.id} key={one.id}>
+                {one.name} (v{one.version})
               </option>
             ))}
           </select>
@@ -121,8 +120,8 @@ function RequestForm({ areas, onCreada, onCancelar }) {
         <label className="request-form-field">
           <span className="request-form-label">Título</span>
           <input
-            value={cabecera.title}
-            onChange={(evento) => setCabecera({ ...cabecera, title: evento.target.value })}
+            value={header.title}
+            onChange={(event) => setCabecera({ ...header, title: event.target.value })}
             placeholder="Ej: Papelería institucional de la facultad"
             required
           />
@@ -132,19 +131,19 @@ function RequestForm({ areas, onCreada, onCancelar }) {
           <span className="request-form-label">Entidad solicitante</span>
           <RequesterInput
             id="solicitante-nuevo"
-            value={cabecera.requester}
-            onChange={(requester) => setCabecera({ ...cabecera, requester })}
+            value={header.requester}
+            onChange={(requester) => setCabecera({ ...header, requester })}
           />
         </div>
 
         <label className="request-form-field">
           <span className="request-form-label">
             Área asignada
-            <Ayuda texto="El área que atiende la solicitud mientras no tiene flujo. Con flujo, la reciben las áreas de su primera fase." />
+            <Help text="El área que atiende la solicitud mientras no tiene flujo. Con flujo, la reciben las áreas de su primera fase." />
           </span>
           <select
-            value={cabecera.areaId}
-            onChange={(evento) => setCabecera({ ...cabecera, areaId: evento.target.value })}
+            value={header.areaId}
+            onChange={(event) => setCabecera({ ...header, areaId: event.target.value })}
           >
             <option value="">Sin asignar</option>
             {areas.map((area) => (
@@ -158,40 +157,40 @@ function RequestForm({ areas, onCreada, onCancelar }) {
         <label className="request-form-field">
           <span className="request-form-label">
             Urgencia
-            <Ayuda texto="Un número: mayor es más urgente. La imprenta y la producción priorizan por urgencia, nunca por orden de llegada (RF-FLW-08)." />
+            <Help text="Un número: mayor es más urgente. La imprenta y la producción priorizan por urgencia, nunca por orden de llegada (RF-FLW-08)." />
           </span>
           <input
             type="number"
-            value={cabecera.priority}
-            onChange={(evento) => setCabecera({ ...cabecera, priority: evento.target.value })}
+            value={header.priority}
+            onChange={(event) => setCabecera({ ...header, priority: event.target.value })}
           />
         </label>
 
         <label className="request-form-field">
           <span className="request-form-label">Cómo llegó</span>
           <select
-            value={cabecera.source}
-            onChange={(evento) => setCabecera({ ...cabecera, source: evento.target.value })}
+            value={header.source}
+            onChange={(event) => setCabecera({ ...header, source: event.target.value })}
           >
-            {ORIGENES.map((origen) => (
-              <option value={origen.value} key={origen.value}>
-                {origen.label}
+            {SOURCES.map((source) => (
+              <option value={source.value} key={source.value}>
+                {source.label}
               </option>
             ))}
           </select>
         </label>
       </div>
 
-      {formato ? (
+      {format ? (
         <section className="request-form-sec">
-          <h3>Lo que pide {formato.name}</h3>
+          <h3>Lo que pide {format.name}</h3>
           <div className="request-form-grid">
-            {campos.map((campo) => (
+            {fields.map((field) => (
               <FieldInput
-                key={campo.code}
-                field={campo}
-                value={valores[campo.code]}
-                onChange={(valor) => setValores({ ...valores, [campo.code]: valor })}
+                key={field.code}
+                field={field}
+                value={values[field.code]}
+                onChange={(value) => setValores({ ...values, [field.code]: value })}
               />
             ))}
           </div>
@@ -207,9 +206,9 @@ function RequestForm({ areas, onCreada, onCancelar }) {
         <button
           className="request-form-btn is-primary"
           type="submit"
-          disabled={guardando || formato === null}
+          disabled={saving || format === null}
         >
-          {guardando ? "Registrando…" : "Registrar solicitud"}
+          {saving ? "Registrando…" : "Registrar solicitud"}
         </button>
       </footer>
     </form>

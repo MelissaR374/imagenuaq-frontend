@@ -208,7 +208,7 @@ function App() {
         ) : activa === "Libros de Excel" && usuario.role === "admin" ? (
           <Spreadsheets onIr={setPestana} />
         ) : activa === "Importar de Excel" && usuario.role === "admin" ? (
-          <ImportConfig />
+          <ImportConfig onIr={setPestana} />
         ) : activa === "Bandeja de solicitudes" && usuario.role === "admin" ? (
           <Inbox />
         ) : activa === "Proyectos" && usuario.role === "admin" ? (

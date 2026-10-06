@@ -1,67 +1,70 @@
-// La bandeja de solicitudes (RF-SOL-04): ordenada y filtrable, para que nadie tenga que
-// revisar correo, Excel, Teams y WhatsApp para saber qué le toca. Los filtros son los que
-// RF-SOL-05 nombra: nombre, entidad, folio, responsable y estatus.
+// The request inbox (RF-SOL-04): ordered and filterable, so nobody has to read mail, Excel, Teams
+// and WhatsApp to find out what is theirs. The filters are the ones RF-SOL-05 names: name, entity,
+// folio, assignee and status.
 //
-// Las pestañas son los pasos del recorrido de DATAMODEL.md §8.2, no un filtro más: los pasos 2
-// y 3 los mueve una mano, así que la bandeja tiene que decir cuántas esperan esa mano. «Sin
-// flujo» trae lo que ninguna área tiene todavía (`routed=false` en el servidor) y su cuenta se
-// pone en ámbar mientras no sea cero; una solicitud importada se quedaría ahí para siempre sin
-// que eso se note en ninguna pantalla.
+// An imported request may come in without a value its format marks required, because the tracker
+// had the row half filled: it exists, it says here how many it owes, and what is refused is
+// turning it into a project until they are there.
 //
-// Cada cuenta es una llamada aparte con `limit=1`, que es de donde sale `total`: el servidor no
-// tiene un endpoint de cuentas por paso y repetir los filtros aquí los dejaría de coincidir.
+// The tabs are the steps of the walk in DATAMODEL.md §8.2, not one more filter: steps 2 and 3 are
+// moved by a hand, so the inbox has to say how many are waiting for that hand. "Sin flujo" holds
+// what no area has yet (`routed=false` on the server) and its count turns amber while it is not
+// zero; an imported request would otherwise sit there forever with no screen saying so.
 //
-// La solicitud se abre en su lugar, bajo su renglón y a todo lo ancho, porque es sobre todo un
-// formulario: los renglones de arriba y de abajo se quedan donde estaban. Se monta con `key` en
-// el id de la solicitud y nada más, para que nada de lo que pase adentro la vuelva a montar.
+// Each count is its own call with `limit=1`, which is where `total` comes from: the server has no
+// counts-per-step endpoint, and repeating the filters here would let the two stop agreeing.
 //
-// `firmaDeFiltros` es el JSON de los filtros que las cuatro pestañas comparten: los dos efectos
-// dependen de su contenido y no de un objeto nuevo en cada render.
+// A request opens in place, under its row and at full width, because it is mostly a form: the rows
+// above and below stay where they were. It is mounted with `key` on the request id and nothing
+// else, so nothing that happens inside remounts it.
+//
+// `filterSignature` is the JSON of the filters the four tabs share: both effects depend on its
+// contents rather than on a new object on every render.
 import { Fragment, useEffect, useState } from "react";
 
 import * as api from "../../api/client.js";
-import { fechaCorta } from "../shared/formato.js";
+import { shortDate } from "../shared/format.js";
 import RequestDetail from "./requestDetail.jsx";
 import RequestForm from "./requestForm.jsx";
 import "./inbox.css";
 
-const POR_PAGINA = 20;
+const PER_PAGE = 20;
 
 /**
- * Los pasos del recorrido, cada uno con la regla que lo define en una frase y los filtros con
- * que el servidor lo trae. `routed` es «alguna área ya la tiene»: con flujo o con área asignada.
+ * The steps of the walk, each with the rule that defines it in one sentence and the filters the
+ * server brings it with. `routed` is "some area already has it": by flow or by assigned area.
  */
-const PESTANAS = [
+const TABS = [
   {
-    clave: "sinFlujo",
-    etiqueta: "Sin flujo",
-    regla:
+    key: "sinFlujo",
+    label: "Sin flujo",
+    rule:
       "Ninguna área la tiene todavía: falta aplicarle una plantilla, diseñarle un flujo o asignarle un área.",
-    avisa: true,
-    filtros: { converted: "false", routed: "false" },
+    warns: true,
+    filters: { converted: "false", routed: "false" },
   },
   {
-    clave: "enAtencion",
-    etiqueta: "En atención",
-    regla:
+    key: "enAtencion",
+    label: "En atención",
+    rule:
       "Las áreas de su primera fase ya la tienen en su bandeja y mueven su estatus conforme avanza.",
-    filtros: { converted: "false", routed: "true" },
+    filters: { converted: "false", routed: "true" },
   },
   {
-    clave: "convertidas",
-    etiqueta: "Convertidas",
-    regla: "Ya son proyecto: desde aquí no se editan, salvo el solicitante.",
-    filtros: { converted: "true" },
+    key: "convertidas",
+    label: "Convertidas",
+    rule: "Ya son proyecto: desde aquí no se editan, salvo el solicitante.",
+    filters: { converted: "true" },
   },
   {
-    clave: "todas",
-    etiqueta: "Todas",
-    regla: "Todo lo que ha entrado, en cualquier paso.",
-    filtros: {},
+    key: "todas",
+    label: "Todas",
+    rule: "Todo lo que ha entrado, en cualquier paso.",
+    filters: {},
   },
 ];
 
-const FILTROS_VACIOS = {
+const NO_FILTERS = {
   q: "",
   areaId: "",
   statusId: "",
@@ -69,72 +72,83 @@ const FILTROS_VACIOS = {
   sort: "priority",
 };
 
-/** Cómo llegó, en palabras: el código es del servidor y no se le muestra a nadie. */
-const ORIGENES = {
+/** How it arrived, in words: the code is the server's and is shown to nobody. */
+const SOURCES = {
   manual: "Captura directa",
   email: "Correo",
   form: "Formulario",
   sheet: "Excel",
 };
 
-/** Las áreas que la tienen en su bandeja: las de la primera fase de su flujo, o la asignada. */
-function areasDe(solicitud) {
-  if (solicitud.hasFlow && solicitud.firstPhaseAreas.length > 0) {
-    return solicitud.firstPhaseAreas.join(", ");
+/** The areas that have it in their inbox: those of its flow's first phase, or the assigned one. */
+function areasOf(request) {
+  if (request.hasFlow && request.firstPhaseAreas.length > 0) {
+    return request.firstPhaseAreas.join(", ");
   }
-  return solicitud.areaName;
+  return request.areaName;
 }
 
-/** Si nadie la tiene: ni flujo ni área. Es lo que lleva la línea ámbar. */
-function sinRepartir(solicitud) {
-  return solicitud.projectId === null && !solicitud.hasFlow && solicitud.areaId === null;
+/** Whether nobody has it: no flow and no area. It is what carries the amber line. */
+function unrouted(request) {
+  return request.projectId === null && !request.hasFlow && request.areaId === null;
 }
 
-/** Un valor que puede faltar, dicho en palabras cuando falta. */
-function SinDato({ valor }) {
-  if (valor === null || valor === undefined || valor === "") {
+/** A value that may be missing, said in words when it is. */
+function NoValue({ value }) {
+  if (value === null || value === undefined || value === "") {
     return <span className="inbox-none">Sin dato</span>;
   }
-  return valor;
+  return value;
 }
 
-/** Un renglón de la bandeja. Todo el renglón abre la solicitud. */
-function FilaDeSolicitud({ solicitud, abierta, conProyecto, onAbrir }) {
-  let marcaDeDuplicado = null;
-  if (solicitud.possibleDuplicateOf !== null) {
-    marcaDeDuplicado = <span className="inbox-dup">Posible duplicado</span>;
+/** One row of the inbox. The whole row opens the request. */
+function RequestRow({ request, opened, withProject, onOpen }) {
+  let duplicateMark = null;
+  if (request.possibleDuplicateOf !== null) {
+    duplicateMark = <span className="inbox-dup">Posible duplicado</span>;
   }
 
-  let clase = "inbox-row";
-  if (abierta) {
-    clase += " is-open";
+  let missingMark = null;
+  if (request.missingRequired > 0) {
+    missingMark = (
+      <span className="inbox-dup">
+        Faltan {request.missingRequired}{" "}
+        {request.missingRequired === 1 ? "dato obligatorio" : "datos obligatorios"}
+      </span>
+    );
   }
-  if (sinRepartir(solicitud)) {
-    clase += " is-pending";
+
+  let className = "inbox-row";
+  if (opened) {
+    className += " is-open";
+  }
+  if (unrouted(request) || request.missingRequired > 0) {
+    className += " is-pending";
   }
 
   return (
-    <tr className={clase} onClick={() => onAbrir(solicitud)}>
+    <tr className={className} onClick={() => onOpen(request)}>
       <td className="inbox-cell-main">
-        <span className="inbox-folio">{solicitud.folio}</span>
-        <span className="inbox-row-title">{solicitud.title}</span>
-        {marcaDeDuplicado}
+        <span className="inbox-folio">{request.folio}</span>
+        <span className="inbox-row-title">{request.title}</span>
+        {missingMark}
+        {duplicateMark}
       </td>
       <td>
-        <SinDato valor={solicitud.requester} />
+        <NoValue value={request.requester} />
       </td>
       <td>
-        <SinDato valor={areasDe(solicitud)} />
+        <NoValue value={areasOf(request)} />
       </td>
-      <td>{solicitud.statusLabel}</td>
+      <td>{request.statusLabel}</td>
       <td className="inbox-arrived">
-        {ORIGENES[solicitud.source] ?? solicitud.source}
-        <span>{fechaCorta(solicitud.createdAt)}</span>
+        {SOURCES[request.source] ?? request.source}
+        <span>{shortDate(request.createdAt)}</span>
       </td>
-      <td className="inbox-num">{solicitud.priority}</td>
-      {conProyecto ? (
+      <td className="inbox-num">{request.priority}</td>
+      {withProject ? (
         <td>
-          <SinDato valor={solicitud.projectKey} />
+          <NoValue value={request.projectKey} />
         </td>
       ) : null}
     </tr>
@@ -142,232 +156,232 @@ function FilaDeSolicitud({ solicitud, abierta, conProyecto, onAbrir }) {
 }
 
 function Inbox() {
-  const [solicitudes, setSolicitudes] = useState([]);
+  const [requests, setSolicitudes] = useState([]);
   const [areas, setAreas] = useState([]);
-  const [estatus, setEstatus] = useState([]);
-  const [pestana, setPestana] = useState("sinFlujo");
-  const [cuentas, setCuentas] = useState({});
-  const [filtros, setFiltros] = useState(FILTROS_VACIOS);
-  const [pagina, setPagina] = useState(0);
+  const [statuses, setEstatus] = useState([]);
+  const [tab, setPestana] = useState("sinFlujo");
+  const [counts, setCuentas] = useState({});
+  const [filters, setFiltros] = useState(NO_FILTERS);
+  const [page, setPagina] = useState(0);
   const [total, setTotal] = useState(0);
-  const [cargando, setCargando] = useState(true);
+  const [loading, setCargando] = useState(true);
   const [error, setError] = useState(null);
-  const [abierta, setAbierta] = useState(null);
-  const [capturando, setCapturando] = useState(false);
+  const [opened, setAbierta] = useState(null);
+  const [capturing, setCapturando] = useState(false);
 
   const [version, setVersion] = useState(0);
 
-  const activa = PESTANAS.find((una) => una.clave === pestana) ?? PESTANAS[0];
+  const activeTab = TABS.find((one) => one.key === tab) ?? TABS[0];
 
-  const firmaDeFiltros = JSON.stringify({
-    q: filtros.q,
-    areaId: filtros.areaId,
-    statusId: filtros.statusId,
-    duplicates: filtros.duplicates,
+  const filterSignature = JSON.stringify({
+    q: filters.q,
+    areaId: filters.areaId,
+    statusId: filters.statusId,
+    duplicates: filters.duplicates,
   });
 
   useEffect(() => {
-    let cancelado = false;
+    let cancelled = false;
 
-    async function cargarCatalogos() {
+    async function loadCatalogs() {
       try {
-        const [respuestaAreas, respuestaEstatus] = await Promise.all([
+        const [areasResponse, statusesResponse] = await Promise.all([
           api.listAreas(),
           api.listStatuses(),
         ]);
-        if (cancelado) {
+        if (cancelled) {
           return;
         }
-        setAreas(respuestaAreas.areas);
-        setEstatus(respuestaEstatus.statuses);
-      } catch (fallo) {
-        if (!cancelado) {
-          setError(fallo.message);
+        setAreas(areasResponse.areas);
+        setEstatus(statusesResponse.statuses);
+      } catch (failure) {
+        if (!cancelled) {
+          setError(failure.message);
         }
       }
     }
 
-    cargarCatalogos();
+    loadCatalogs();
     return () => {
-      cancelado = true;
+      cancelled = true;
     };
   }, []);
 
   useEffect(() => {
-    let cancelado = false;
+    let cancelled = false;
 
-    async function cargarSolicitudes() {
+    async function loadRequests() {
       setCargando(true);
       try {
-        const respuesta = await api.listRequests({
-          ...JSON.parse(firmaDeFiltros),
-          ...activa.filtros,
-          sort: filtros.sort,
-          limit: POR_PAGINA,
-          offset: pagina * POR_PAGINA,
+        const response = await api.listRequests({
+          ...JSON.parse(filterSignature),
+          ...activeTab.filters,
+          sort: filters.sort,
+          limit: PER_PAGE,
+          offset: page * PER_PAGE,
         });
-        if (!cancelado) {
-          setSolicitudes(respuesta.requests);
-          setTotal(respuesta.total);
+        if (!cancelled) {
+          setSolicitudes(response.requests);
+          setTotal(response.total);
         }
-      } catch (fallo) {
-        if (!cancelado) {
-          setError(fallo.message);
+      } catch (failure) {
+        if (!cancelled) {
+          setError(failure.message);
         }
       } finally {
-        if (!cancelado) {
+        if (!cancelled) {
           setCargando(false);
         }
       }
     }
 
-    cargarSolicitudes();
+    loadRequests();
     return () => {
-      cancelado = true;
+      cancelled = true;
     };
-  }, [firmaDeFiltros, filtros.sort, activa, version, pagina]);
+  }, [filterSignature, filters.sort, activeTab, version, page]);
 
   useEffect(() => {
-    let cancelado = false;
+    let cancelled = false;
 
-    async function cargarCuentas() {
-      const base = JSON.parse(firmaDeFiltros);
+    async function loadCounts() {
+      const base = JSON.parse(filterSignature);
       try {
-        const respuestas = await Promise.all(
-          PESTANAS.map((una) => api.listRequests({ ...base, ...una.filtros, limit: 1 })),
+        const responses = await Promise.all(
+          TABS.map((one) => api.listRequests({ ...base, ...one.filters, limit: 1 })),
         );
-        if (cancelado) {
+        if (cancelled) {
           return;
         }
-        const nuevas = {};
-        PESTANAS.forEach((una, indice) => {
-          nuevas[una.clave] = respuestas[indice].total;
+        const fresh = {};
+        TABS.forEach((one, index) => {
+          fresh[one.key] = responses[index].total;
         });
-        setCuentas(nuevas);
-      } catch (fallo) {
-        if (!cancelado) {
-          setError(fallo.message);
+        setCuentas(fresh);
+      } catch (failure) {
+        if (!cancelled) {
+          setError(failure.message);
         }
       }
     }
 
-    cargarCuentas();
+    loadCounts();
     return () => {
-      cancelado = true;
+      cancelled = true;
     };
-  }, [firmaDeFiltros, version]);
+  }, [filterSignature, version]);
 
   useEffect(() => {
-    if (abierta === null && !capturando) {
+    if (opened === null && !capturing) {
       return undefined;
     }
 
-    function alTeclear(evento) {
-      if (evento.key === "Escape") {
+    function onKeyDown(event) {
+      if (event.key === "Escape") {
         setAbierta(null);
         setCapturando(false);
       }
     }
 
-    window.addEventListener("keydown", alTeclear);
-    return () => window.removeEventListener("keydown", alTeclear);
-  }, [abierta, capturando]);
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [opened, capturing]);
 
-  function cambiarFiltro(clave, valor) {
-    setFiltros((actual) => ({ ...actual, [clave]: valor }));
+  function changeFilter(key, value) {
+    setFiltros((actual) => ({ ...actual, [key]: value }));
     setPagina(0);
   }
 
-  function cambiarPestana(clave) {
-    setPestana(clave);
+  function changeTab(key) {
+    setPestana(key);
     setPagina(0);
   }
 
-  function limpiarFiltros() {
-    setFiltros(FILTROS_VACIOS);
+  function clearFilters() {
+    setFiltros(NO_FILTERS);
     setPagina(0);
   }
 
-  function recargar() {
+  function reload() {
     setVersion((actual) => actual + 1);
   }
 
-  /** Abrir y cerrar con el mismo renglón: el que ya está abierto se dobla. */
-  function alternarAbierta(solicitud) {
+  /** Open and close with the same row: the one already open folds. */
+  function toggleOpen(request) {
     setCapturando(false);
-    setAbierta((actual) => (actual !== null && actual.id === solicitud.id ? null : solicitud));
+    setAbierta((actual) => (actual !== null && actual.id === request.id ? null : request));
   }
 
-  function abrirCaptura() {
+  function openCapture() {
     setAbierta(null);
     setCapturando(true);
   }
 
-  function terminarCaptura(solicitud) {
+  function finishCapture(request) {
     setCapturando(false);
-    recargar();
-    setAbierta(solicitud);
+    reload();
+    setAbierta(request);
   }
 
   /**
-   * Una solicitud abierta sigue su paso: al aplicarle un flujo o asignarle un área cambia de
-   * pestaña, y la pestaña se cambia con ella para que el formulario no desaparezca de abajo.
+   * An open request follows its step: applying a flow or assigning an area moves it to another
+   * tab, and the tab moves with it so the form does not vanish from under you.
    */
-  function seguirElPaso(detalle) {
-    recargar();
-    if (detalle === undefined || detalle === null) {
+  function followTheStep(detail) {
+    reload();
+    if (detail === undefined || detail === null) {
       return;
     }
 
-    let destino = "enAtencion";
-    if (detalle.projectId !== null && detalle.projectId !== undefined) {
-      destino = "convertidas";
-    } else if (!detalle.hasFlow && !detalle.flow && detalle.areaId === null) {
-      destino = "sinFlujo";
+    let target = "enAtencion";
+    if (detail.projectId !== null && detail.projectId !== undefined) {
+      target = "convertidas";
+    } else if (!detail.hasFlow && !detail.flow && detail.areaId === null) {
+      target = "sinFlujo";
     }
-    if (pestana !== "todas" && pestana !== destino) {
-      setPestana(destino);
+    if (tab !== "todas" && tab !== target) {
+      setPestana(target);
       setPagina(0);
     }
   }
 
-  function cerrar() {
+  function close() {
     setAbierta(null);
-    recargar();
+    reload();
   }
 
-  const filtrado =
-    filtros.q !== "" ||
-    filtros.areaId !== "" ||
-    filtros.statusId !== "" ||
-    filtros.duplicates !== "";
+  const filtered =
+    filters.q !== "" ||
+    filters.areaId !== "" ||
+    filters.statusId !== "" ||
+    filters.duplicates !== "";
 
-  const primera = total === 0 ? 0 : pagina * POR_PAGINA + 1;
-  const ultima = pagina * POR_PAGINA + solicitudes.length;
-  const conProyecto = pestana === "convertidas" || pestana === "todas";
-  const columnas = conProyecto ? 7 : 6;
+  const first = total === 0 ? 0 : page * PER_PAGE + 1;
+  const last = page * PER_PAGE + requests.length;
+  const withProject = tab === "convertidas" || tab === "todas";
+  const columns = withProject ? 7 : 6;
 
-  let paginacion = null;
-  if (total > POR_PAGINA) {
-    paginacion = (
+  let pagination = null;
+  if (total > PER_PAGE) {
+    pagination = (
       <div className="inbox-pages">
         <p className="inbox-range">
-          {primera}–{ultima} de {total}
+          {first}–{last} de {total}
         </p>
         <div className="inbox-page-actions">
           <button
             className="inbox-btn"
             type="button"
-            onClick={() => setPagina(pagina - 1)}
-            disabled={pagina === 0 || cargando}
+            onClick={() => setPagina(page - 1)}
+            disabled={page === 0 || loading}
           >
             Anteriores
           </button>
           <button
             className="inbox-btn"
             type="button"
-            onClick={() => setPagina(pagina + 1)}
-            disabled={ultima >= total || cargando}
+            onClick={() => setPagina(page + 1)}
+            disabled={last >= total || loading}
           >
             Siguientes
           </button>
@@ -376,16 +390,16 @@ function Inbox() {
     );
   }
 
-  let renglonVacio = null;
-  if (!cargando && solicitudes.length === 0 && !capturando) {
-    let texto = `Nada en «${activa.etiqueta}».`;
-    if (filtrado) {
-      texto = "Ninguna solicitud coincide con lo que está filtrado.";
+  let emptyRow = null;
+  if (!loading && requests.length === 0 && !capturing) {
+    let text = `Nada en «${activeTab.label}».`;
+    if (filtered) {
+      text = "Ninguna solicitud coincide con lo que está filtrado.";
     }
-    renglonVacio = (
+    emptyRow = (
       <tr>
-        <td colSpan={columnas}>
-          <p className="inbox-empty">{texto}</p>
+        <td colSpan={columns}>
+          <p className="inbox-empty">{text}</p>
         </td>
       </tr>
     );
@@ -397,53 +411,53 @@ function Inbox() {
 
       <div className="inbox-bar">
         <div className="inbox-tabs">
-          {PESTANAS.map((una) => {
-            const cuenta = cuentas[una.clave];
+          {TABS.map((one) => {
+            const count = counts[one.key];
 
-            let clase = "inbox-tab";
-            if (una.clave === pestana) {
-              clase += " is-active";
+            let className = "inbox-tab";
+            if (one.key === tab) {
+              className += " is-active";
             }
-            if (una.avisa && cuenta > 0) {
-              clase += " needs";
+            if (one.warns && count > 0) {
+              className += " needs";
             }
 
             return (
               <button
-                className={clase}
+                className={className}
                 type="button"
-                onClick={() => cambiarPestana(una.clave)}
-                key={una.clave}
+                onClick={() => changeTab(one.key)}
+                key={one.key}
               >
-                {una.etiqueta}
-                {cuenta === undefined ? null : <span className="inbox-tab-count">{cuenta}</span>}
+                {one.label}
+                {count === undefined ? null : <span className="inbox-tab-count">{count}</span>}
               </button>
             );
           })}
         </div>
 
-        <button className="inbox-btn inbox-btn-primary" type="button" onClick={abrirCaptura}>
-          Nueva solicitud
+        <button className="inbox-btn inbox-btn-primary" type="button" onClick={openCapture}>
+          Nueva request
         </button>
       </div>
 
-      <p className={activa.avisa && cuentas[activa.clave] > 0 ? "inbox-rule warn" : "inbox-rule"}>
-        {activa.regla}
+      <p className={activeTab.warns && counts[activeTab.key] > 0 ? "inbox-rule warn" : "inbox-rule"}>
+        {activeTab.rule}
       </p>
 
       <div className="inbox-filters">
         <div className="inbox-search">
           <input
-            value={filtros.q}
-            onChange={(evento) => cambiarFiltro("q", evento.target.value)}
+            value={filters.q}
+            onChange={(event) => changeFilter("q", event.target.value)}
             placeholder="Ej: folio, título o solicitante"
             aria-label="Buscar"
           />
         </div>
 
         <select
-          value={filtros.areaId}
-          onChange={(evento) => cambiarFiltro("areaId", evento.target.value)}
+          value={filters.areaId}
+          onChange={(event) => changeFilter("areaId", event.target.value)}
           aria-label="Área"
         >
           <option value="">Todas las áreas</option>
@@ -455,12 +469,12 @@ function Inbox() {
         </select>
 
         <select
-          value={filtros.statusId}
-          onChange={(evento) => cambiarFiltro("statusId", evento.target.value)}
+          value={filters.statusId}
+          onChange={(event) => changeFilter("statusId", event.target.value)}
           aria-label="Estatus"
         >
-          <option value="">Todos los estatus</option>
-          {estatus.map((uno) => (
+          <option value="">Todos los statuses</option>
+          {statuses.map((uno) => (
             <option value={uno.id} key={uno.id}>
               {uno.label}
             </option>
@@ -468,8 +482,8 @@ function Inbox() {
         </select>
 
         <select
-          value={filtros.sort}
-          onChange={(evento) => cambiarFiltro("sort", evento.target.value)}
+          value={filters.sort}
+          onChange={(event) => changeFilter("sort", event.target.value)}
           aria-label="Orden"
         >
           <option value="priority">Por urgencia</option>
@@ -477,16 +491,16 @@ function Inbox() {
         </select>
 
         <button
-          className={filtros.duplicates === "true" ? "inbox-chip is-on" : "inbox-chip"}
+          className={filters.duplicates === "true" ? "inbox-chip is-on" : "inbox-chip"}
           type="button"
-          onClick={() => cambiarFiltro("duplicates", filtros.duplicates === "true" ? "" : "true")}
+          onClick={() => changeFilter("duplicates", filters.duplicates === "true" ? "" : "true")}
         >
           Posibles duplicados
         </button>
 
-        {filtrado ? (
-          <button className="inbox-clear" type="button" onClick={limpiarFiltros}>
-            Quitar filtros
+        {filtered ? (
+          <button className="inbox-clear" type="button" onClick={clearFilters}>
+            Quitar filters
           </button>
         ) : null}
       </div>
@@ -501,42 +515,42 @@ function Inbox() {
               <th>Estatus</th>
               <th>Llegó</th>
               <th className="inbox-num">Urgencia</th>
-              {conProyecto ? <th>Proyecto</th> : null}
+              {withProject ? <th>Proyecto</th> : null}
             </tr>
           </thead>
           <tbody>
-            {capturando ? (
+            {capturing ? (
               <tr className="inbox-expanded is-new">
-                <td colSpan={columnas}>
+                <td colSpan={columns}>
                   <RequestForm
                     areas={areas}
-                    onCreada={terminarCaptura}
+                    onCreada={finishCapture}
                     onCancelar={() => setCapturando(false)}
                   />
                 </td>
               </tr>
             ) : null}
 
-            {solicitudes.map((solicitud) => {
-              const estaAbierta = abierta !== null && abierta.id === solicitud.id;
+            {requests.map((request) => {
+              const isOpen = opened !== null && opened.id === request.id;
 
               return (
-                <Fragment key={solicitud.id}>
-                  <FilaDeSolicitud
-                    solicitud={solicitud}
-                    abierta={estaAbierta}
-                    conProyecto={conProyecto}
-                    onAbrir={alternarAbierta}
+                <Fragment key={request.id}>
+                  <RequestRow
+                    request={request}
+                    opened={isOpen}
+                    withProject={withProject}
+                    onOpen={toggleOpen}
                   />
-                  {estaAbierta ? (
+                  {isOpen ? (
                     <tr className="inbox-expanded">
-                      <td colSpan={columnas}>
+                      <td colSpan={columns}>
                         <RequestDetail
-                          solicitud={abierta}
+                          request={opened}
                           areas={areas}
-                          onCerrar={cerrar}
-                          onCambio={seguirElPaso}
-                          key={abierta.id}
+                          onCerrar={close}
+                          onCambio={followTheStep}
+                          key={opened.id}
                         />
                       </td>
                     </tr>
@@ -545,12 +559,12 @@ function Inbox() {
               );
             })}
 
-            {renglonVacio}
+            {emptyRow}
           </tbody>
         </table>
       </div>
 
-      {paginacion}
+      {pagination}
     </section>
   );
 }

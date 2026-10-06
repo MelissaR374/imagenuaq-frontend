@@ -1,171 +1,251 @@
-// «Configuración de formatos de solicitud»: el mapeo de las columnas de un libro a un formato, y
-// la importación (RF-MIG-02).
+// Importing from Excel: what a book's columns mean and how its rows become requests (RF-MIG-02).
 //
-// Es la pestaña que el menú ya nombraba y que no tenía pantalla. La división entre las dos
-// pestañas es la que el propio menú describe: «Formatos de solicitud» da de alta la cuenta y el
-// libro —qué se lee y con qué permiso—, y aquí se decide qué significan sus columnas. Son dos
-// trabajos distintos, de dos momentos distintos: registrar pasa una vez, mapear se ajusta cada vez
-// que la hoja cambia.
+// Registering a book happens once and lives in "Libros de Excel"; routing the requests happens
+// afterwards and lives in the inbox. What is left here are the three steps that really belong to
+// this screen: the mapping, the test and the import.
 //
-// Se elige el libro primero porque el mapeo no existe sin uno: cada libro tiene los suyos.
-/** En qué va cada libro, en las mismas palabras y colores que usa la canalización. */
+// A book opens at full screen because the mapping is read against the book's columns, and with the
+// list above them the two did not fit.
 import { useEffect, useState } from "react";
+import { MdCheckCircle, MdErrorOutline, MdWarningAmber } from "react-icons/md";
 
 import * as api from "../../api/client.js";
-import { fechaCorta } from "../shared/formato.js";
-import ImportPipeline from "./importPipeline.jsx";
+import { shortDate } from "../shared/format.js";
+import ImportMapper from "./importMapper.jsx";
+import ImportRun from "./importRun.jsx";
 import "./importConfig.css";
 
-function estadoDelLibro(hoja) {
-  if (!hoja.mapped) {
-    return { texto: "Sin mapear", clase: "is-pendiente" };
+const STEPS = [
+  { key: "mapeo", label: "Mapeo" },
+  { key: "prueba", label: "Prueba" },
+  { key: "importacion", label: "Importación" },
+];
+
+/** Where a book stands, in one sentence. */
+function bookState(book) {
+  if (book.accountRevoked) {
+    return {
+      text: "No se puede leer: la cuenta está desconectada",
+      className: "is-bad",
+      Symbol: MdErrorOutline,
+    };
   }
-  if (hoja.lastImportedAt === null) {
-    return { texto: "Mapeado, sin importar", clase: "is-listo" };
+  if (!book.mapped) {
+    return { text: "Falta el mapeo", className: "is-pending", Symbol: MdWarningAmber };
   }
-  return { texto: `Importado el ${fechaCorta(hoja.lastImportedAt)}`, clase: "is-hecho" };
+  return { text: "Mapeado, listo para importar", className: "is-ready", Symbol: MdCheckCircle };
 }
 
-/**
- * Un libro en la lista para elegir. Lleva lo que hace falta para decidir si es éste: su nombre, la
- * hoja dentro del libro, la cuenta con la que se lee y en qué va.
- */
-function LibroElegible({ hoja, onElegir }) {
-  const estado = estadoDelLibro(hoja);
-
-  let accion = "Configurar el mapeo";
-  if (hoja.mapped) {
-    accion = "Ver y ajustar";
+/** When the last import ran and how it went. */
+function lastImport(book) {
+  if (book.lastImport === null) {
+    if (book.markedRows > 0) {
+      return `${book.markedRows} filas marcadas como ya atendidas`;
+    }
+    return "Nunca se ha importado";
   }
-
-  let cuenta = hoja.accountEmail;
-  if (hoja.accountRevoked) {
-    cuenta = `${hoja.accountEmail} — desconectada`;
-  }
-
-  return (
-    <li className="config-book">
-      <button type="button" className="config-book-button" onClick={() => onElegir(hoja)}>
-        <span className="config-book-main">
-          <span className="config-book-name">{hoja.name}</span>
-          <span className="config-book-meta">
-            <span className="spreadsheets-tag">{hoja.tableName ?? "primera hoja"}</span>
-            {cuenta}
-          </span>
-        </span>
-        <span className="config-book-side">
-          <span className={`config-book-state ${estado.clase}`}>{estado.texto}</span>
-          <span className="config-book-action">{accion}</span>
-        </span>
-      </button>
-    </li>
-  );
+  return `${shortDate(book.lastImport.finishedAt)} · ${book.lastImport.created} ${
+    book.lastImport.created === 1 ? "nueva" : "nuevas"
+  }`;
 }
 
-function ImportConfig() {
-  const [libros, setLibros] = useState([]);
-  const [elegido, setElegido] = useState(null);
-  const [cargando, setCargando] = useState(true);
+function ImportConfig({ onGo = null }) {
+  const [books, setLibros] = useState([]);
+  const [opened, setAbierto] = useState(null);
+  const [step, setPaso] = useState("mapeo");
+  const [loading, setCargando] = useState(true);
   const [error, setError] = useState(null);
-  const [recarga, setRecarga] = useState(0);
+  const [reloads, setRecarga] = useState(0);
+  const [dirty, setSucio] = useState(false);
+  const [leaving, setSaliendo] = useState(null);
 
   useEffect(() => {
-    let cancelado = false;
+    let cancelled = false;
 
-    async function cargar() {
+    async function load() {
       setCargando(true);
       try {
-        const respuesta = await api.listSpreadsheets();
-        if (!cancelado) {
-          setLibros(respuesta.sheets);
-        }
-      } catch (fallo) {
-        if (!cancelado) {
-          setError(fallo.message);
-        }
+        const response = await api.listSpreadsheets();
+        if (!cancelled) setLibros(response.sheets);
+      } catch (failure) {
+        if (!cancelled) setError(failure.message);
       } finally {
-        if (!cancelado) {
-          setCargando(false);
-        }
+        if (!cancelled) setCargando(false);
       }
     }
 
-    cargar();
+    load();
     return () => {
-      cancelado = true;
+      cancelled = true;
     };
-  }, [recarga]);
+  }, [reloads]);
 
-  function elegir(hoja) {
-    setError(null);
-    setElegido(hoja);
+  function reload() {
+    setRecarga((actual) => actual + 1);
   }
 
-  function volverALaLista() {
-    setElegido(null);
-    setRecarga(recarga + 1);
+  /** Salir del mapeo con cambios sin guardar pregunta antes, en lugar de tirarlos. */
+  function tryToGo(target) {
+    if (step === "mapeo" && dirty) {
+      setSaliendo(target);
+      return;
+    }
+    goTo(target);
   }
 
-  function recargar() {
-    setRecarga(recarga + 1);
+  function goTo(target) {
+    setSaliendo(null);
+    setSucio(false);
+    if (target === null) {
+      setAbierto(null);
+      reload();
+      return;
+    }
+    setPaso(target);
   }
 
-  if (cargando) {
-    return <p className="config-loading">Cargando...</p>;
+  if (loading) {
+    return <p className="imp-note">Cargando…</p>;
   }
 
-  if (elegido !== null) {
-    const vigente = libros.find((hoja) => hoja.id === elegido.id) ?? elegido;
+  if (opened !== null) {
+    const book = books.find((one) => one.id === opened.id) ?? opened;
+
     return (
-      <ImportPipeline
-        key={vigente.id}
-        sheet={vigente}
-        onCerrar={volverALaLista}
-        onCambio={recargar}
-      />
-    );
-  }
+      <section className="imp-full">
+        <header className="imp-bar">
+          <button
+            className="imp-close"
+            type="button"
+            onClick={() => tryToGo(null)}
+            aria-label="Volver a la lista"
+          >
+            ✕
+          </button>
 
-  let bloqueDeError = null;
-  if (error !== null) {
-    bloqueDeError = <p className="config-error">{error}</p>;
-  }
+          <div className="imp-bar-text">
+            <span className="imp-eyebrow">
+              {book.tableName === null ? "Hoja" : `Tabla · ${book.tableName}`}
+            </span>
+            <h2>{book.name}</h2>
+          </div>
 
-  let lista;
-  if (libros.length === 0) {
-    lista = (
-      <p className="config-empty">
-        No hay libros registrados todavía. Primero se da de alta el libro y la cuenta con la que se
-        lee, en «Formatos de solicitud»; aquí se decide qué significan sus columnas.
-      </p>
-    );
-  } else {
-    lista = (
-      <ul className="config-books">
-        {libros.map((hoja) => (
-          <LibroElegible hoja={hoja} onElegir={elegir} key={hoja.id} />
-        ))}
-      </ul>
+          <ol className="imp-steps">
+            {STEPS.map((one, index) => (
+              <li key={one.key}>
+                <button
+                  className={one.key === step ? "imp-step is-now" : "imp-step"}
+                  type="button"
+                  onClick={() => tryToGo(one.key)}
+                  disabled={one.key !== "mapeo" && !book.mapped}
+                >
+                  {index + 1}. {one.label}
+                </button>
+              </li>
+            ))}
+          </ol>
+        </header>
+
+        {leaving !== null ? (
+          <div className="imp-leaving">
+            <p>El mapeo tiene cambios sin guardar.</p>
+            <div className="imp-action-row">
+              <button className="imp-quiet" type="button" onClick={() => setSaliendo(null)}>
+                Quedarme en el mapeo
+              </button>
+              <button className="imp-btn" type="button" onClick={() => goTo(leaving)}>
+                Descartar los cambios
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        <div className="imp-body">
+          {step === "mapeo" ? (
+            <ImportMapper
+              book={book}
+              onDirty={setSucio}
+              onSaved={() => {
+                setSucio(false);
+                reload();
+              }}
+              onContinue={() => tryToGo("prueba")}
+            />
+          ) : (
+            <ImportRun book={book} step={step} onChanged={reload} onGo={onGo} />
+          )}
+        </div>
+      </section>
     );
   }
 
   return (
-    <section className="config">
-      <header className="config-header">
-        <h1 className="config-title">Configuración de formatos de solicitud</h1>
-        <p className="config-count">
-          {libros.length} libro{libros.length === 1 ? "" : "s"} registrado
-          {libros.length === 1 ? "" : "s"}
-        </p>
-      </header>
+    <section className="imp">
+      {error !== null ? <p className="imp-error">{error}</p> : null}
 
-      <p className="config-intro">
-        Aquí se dice a qué formato se parecen las filas de un libro de Excel y qué columna alimenta
-        cada campo, sin tocar código. Con eso, cada fila nueva se vuelve una solicitud con folio.
+      <p className="imp-count">
+        {books.length} {books.length === 1 ? "libro registrado" : "libros registrados"}
       </p>
 
-      {bloqueDeError}
-      {lista}
+      <div className="imp-table-wrap">
+        <table className="imp-table">
+          <thead>
+            <tr>
+              <th>Libro</th>
+              <th>Formato</th>
+              <th>En qué va</th>
+              <th>Última importación</th>
+            </tr>
+          </thead>
+          <tbody>
+            {books.map((book) => {
+              const state = bookState(book);
+              return (
+                <tr
+                  className={state.className === "is-bad" ? "imp-row is-stale" : "imp-row"}
+                  onClick={() => {
+                    setAbierto(book);
+                    setPaso(book.mapped ? "importacion" : "mapeo");
+                  }}
+                  key={book.id}
+                >
+                  <td className="imp-cell-main">
+                    <span className="imp-kind">
+                      {book.tableName === null ? "Hoja" : `Tabla · ${book.tableName}`}
+                    </span>
+                    <span className="imp-row-name">{book.name}</span>
+                  </td>
+                  <td>
+                    {book.mapped ? (
+                      `${book.schemaName} v${book.schemaVersion}`
+                    ) : (
+                      <span className="imp-off">Sin formato</span>
+                    )}
+                  </td>
+                  <td>
+                    <span className={`imp-state ${state.className}`}>
+                      <state.Symbol aria-hidden="true" />
+                      {state.text}
+                    </span>
+                  </td>
+                  <td>{lastImport(book)}</td>
+                </tr>
+              );
+            })}
+
+            {books.length === 0 ? (
+              <tr>
+                <td colSpan={4}>
+                  <p className="imp-empty">
+                    No hay libros registrados. Se dan de alta en «Libros de Excel», con la cuenta
+                    con la que se van a leer; aquí se decide qué significan sus columnas.
+                  </p>
+                </td>
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
+      </div>
     </section>
   );
 }

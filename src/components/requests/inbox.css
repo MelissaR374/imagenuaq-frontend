@@ -1,12 +1,12 @@
-/* Bandeja de solicitudes. Acomodo portado del prototipo «Lienzo»: pestañas por paso, una tabla
-   ligera y la solicitud abierta en su lugar, bajo su renglón. */
+/* The request inbox. Layout ported from the "Lienzo" prototype: tabs by step, a light table, and
+   the request opened in place under its row. */
 
 .inbox {
   padding-bottom: 30px;
 }
 
 /* =========================================================
-   PESTAÑAS POR PASO
+   TABS BY STEP
 ========================================================= */
 
 .inbox-bar {
@@ -93,7 +93,7 @@
 }
 
 /* =========================================================
-   BOTONES
+   BUTTONS
 ========================================================= */
 
 .inbox-btn {
@@ -138,7 +138,7 @@
 }
 
 /* =========================================================
-   FILTROS EN UN RENGLÓN
+   FILTERS IN ONE ROW
 ========================================================= */
 
 .inbox-filters {
@@ -228,7 +228,7 @@
 }
 
 /* =========================================================
-   LA TABLA
+   THE TABLE
 ========================================================= */
 
 .inbox-table-wrap {
@@ -288,7 +288,7 @@
   border-bottom-color: transparent;
 }
 
-/* La línea ámbar: lo que todavía no tiene flujo ni área. */
+/* The amber line: what has no flow and no area yet. */
 .inbox-row.is-pending td:first-child {
   box-shadow: inset 3px 0 0 var(--warning);
 }
@@ -390,7 +390,7 @@
 }
 
 /* =========================================================
-   EL RENGLÓN QUE SE ABRE
+   THE ROW THAT OPENS
 ========================================================= */
 
 .inbox-expanded > td {

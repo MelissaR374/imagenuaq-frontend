@@ -1,50 +1,50 @@
-// El tablero de proyectos (RF-PRY-02). Los más urgentes arriba: aquí no hay orden de llegada, la
-// urgencia la pone una persona (RF-FLW-08).
+// The project board (RF-PRY-02). The most urgent first: there is no order of arrival here, a
+// person sets the urgency (RF-FLW-08).
 //
-// Las pestañas son el estado del proyecto y no un filtro más, porque son excluyentes y cada una
-// tiene su propia regla. Al lado, «Mis proyectos» o «Todos»: por omisión solo lo que me toca, que
-// es un proyecto que yo creé o uno donde soy responsable de una etapa (`mine` en el servidor, que
-// además marca cada renglón). Las cuentas siguen ese interruptor, para que no digan una cosa y la
-// lista otra.
+// The tabs are the project's state and not one more filter, because they are exclusive and each
+// carries its own rule. Beside them, "Mis proyectos" or "Todos": by default only what is mine,
+// which is a project I created or one where I am responsible for a stage (`mine` on the server,
+// which also marks every row). The counts follow that switch, so they cannot say one thing while
+// the list says another.
 //
-// La columna «Dónde va» nombra las etapas abiertas en lugar de contarlas: «Diseño gráfico ·
-// Propuesta» es algo sobre lo que alguien puede actuar, un 2 no. Un proyecto sin etapas abiertas
-// cuyo estatus no dice que terminó es trabajo que nadie cerró, y lleva la línea ámbar.
+// The "Dónde va" column names the open stages instead of counting them: "Diseño gráfico ·
+// Propuesta" is something somebody can act on, a 2 is not. A project with no open stage whose
+// status does not say it is finished is work nobody closed, and it carries the amber line.
 //
-// El proyecto se abre a pantalla completa, encima de la lista y de la barra lateral: lleva un
-// proceso vivo con muchas partes y en su lugar, bajo el renglón, se interrumpía.
+// A project opens full screen, over the list and over the sidebar: it carries a live process with
+// many parts, and in place under its row it was cut short.
 import { useEffect, useState } from "react";
 
 import * as api from "../../api/client.js";
-import { fechaCorta } from "../shared/formato.js";
-import { vocabularioDeFormatos } from "../shared/vocabulario.js";
+import { shortDate } from "../shared/format.js";
+import { vocabularyOf } from "../shared/vocabulary.js";
 import ProjectDetail from "./projectDetail.jsx";
 import ProjectForm from "./projectForm.jsx";
 import "./projects.css";
 
-const POR_PAGINA = 20;
+const PER_PAGE = 20;
 
-/** Los estados de un proyecto, cada uno con la regla que lo define en una frase. */
-const PESTANAS = [
+/** A project's states, each with the rule that defines it in one sentence. */
+const TABS = [
   {
-    clave: "open",
-    etiqueta: "Abiertos",
-    regla: "Trabajo en curso: ni concluido ni quitado de en medio.",
+    key: "open",
+    label: "Abiertos",
+    rule: "Trabajo en curso: ni concluido ni quitado de en medio.",
   },
   {
-    clave: "closed",
-    etiqueta: "Cerrados",
-    regla: "Ya se concluyeron. Cerrar se niega mientras alguna etapa siga abierta.",
+    key: "closed",
+    label: "Cerrados",
+    rule: "Ya se concluyeron. Cerrar se niega mientras alguna etapa siga abierta.",
   },
   {
-    clave: "archived",
-    etiqueta: "Archivados",
-    regla: "Quitados de en medio. Archivar es otra cosa que concluir.",
+    key: "archived",
+    label: "Archivados",
+    rule: "Quitados de en medio. Archivar es otra cosa que concluir.",
   },
-  { clave: "all", etiqueta: "Todos", regla: "Todo lo que existe, en cualquier estado." },
+  { key: "all", label: "Todos", rule: "Todo lo que existe, en cualquier estado." },
 ];
 
-const FILTROS_VACIOS = {
+const NO_FILTERS = {
   q: "",
   areaId: "",
   statusId: "",
@@ -54,46 +54,46 @@ const FILTROS_VACIOS = {
   sort: "priority",
 };
 
-/** Los días entre hoy y una fecha, para decir «en 9 d» o «vencido hace 21 d». */
-function diasHasta(fecha) {
-  const dia = 24 * 60 * 60 * 1000;
-  const hoy = new Date();
-  hoy.setHours(0, 0, 0, 0);
-  return Math.round((new Date(fecha).setHours(0, 0, 0, 0) - hoy) / dia);
+/** The days between today and a date, to say "en 9 d" or "vencido hace 21 d". */
+function daysUntil(fecha) {
+  const day = 24 * 60 * 60 * 1000;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Math.round((new Date(fecha).setHours(0, 0, 0, 0) - today) / day);
 }
 
-/** La fecha de entrega con lo que falta o lo que ya se pasó. */
-function Entrega({ dueOn, cerrado }) {
+/** The due date with what is left of it, or how long ago it passed. */
+function DueDate({ dueOn, closed }) {
   if (dueOn === null || dueOn === undefined) {
     return <span className="projects-none">Sin fecha</span>;
   }
 
-  const dias = diasHasta(dueOn);
+  const days = daysUntil(dueOn);
 
-  let plazo = `en ${dias} d`;
-  let clase = "projects-due-note";
-  if (dias === 0) {
-    plazo = "hoy";
-  } else if (dias < 0) {
-    plazo = `vencido hace ${-dias} d`;
-    clase = "projects-due-note is-late";
+  let due = `en ${days} d`;
+  let className = "projects-due-note";
+  if (days === 0) {
+    due = "hoy";
+  } else if (days < 0) {
+    due = `vencido hace ${-days} d`;
+    className = "projects-due-note is-late";
   }
-  if (cerrado) {
-    plazo = "";
+  if (closed) {
+    due = "";
   }
 
   return (
     <>
-      {fechaCorta(dueOn)}
-      {plazo === "" ? null : <span className={clase}>{plazo}</span>}
+      {shortDate(dueOn)}
+      {due === "" ? null : <span className={className}>{due}</span>}
     </>
   );
 }
 
-/** Dónde va: cada etapa abierta por su área y su título, en ámbar la que espera a un tercero. */
-function DondeVa({ proyecto }) {
-  if (proyecto.openStages.length === 0) {
-    if (proyecto.closedAt !== null || proyecto.archivedAt !== null) {
+/** Where it is: every open stage by its area and title, amber when it waits on a third party. */
+function WhereItIs({ project }) {
+  if (project.openStages.length === 0) {
+    if (project.closedAt !== null || project.archivedAt !== null) {
       return <span className="projects-none">Nada abierto</span>;
     }
     return <span className="projects-stale">Sin etapas abiertas</span>;
@@ -101,258 +101,258 @@ function DondeVa({ proyecto }) {
 
   return (
     <ul className="projects-stages">
-      {proyecto.openStages.map((etapa) => (
+      {project.openStages.map((stage) => (
         <li
           className={
-            etapa.status === "waiting_external" ? "projects-stage is-waiting" : "projects-stage"
+            stage.status === "waiting_external" ? "projects-stage is-waiting" : "projects-stage"
           }
-          key={etapa.id}
+          key={stage.id}
         >
-          <span className="projects-stage-area">{etapa.areaName}</span>
-          {etapa.title}
-          {etapa.status === "waiting_external" ? " · en espera" : ""}
+          <span className="projects-stage-area">{stage.areaName}</span>
+          {stage.title}
+          {stage.status === "waiting_external" ? " · en espera" : ""}
         </li>
       ))}
     </ul>
   );
 }
 
-function FilaDeProyecto({ proyecto, onAbrir }) {
-  let miParte = null;
-  if (proyecto.mineResponsible) {
-    miParte = <span className="projects-mine">Eres responsable</span>;
-  } else if (proyecto.mineCreated) {
-    miParte = <span className="projects-mine">Lo creaste</span>;
+function ProjectRow({ project, onOpen }) {
+  let myPart = null;
+  if (project.mineResponsible) {
+    myPart = <span className="projects-mine">Eres responsable</span>;
+  } else if (project.mineCreated) {
+    myPart = <span className="projects-mine">Lo creaste</span>;
   }
 
-  const sinCerrar =
-    proyecto.openStages.length === 0 &&
-    proyecto.closedAt === null &&
-    proyecto.archivedAt === null;
+  const unclosed =
+    project.openStages.length === 0 &&
+    project.closedAt === null &&
+    project.archivedAt === null;
 
   return (
     <tr
-      className={sinCerrar ? "projects-row is-stale" : "projects-row"}
-      onClick={() => onAbrir(proyecto)}
+      className={unclosed ? "projects-row is-stale" : "projects-row"}
+      onClick={() => onOpen(project)}
     >
       <td className="projects-cell-main">
-        <span className="projects-key">{proyecto.key}</span>
-        <span className="projects-row-title">{proyecto.title}</span>
-        {miParte}
+        <span className="projects-key">{project.key}</span>
+        <span className="projects-row-title">{project.title}</span>
+        {myPart}
       </td>
       <td>
-        {proyecto.requester === null || proyecto.requester === "" ? (
+        {project.requester === null || project.requester === "" ? (
           <span className="projects-none">Sin dato</span>
         ) : (
-          proyecto.requester
+          project.requester
         )}
       </td>
       <td>
-        <DondeVa proyecto={proyecto} />
+        <WhereItIs project={project} />
       </td>
-      <td>{proyecto.statusLabel}</td>
+      <td>{project.statusLabel}</td>
       <td className="projects-due">
-        <Entrega
-          dueOn={proyecto.dueOn}
-          cerrado={proyecto.closedAt !== null || proyecto.archivedAt !== null}
+        <DueDate
+          dueOn={project.dueOn}
+          closed={project.closedAt !== null || project.archivedAt !== null}
         />
       </td>
-      <td className="projects-num">{proyecto.priority}</td>
+      <td className="projects-num">{project.priority}</td>
     </tr>
   );
 }
 
-function Projects({ usuario }) {
-  const [proyectos, setProyectos] = useState([]);
+function Projects({ user }) {
+  const [projects, setProyectos] = useState([]);
   const [areas, setAreas] = useState([]);
-  const [estatus, setEstatus] = useState([]);
-  const [vocabulario, setVocabulario] = useState(new Map());
-  const [pestana, setPestana] = useState("open");
-  const [soloMios, setSoloMios] = useState(true);
-  const [cuentas, setCuentas] = useState({});
-  const [filtros, setFiltros] = useState(FILTROS_VACIOS);
-  const [pagina, setPagina] = useState(0);
+  const [statuses, setEstatus] = useState([]);
+  const [vocabulary, setVocabulario] = useState(new Map());
+  const [tab, setPestana] = useState("open");
+  const [onlyMine, setSoloMios] = useState(true);
+  const [counts, setCuentas] = useState({});
+  const [filters, setFiltros] = useState(NO_FILTERS);
+  const [page, setPagina] = useState(0);
   const [total, setTotal] = useState(0);
-  const [cargando, setCargando] = useState(true);
+  const [loading, setCargando] = useState(true);
   const [error, setError] = useState(null);
-  const [abierto, setAbierto] = useState(null);
-  const [capturando, setCapturando] = useState(false);
+  const [opened, setAbierto] = useState(null);
+  const [capturing, setCapturando] = useState(false);
   const [version, setVersion] = useState(0);
 
-  const activa = PESTANAS.find((una) => una.clave === pestana) ?? PESTANAS[0];
+  const activeTab = TABS.find((one) => one.key === tab) ?? TABS[0];
 
-  const firmaDeFiltros = JSON.stringify({
-    q: filtros.q,
-    areaId: filtros.areaId,
-    statusId: filtros.statusId,
-    hasCost: filtros.hasCost,
-    fieldKey: filtros.fieldKey,
-    fieldValue: filtros.fieldKey === "" ? "" : filtros.fieldValue,
-    mine: soloMios ? "true" : "",
+  const filterSignature = JSON.stringify({
+    q: filters.q,
+    areaId: filters.areaId,
+    statusId: filters.statusId,
+    hasCost: filters.hasCost,
+    fieldKey: filters.fieldKey,
+    fieldValue: filters.fieldKey === "" ? "" : filters.fieldValue,
+    mine: onlyMine ? "true" : "",
   });
 
   useEffect(() => {
-    let cancelado = false;
+    let cancelled = false;
 
-    async function cargarCatalogos() {
+    async function loadCatalogs() {
       try {
         const [respuestaAreas, respuestaEstatus, respuestaFormatos] = await Promise.all([
           api.listAreas(),
           api.listStatuses(),
           api.listSchemas(),
         ]);
-        if (cancelado) {
+        if (cancelled) {
           return;
         }
         setAreas(respuestaAreas.areas);
         setEstatus(respuestaEstatus.statuses);
-        setVocabulario(vocabularioDeFormatos(respuestaFormatos.schemas));
-      } catch (fallo) {
-        if (!cancelado) {
-          setError(fallo.message);
+        setVocabulario(vocabularyOf(respuestaFormatos.schemas));
+      } catch (failure) {
+        if (!cancelled) {
+          setError(failure.message);
         }
       }
     }
 
-    cargarCatalogos();
+    loadCatalogs();
     return () => {
-      cancelado = true;
+      cancelled = true;
     };
   }, []);
 
   useEffect(() => {
-    let cancelado = false;
+    let cancelled = false;
 
-    async function cargarProyectos() {
+    async function loadProjects() {
       setCargando(true);
       try {
-        const respuesta = await api.listProjects({
-          ...JSON.parse(firmaDeFiltros),
-          state: pestana,
-          sort: filtros.sort,
-          limit: POR_PAGINA,
-          offset: pagina * POR_PAGINA,
+        const response = await api.listProjects({
+          ...JSON.parse(filterSignature),
+          state: tab,
+          sort: filters.sort,
+          limit: PER_PAGE,
+          offset: page * PER_PAGE,
         });
-        if (!cancelado) {
-          setProyectos(respuesta.projects);
-          setTotal(respuesta.total);
+        if (!cancelled) {
+          setProyectos(response.projects);
+          setTotal(response.total);
         }
-      } catch (fallo) {
-        if (!cancelado) {
-          setError(fallo.message);
+      } catch (failure) {
+        if (!cancelled) {
+          setError(failure.message);
         }
       } finally {
-        if (!cancelado) {
+        if (!cancelled) {
           setCargando(false);
         }
       }
     }
 
-    cargarProyectos();
+    loadProjects();
     return () => {
-      cancelado = true;
+      cancelled = true;
     };
-  }, [firmaDeFiltros, filtros.sort, pestana, version, pagina]);
+  }, [filterSignature, filters.sort, tab, version, page]);
 
   useEffect(() => {
-    let cancelado = false;
+    let cancelled = false;
 
-    async function cargarCuentas() {
-      const base = JSON.parse(firmaDeFiltros);
+    async function loadCounts() {
+      const base = JSON.parse(filterSignature);
       try {
-        const respuestas = await Promise.all(
-          PESTANAS.map((una) => api.listProjects({ ...base, state: una.clave, limit: 1 })),
+        const responses = await Promise.all(
+          TABS.map((one) => api.listProjects({ ...base, state: one.key, limit: 1 })),
         );
-        if (cancelado) {
+        if (cancelled) {
           return;
         }
-        const nuevas = {};
-        PESTANAS.forEach((una, indice) => {
-          nuevas[una.clave] = respuestas[indice].total;
+        const fresh = {};
+        TABS.forEach((one, index) => {
+          fresh[one.key] = responses[index].total;
         });
-        setCuentas(nuevas);
-      } catch (fallo) {
-        if (!cancelado) {
-          setError(fallo.message);
+        setCuentas(fresh);
+      } catch (failure) {
+        if (!cancelled) {
+          setError(failure.message);
         }
       }
     }
 
-    cargarCuentas();
+    loadCounts();
     return () => {
-      cancelado = true;
+      cancelled = true;
     };
-  }, [firmaDeFiltros, version]);
+  }, [filterSignature, version]);
 
-  function cambiarFiltro(clave, valor) {
-    setFiltros((actual) => ({ ...actual, [clave]: valor }));
+  function changeFilter(key, value) {
+    setFiltros((actual) => ({ ...actual, [key]: value }));
     setPagina(0);
   }
 
-  function cambiarPestana(clave) {
-    setPestana(clave);
+  function changeTab(key) {
+    setPestana(key);
     setPagina(0);
   }
 
-  function cambiarAlcance(mios) {
+  function changeScope(mios) {
     setSoloMios(mios);
     setPagina(0);
   }
 
-  function limpiarFiltros() {
-    setFiltros(FILTROS_VACIOS);
+  function clearFilters() {
+    setFiltros(NO_FILTERS);
     setPagina(0);
   }
 
-  function recargar() {
+  function reload() {
     setVersion((actual) => actual + 1);
   }
 
-  function terminarCaptura(proyecto) {
+  function finishCapture(project) {
     setCapturando(false);
-    recargar();
-    setAbierto(proyecto);
+    reload();
+    setAbierto(project);
   }
 
-  /** Pasar al vecino de la lista sin cerrar: el ‹ › de la barra del proyecto. */
-  function moverse(salto) {
-    const indice = proyectos.findIndex((uno) => uno.id === abierto.id);
-    const destino = proyectos[indice + salto];
-    if (destino !== undefined) {
-      setAbierto(destino);
+  /** Step to the neighbour in the list without closing: the ‹ › in the project's bar. */
+  function moveTo(offset) {
+    const index = projects.findIndex((one) => one.id === opened.id);
+    const target = projects[index + offset];
+    if (target !== undefined) {
+      setAbierto(target);
     }
   }
 
-  const filtrado =
-    filtros.q !== "" ||
-    filtros.areaId !== "" ||
-    filtros.statusId !== "" ||
-    filtros.hasCost !== "" ||
-    filtros.fieldKey !== "";
+  const filtered =
+    filters.q !== "" ||
+    filters.areaId !== "" ||
+    filters.statusId !== "" ||
+    filters.hasCost !== "" ||
+    filters.fieldKey !== "";
 
-  const primera = total === 0 ? 0 : pagina * POR_PAGINA + 1;
-  const ultima = pagina * POR_PAGINA + proyectos.length;
-  const indiceAbierto = abierto === null ? -1 : proyectos.findIndex((uno) => uno.id === abierto.id);
+  const first = total === 0 ? 0 : page * PER_PAGE + 1;
+  const last = page * PER_PAGE + projects.length;
+  const openIndex = opened === null ? -1 : projects.findIndex((one) => one.id === opened.id);
 
-  if (abierto !== null) {
+  if (opened !== null) {
     return (
       <ProjectDetail
-        proyecto={abierto}
+        project={opened}
         areas={areas}
-        estatus={estatus}
-        vocabulario={vocabulario}
-        usuario={usuario}
-        lugar={indiceAbierto === -1 ? null : { posicion: indiceAbierto + 1, de: proyectos.length }}
-        onAnterior={indiceAbierto > 0 ? () => moverse(-1) : null}
+        statuses={statuses}
+        vocabulary={vocabulary}
+        user={user}
+        place={openIndex === -1 ? null : { position: openIndex + 1, total: projects.length }}
+        onAnterior={openIndex > 0 ? () => moveTo(-1) : null}
         onSiguiente={
-          indiceAbierto !== -1 && indiceAbierto < proyectos.length - 1 ? () => moverse(1) : null
+          openIndex !== -1 && openIndex < projects.length - 1 ? () => moveTo(1) : null
         }
-        onCerrar={() => {
+        onClose={() => {
           setAbierto(null);
-          recargar();
+          reload();
         }}
-        onCambio={recargar}
-        key={abierto.id}
+        onChanged={reload}
+        key={opened.id}
       />
     );
   }
@@ -363,32 +363,32 @@ function Projects({ usuario }) {
 
       <div className="projects-bar">
         <div className="projects-tabs">
-          {PESTANAS.map((una) => (
+          {TABS.map((one) => (
             <button
-              className={una.clave === pestana ? "projects-tab is-active" : "projects-tab"}
+              className={one.key === tab ? "projects-tab is-active" : "projects-tab"}
               type="button"
-              onClick={() => cambiarPestana(una.clave)}
-              key={una.clave}
+              onClick={() => changeTab(one.key)}
+              key={one.key}
             >
-              {una.etiqueta}
-              {cuentas[una.clave] === undefined ? null : (
-                <span className="projects-tab-count">{cuentas[una.clave]}</span>
+              {one.label}
+              {counts[one.key] === undefined ? null : (
+                <span className="projects-tab-count">{counts[one.key]}</span>
               )}
             </button>
           ))}
 
           <div className="projects-scope">
             <button
-              className={soloMios ? "projects-scope-btn is-on" : "projects-scope-btn"}
+              className={onlyMine ? "projects-scope-btn is-on" : "projects-scope-btn"}
               type="button"
-              onClick={() => cambiarAlcance(true)}
+              onClick={() => changeScope(true)}
             >
-              Mis proyectos
+              Mis projects
             </button>
             <button
-              className={soloMios ? "projects-scope-btn" : "projects-scope-btn is-on"}
+              className={onlyMine ? "projects-scope-btn" : "projects-scope-btn is-on"}
               type="button"
-              onClick={() => cambiarAlcance(false)}
+              onClick={() => changeScope(false)}
             >
               Todos
             </button>
@@ -400,54 +400,54 @@ function Projects({ usuario }) {
           type="button"
           onClick={() => setCapturando(true)}
         >
-          Nuevo proyecto
+          Nuevo project
         </button>
       </div>
 
       <p className="projects-rule">
-        {activa.regla}
-        {soloMios ? " Solo los que creaste o en los que eres responsable de una etapa." : ""}
+        {activeTab.rule}
+        {onlyMine ? " Solo los que creaste o en los que eres responsable de una etapa." : ""}
       </p>
 
       <div className="projects-filters">
         <div className="projects-search">
           <input
-            value={filtros.q}
-            onChange={(evento) => cambiarFiltro("q", evento.target.value)}
+            value={filters.q}
+            onChange={(event) => changeFilter("q", event.target.value)}
             placeholder="Ej: llave o título"
             aria-label="Buscar"
           />
         </div>
 
         <select
-          value={filtros.areaId}
-          onChange={(evento) => cambiarFiltro("areaId", evento.target.value)}
+          value={filters.areaId}
+          onChange={(event) => changeFilter("areaId", event.target.value)}
           aria-label="Con etapa en un área"
         >
           <option value="">Con etapa en cualquier área</option>
           {areas.map((area) => (
             <option value={area.id} key={area.id}>
-              Con etapa en {area.name}
+              Con stage en {area.name}
             </option>
           ))}
         </select>
 
         <select
-          value={filtros.statusId}
-          onChange={(evento) => cambiarFiltro("statusId", evento.target.value)}
+          value={filters.statusId}
+          onChange={(event) => changeFilter("statusId", event.target.value)}
           aria-label="Estatus"
         >
           <option value="">Todos los estatus</option>
-          {estatus.map((uno) => (
-            <option value={uno.id} key={uno.id}>
-              {uno.label}
+          {statuses.map((one) => (
+            <option value={one.id} key={one.id}>
+              {one.label}
             </option>
           ))}
         </select>
 
         <select
-          value={filtros.sort}
-          onChange={(evento) => cambiarFiltro("sort", evento.target.value)}
+          value={filters.sort}
+          onChange={(event) => changeFilter("sort", event.target.value)}
           aria-label="Orden"
         >
           <option value="priority">Por urgencia</option>
@@ -455,38 +455,38 @@ function Projects({ usuario }) {
         </select>
 
         <button
-          className={filtros.hasCost === "true" ? "projects-chip is-on" : "projects-chip"}
+          className={filters.hasCost === "true" ? "projects-chip is-on" : "projects-chip"}
           type="button"
-          onClick={() => cambiarFiltro("hasCost", filtros.hasCost === "true" ? "" : "true")}
+          onClick={() => changeFilter("hasCost", filters.hasCost === "true" ? "" : "true")}
         >
           Con costo
         </button>
 
         <select
-          value={filtros.fieldKey}
-          onChange={(evento) => cambiarFiltro("fieldKey", evento.target.value)}
+          value={filters.fieldKey}
+          onChange={(event) => changeFilter("fieldKey", event.target.value)}
           aria-label="Buscar por un dato"
         >
           <option value="">Buscar por un dato…</option>
-          {[...vocabulario.entries()].map(([clave, campo]) => (
-            <option value={clave} key={clave}>
-              {campo.name}
+          {[...vocabulary.entries()].map(([key, field]) => (
+            <option value={key} key={key}>
+              {field.name}
             </option>
           ))}
         </select>
 
-        {filtros.fieldKey === "" ? null : (
+        {filters.fieldKey === "" ? null : (
           <input
             className="projects-field-value"
-            value={filtros.fieldValue}
-            onChange={(evento) => cambiarFiltro("fieldValue", evento.target.value)}
-            placeholder={`Valor de ${vocabulario.get(filtros.fieldKey)?.name ?? filtros.fieldKey}`}
+            value={filters.fieldValue}
+            onChange={(event) => changeFilter("fieldValue", event.target.value)}
+            placeholder={`Valor de ${vocabulary.get(filters.fieldKey)?.name ?? filters.fieldKey}`}
           />
         )}
 
-        {filtrado ? (
-          <button className="projects-clear" type="button" onClick={limpiarFiltros}>
-            Quitar filtros
+        {filtered ? (
+          <button className="projects-clear" type="button" onClick={clearFilters}>
+            Quitar filters
           </button>
         ) : null}
       </div>
@@ -504,33 +504,33 @@ function Projects({ usuario }) {
             </tr>
           </thead>
           <tbody>
-            {capturando ? (
+            {capturing ? (
               <tr className="projects-expanded">
                 <td colSpan={6}>
                   <ProjectForm
-                    onCreado={terminarCaptura}
-                    onCancelar={() => setCapturando(false)}
+                    onCreated={finishCapture}
+                    onCancel={() => setCapturando(false)}
                   />
                 </td>
               </tr>
             ) : null}
 
-            {proyectos.map((proyecto) => (
-              <FilaDeProyecto proyecto={proyecto} onAbrir={setAbierto} key={proyecto.id} />
+            {projects.map((project) => (
+              <ProjectRow project={project} onOpen={setAbierto} key={project.id} />
             ))}
 
-            {!cargando && proyectos.length === 0 && !capturando ? (
+            {!loading && projects.length === 0 && !capturing ? (
               <tr>
                 <td colSpan={6}>
                   <p className="projects-empty">
-                    {soloMios && !filtrado
+                    {onlyMine && !filtered
                       ? "No hay proyectos tuyos aquí."
                       : "Ningún proyecto coincide con lo que está filtrado."}
-                    {soloMios ? (
+                    {onlyMine ? (
                       <button
                         className="projects-clear"
                         type="button"
-                        onClick={() => cambiarAlcance(false)}
+                        onClick={() => changeScope(false)}
                       >
                         Ver todos
                       </button>
@@ -543,25 +543,25 @@ function Projects({ usuario }) {
         </table>
       </div>
 
-      {total > POR_PAGINA ? (
+      {total > PER_PAGE ? (
         <div className="projects-pages">
           <p className="projects-range">
-            {primera}–{ultima} de {total}
+            {first}–{last} of {total}
           </p>
           <div className="projects-page-actions">
             <button
               className="projects-btn"
               type="button"
-              onClick={() => setPagina(pagina - 1)}
-              disabled={pagina === 0 || cargando}
+              onClick={() => setPagina(page - 1)}
+              disabled={page === 0 || loading}
             >
               Anteriores
             </button>
             <button
               className="projects-btn"
               type="button"
-              onClick={() => setPagina(pagina + 1)}
-              disabled={ultima >= total || cargando}
+              onClick={() => setPagina(page + 1)}
+              disabled={last >= total || loading}
             >
               Siguientes
             </button>

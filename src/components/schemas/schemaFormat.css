@@ -14,7 +14,7 @@
 }
 
 /* =========================================================
-   LA BARRA
+   THE BAR
 ========================================================= */
 
 .format-bar {
@@ -88,7 +88,7 @@
 }
 
 /* =========================================================
-   EL CUERPO
+   THE BODY
 ========================================================= */
 
 .format-body {
@@ -161,7 +161,7 @@
 }
 
 /* =========================================================
-   LA LISTA DE CAMPOS
+   THE LIST OF FIELDS
 ========================================================= */
 
 .format-fields {
@@ -290,7 +290,7 @@
   background: var(--surface-secondary);
 }
 
-/* Lo que puede crecer va punteado, en el lugar que ocuparía. */
+/* What can grow is drawn dashed, in the place it would occupy. */
 .format-add-row {
   display: flex;
   align-items: center;
@@ -354,7 +354,7 @@
 }
 
 /* =========================================================
-   LA CAPTURA DE AL LADO
+   THE CAPTURE FORM BESIDE IT
 ========================================================= */
 
 .format-preview {

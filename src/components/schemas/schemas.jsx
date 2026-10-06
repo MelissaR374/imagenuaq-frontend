@@ -1,127 +1,127 @@
-// Los formatos de solicitud (RF-SOL-01). Un formato es la identidad; lo que pide vive en sus
-// versiones, y una versión publicada no se edita: «editar» es publicar la siguiente, para que lo
-// capturado con la anterior siga leyéndose como se capturó.
+// The request formats (RF-SOL-01). A format is the identity; what it asks for lives in its
+// versions, and a published version is not edited: "editing" is publishing the next one, so what
+// was captured with the previous one keeps reading as it was captured.
 //
-// La lista es ligera a propósito: no tiene botones por renglón, porque un formato se abre y todo
-// lo que se le puede hacer vive adentro, junto a lo que va a cambiar. Las versiones se dicen en
-// una línea discreta bajo el nombre: importan al actualizar y al mirar atrás, no al elegir.
+// The list is light on purpose: no buttons per row, because a format opens and everything that can
+// be done to it lives inside, next to what it will change. The versions are said in one quiet line
+// under the name: they matter when updating and when looking back, not when choosing.
 //
-// Lo que cada formato trae en uso —cuántas solicitudes se capturaron con él y cuántos libros de
-// Excel lo tienen mapeado— sale del servidor, porque es lo que vuelve concreta la advertencia de
-// publicar: las solicitudes de antes se siguen leyendo con su versión y un libro se queda en la
-// suya hasta que alguien lo remapee.
+// What each format is used by -- how many requests were captured with it and how many Excel
+// workbooks are mapped to it -- comes from the server, because it is what makes the warning about
+// publishing concrete: earlier requests keep being read with their version, and a workbook stays
+// on its own until somebody remaps it.
 import { useEffect, useState } from "react";
 
 import * as api from "../../api/client.js";
-import { fechaCorta } from "../shared/formato.js";
+import { shortDate } from "../shared/format.js";
 import SchemaFormat from "./schemaFormat.jsx";
 import "./schemas.css";
 
-const PESTANAS = [
+const TABS = [
   {
-    clave: "activos",
-    etiqueta: "Activos",
-    regla: "Los que se pueden elegir al capturar una solicitud.",
+    key: "activos",
+    label: "Activos",
+    rule: "Los que se pueden elegir al capturar una solicitud.",
   },
   {
-    clave: "inactivos",
-    etiqueta: "Inactivos",
-    regla:
+    key: "inactivos",
+    label: "Inactivos",
+    rule:
       "Ya no se ofrecen al capturar. Nada se borra: lo capturado con ellos se sigue leyendo.",
   },
 ];
 
-/** Cuántos campos pide un formato, de qué tipo y cuántos obligatorios. */
-function cuentaDeCampos(formato) {
-  if (formato.fields === null || formato.fields === undefined) {
+/** How many fields a format asks for, of what kind, and how many are required. */
+function fieldTally(format) {
+  if (format.fields === null || format.fields === undefined) {
     return "Sin versión publicada";
   }
-  const entrega = formato.fields.deliverables;
-  const informacion = formato.fields.information;
-  const total = entrega.length + informacion.length;
-  const obligatorios = [...entrega, ...informacion].filter((campo) => campo.required).length;
+  const deliverables = format.fields.deliverables;
+  const information = format.fields.information;
+  const total = deliverables.length + information.length;
+  const required = [...deliverables, ...information].filter((campo) => campo.required).length;
 
-  return `${total} ${total === 1 ? "campo" : "campos"} · ${obligatorios} ${
-    obligatorios === 1 ? "obligatorio" : "obligatorios"
-  } · ${entrega.length} de entrega`;
+  return `${total} ${total === 1 ? "campo" : "campos"} · ${required} ${
+    required === 1 ? "obligatorio" : "required"
+  } · ${deliverables.length} de entrega`;
 }
 
-/** En qué se está usando: lo que vuelve concreta la advertencia de publicar una versión. */
-function uso(formato) {
-  const partes = [];
-  if (formato.requestCount > 0) {
-    partes.push(
-      `${formato.requestCount} ${formato.requestCount === 1 ? "solicitud" : "solicitudes"}`,
+/** What it is used by: what makes the warning about publishing a version concrete. */
+function usage(format) {
+  const parts = [];
+  if (format.requestCount > 0) {
+    parts.push(
+      `${format.requestCount} ${format.requestCount === 1 ? "solicitud" : "solicitudes"}`,
     );
   }
-  if (formato.sheetCount > 0) {
-    partes.push(
-      `${formato.sheetCount} ${formato.sheetCount === 1 ? "libro de Excel" : "libros de Excel"}`,
+  if (format.sheetCount > 0) {
+    parts.push(
+      `${format.sheetCount} ${format.sheetCount === 1 ? "libro de Excel" : "libros de Excel"}`,
     );
   }
-  if (partes.length === 0) {
+  if (parts.length === 0) {
     return "Sin uso todavía";
   }
-  return partes.join(" · ");
+  return parts.join(" · ");
 }
 
-function FilaDeFormato({ formato, onAbrir }) {
+function FormatRow({ format, onOpen }) {
   return (
-    <tr className="schemas-row" onClick={() => onAbrir(formato)}>
+    <tr className="schemas-row" onClick={() => onOpen(format)}>
       <td className="schemas-cell-main">
-        <span className="schemas-code">{formato.code}</span>
-        <span className="schemas-row-name">{formato.name}</span>
+        <span className="schemas-code">{format.code}</span>
+        <span className="schemas-row-name">{format.name}</span>
         <span className="schemas-version-line">
-          {formato.version === null ? "Sin versión" : `Versión ${formato.version}`}
-          {formato.publishedAt === null ? "" : ` · ${fechaCorta(formato.publishedAt)}`}
-          {formato.publishedByName === null ? "" : ` · ${formato.publishedByName}`}
+          {format.version === null ? "Sin versión" : `Versión ${format.version}`}
+          {format.publishedAt === null ? "" : ` · ${shortDate(format.publishedAt)}`}
+          {format.publishedByName === null ? "" : ` · ${format.publishedByName}`}
         </span>
       </td>
-      <td>{cuentaDeCampos(formato)}</td>
-      <td>{uso(formato)}</td>
+      <td>{fieldTally(format)}</td>
+      <td>{usage(format)}</td>
     </tr>
   );
 }
 
 function Schemas() {
-  const [formatos, setFormatos] = useState([]);
-  const [tipos, setTipos] = useState([]);
-  const [vocabulario, setVocabulario] = useState([]);
-  const [pestana, setPestana] = useState("activos");
-  const [busqueda, setBusqueda] = useState("");
-  const [abierto, setAbierto] = useState(null);
-  const [nuevo, setNuevo] = useState(false);
-  const [cargando, setCargando] = useState(true);
+  const [formats, setFormatos] = useState([]);
+  const [types, setTipos] = useState([]);
+  const [vocabulary, setVocabulario] = useState([]);
+  const [tab, setPestana] = useState("activos");
+  const [search, setBusqueda] = useState("");
+  const [opened, setAbierto] = useState(null);
+  const [creating, setNuevo] = useState(false);
+  const [loading, setCargando] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    let cancelado = false;
+    let cancelled = false;
 
-    async function cargar() {
+    async function load() {
       try {
         const [formatosRes, tiposRes, clavesRes] = await Promise.all([
           api.listSchemas(),
           api.listDataTypes(),
           api.listFieldKeys(),
         ]);
-        if (cancelado) return;
+        if (cancelled) return;
         setFormatos(formatosRes.schemas);
         setTipos(tiposRes.dataTypes);
         setVocabulario(clavesRes.fieldKeys);
-      } catch (fallo) {
-        if (!cancelado) setError(fallo.message);
+      } catch (failure) {
+        if (!cancelled) setError(failure.message);
       } finally {
-        if (!cancelado) setCargando(false);
+        if (!cancelled) setCargando(false);
       }
     }
 
-    cargar();
+    load();
     return () => {
-      cancelado = true;
+      cancelled = true;
     };
   }, []);
 
-  async function recargar() {
+  async function reload() {
     try {
       const [{ schemas }, { fieldKeys }] = await Promise.all([
         api.listSchemas(),
@@ -130,54 +130,54 @@ function Schemas() {
       setFormatos(schemas);
       setVocabulario(fieldKeys);
       return schemas;
-    } catch (fallo) {
-      setError(fallo.message);
-      return formatos;
+    } catch (failure) {
+      setError(failure.message);
+      return formats;
     }
   }
 
-  /** Al publicar o clonar, el formato abierto se queda abierto con lo que ya quedó guardado. */
-  async function alCambiar(id) {
-    const lista = await recargar();
+  /** On publishing or cloning, the open format stays open, holding what was just saved. */
+  async function onFormatChanged(id) {
+    const list = await reload();
     if (id === undefined || id === null) {
       return;
     }
-    const encontrado = lista.find((uno) => uno.id === id);
-    if (encontrado !== undefined) {
-      setAbierto(encontrado);
+    const found = list.find((one) => one.id === id);
+    if (found !== undefined) {
+      setAbierto(found);
       setNuevo(false);
     }
   }
 
-  if (nuevo || abierto !== null) {
+  if (creating || opened !== null) {
     return (
       <SchemaFormat
-        formato={nuevo ? null : abierto}
-        formatos={formatos}
-        tipos={tipos}
-        vocabulario={vocabulario}
-        onCambio={alCambiar}
-        onCerrar={() => {
+        format={creating ? null : opened}
+        formats={formats}
+        types={types}
+        vocabulary={vocabulary}
+        onChanged={onFormatChanged}
+        onClose={() => {
           setAbierto(null);
           setNuevo(false);
-          recargar();
+          reload();
         }}
-        key={nuevo ? "nuevo" : abierto.id}
+        key={creating ? "nuevo" : opened.id}
       />
     );
   }
 
-  const activa = PESTANAS.find((una) => una.clave === pestana) ?? PESTANAS[0];
-  const texto = busqueda.trim().toLowerCase();
-  const visibles = formatos.filter((formato) => {
-    if (formato.isActive !== (pestana === "activos")) {
+  const activeTab = TABS.find((one) => one.key === tab) ?? TABS[0];
+  const text = search.trim().toLowerCase();
+  const visible = formats.filter((format) => {
+    if (format.isActive !== (tab === "activos")) {
       return false;
     }
-    if (texto === "") {
+    if (text === "") {
       return true;
     }
     return (
-      formato.name.toLowerCase().includes(texto) || formato.code.toLowerCase().includes(texto)
+      format.name.toLowerCase().includes(text) || format.code.toLowerCase().includes(text)
     );
   });
 
@@ -187,19 +187,19 @@ function Schemas() {
 
       <div className="schemas-bar">
         <div className="schemas-tabs">
-          {PESTANAS.map((una) => {
-            const cuenta = formatos.filter(
-              (formato) => formato.isActive === (una.clave === "activos"),
+          {TABS.map((one) => {
+            const count = formats.filter(
+              (format) => format.isActive === (one.key === "activos"),
             ).length;
             return (
               <button
-                className={una.clave === pestana ? "schemas-tab is-active" : "schemas-tab"}
+                className={one.key === tab ? "schemas-tab is-active" : "schemas-tab"}
                 type="button"
-                onClick={() => setPestana(una.clave)}
-                key={una.clave}
+                onClick={() => setPestana(one.key)}
+                key={one.key}
               >
-                {una.etiqueta}
-                <span className="schemas-tab-count">{cuenta}</span>
+                {one.label}
+                <span className="schemas-tab-count">{count}</span>
               </button>
             );
           })}
@@ -210,17 +210,17 @@ function Schemas() {
           type="button"
           onClick={() => setNuevo(true)}
         >
-          Nuevo formato
+          Nuevo format
         </button>
       </div>
 
-      <p className="schemas-rule">{activa.regla}</p>
+      <p className="schemas-rule">{activeTab.rule}</p>
 
       <div className="schemas-filters">
         <div className="schemas-search">
           <input
-            value={busqueda}
-            onChange={(evento) => setBusqueda(evento.target.value)}
+            value={search}
+            onChange={(event) => setBusqueda(event.target.value)}
             placeholder="Ej: nombre o clave"
             aria-label="Buscar"
           />
@@ -237,16 +237,16 @@ function Schemas() {
             </tr>
           </thead>
           <tbody>
-            {visibles.map((formato) => (
-              <FilaDeFormato formato={formato} onAbrir={setAbierto} key={formato.id} />
+            {visible.map((format) => (
+              <FormatRow format={format} onOpen={setAbierto} key={format.id} />
             ))}
 
-            {!cargando && visibles.length === 0 ? (
+            {!loading && visible.length === 0 ? (
               <tr>
                 <td colSpan={3}>
                   <p className="schemas-empty">
-                    {texto === ""
-                      ? `Nada en «${activa.etiqueta}».`
+                    {text === ""
+                      ? `Nada en «${activeTab.label}».`
                       : "Ningún formato coincide con lo que buscas."}
                   </p>
                 </td>

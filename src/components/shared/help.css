@@ -1,6 +1,6 @@
-/* El (?) de un campo y su explicación, que aparece al pasar el ratón o al enfocar. */
+/* A field's (?) and its explanation, shown on hover or focus. */
 
-.ayuda {
+.help {
   position: relative;
 
   display: inline-flex;
@@ -24,19 +24,19 @@
   cursor: help;
 }
 
-.ayuda:hover,
-.ayuda:focus-visible {
+.help:hover,
+.help:focus-visible {
   border-color: var(--accent-line);
   color: var(--accent-line);
 }
 
-.ayuda-marca {
+.help-mark {
   font-size: 9px;
   font-weight: 700;
   line-height: 1;
 }
 
-.ayuda-texto {
+.help-text {
   position: absolute;
   bottom: calc(100% + 6px);
   left: -8px;
@@ -63,7 +63,7 @@
   white-space: normal;
 }
 
-.ayuda:hover .ayuda-texto,
-.ayuda:focus-visible .ayuda-texto {
+.help:hover .help-text,
+.help:focus-visible .help-text {
   display: block;
 }

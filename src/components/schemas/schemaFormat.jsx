@@ -1,50 +1,51 @@
-// Un formato abierto a pantalla completa: el armado de sus campos (RF-SOL-01) con la captura al
-// lado, porque un formato es un constructor y lo único que dice si está bien es cómo se va a ver.
+// A format opened at full screen: building its fields (RF-SOL-01) with the capture form beside
+// it, because a format is a builder and the only thing that says whether it is right is how it is
+// going to look.
 //
-// Son dos secciones y cada una un arreglo: `deliverables` es lo que hay que producir,
-// `information` lo que hay que declarar. Los campos son una lista, no una tabla de inputs: un
-// renglón por campo con su nombre, su clave y su tipo, y el editor se abre en su lugar.
+// It is two sections and each one an array: `deliverables` is what has to be produced,
+// `information` what has to be declared. The fields are a list, not a table of inputs: one row per
+// field with its name, its key and its type, and the editor opens in its place.
 //
-// El `code` es la llave con la que el valor se guarda y con la que después lo leen la etiqueta, la
-// orden de impresión y facturación, así que es snake_case y único entre ambas secciones.
+// The `code` is the key the value is stored under, and the one the label, the print order and the
+// invoicing read it by, so it is snake_case and unique across both sections.
 //
-// **Una clave que ya existe se reusa, no se redefine.** Al elegir una del vocabulario
-// (`GET /api/schemas/field-keys`) el nombre y el tipo se llenan solos y quedan en firme, porque el
-// valor se guarda bajo esa clave en todo el sistema y si aquí fuera de otro tipo, el proyecto
-// acabaría con dos cosas distintas bajo un nombre. El servidor rechaza publicarla con otro tipo,
-// así que mostrarlo aquí es lo que evita el viaje.
+// **A key that already exists is reused, not redefined.** Choosing one from the vocabulary
+// (`GET /api/schemas/field-keys`) fills the name and the type and leaves them firm, because the
+// value is stored under that key across the whole system, and if it were another type here the
+// project would end up with two different things under one name. The server refuses to publish it
+// with another type, so showing it here is what saves the trip.
 //
-// La clave de un campo se sugiere desde su nombre mientras nadie la haya tocado: sugerirla solo
-// mientras está vacía dejaba `c` al escribir «Contacto».
+// A field's key is suggested from its name until somebody touches it: suggesting only while it was
+// empty left `c` when typing "Contacto".
 //
-// Publicar crea la versión siguiente y no toca la anterior: el pie lo dice con los números de este
-// formato, que es la única forma de que la advertencia signifique algo.
+// Publishing creates the next version and does not touch the previous one: the footer says so in
+// this format's own numbers, which is the only way for the warning to mean anything.
 import { useEffect, useState } from "react";
 
 import * as api from "../../api/client.js";
-import { fechaCorta } from "../shared/formato.js";
-import Ayuda from "../shared/ayuda.jsx";
+import { shortDate } from "../shared/format.js";
+import Help from "../shared/help.jsx";
 import FieldInput from "../shared/fieldInput.jsx";
-import IconoDeTipo from "../shared/iconoDeTipo.jsx";
+import TypeIcon from "../shared/typeIcon.jsx";
 import "./schemaFormat.css";
 
-const SECCIONES = [
+const SECTIONS = [
   {
-    clave: "deliverables",
+    key: "deliverables",
     titulo: "Entregables",
     ayuda: "Lo que el área tiene que producir",
   },
   {
-    clave: "information",
+    key: "information",
     titulo: "Información",
     ayuda: "Lo que el solicitante declara",
   },
 ];
 
-const CAMPO_VACIO = { code: "", name: "", type: "text", note: "", required: false };
+const EMPTY_FIELD = { code: "", name: "", type: "text", note: "", required: false };
 
-/** Un nombre a una clave propuesta: sin acentos, en minúsculas y con guiones bajos. */
-function claveSugerida(nombre) {
+/** A name into a proposed key: no accents, lower case, underscores. */
+function suggestedKey(nombre) {
   return nombre
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
@@ -55,33 +56,33 @@ function claveSugerida(nombre) {
 }
 
 /**
- * Por qué el nombre y el tipo de un campo vienen de otro lado. La clave es vocabulario compartido
- * (DATAMODEL.md §2.13b): ya tiene valores capturados debajo, así que cambiarlos volvería mentira
- * lo capturado. Se puede reusar; no se puede redefinir.
+ * Why a field's name and type come from somewhere else. The key is shared vocabulary
+ * (DATAMODEL.md §2.13b): it already has captured values under it, so changing them would make what
+ * was captured a lie. It can be reused; it cannot be redefined.
  */
-function textoDeReuso(publicada) {
-  const donde = publicada.schemas ?? [];
-  if (donde.length === 0) {
+function reuseText(published) {
+  const usedIn = published.schemas ?? [];
+  if (usedIn.length === 0) {
     return "Esta clave ya se publicó antes: su nombre y su tipo vienen de ahí.";
   }
-  return `Dato compartido con ${donde.join(", ")}: su nombre y su tipo vienen de ahí.`;
+  return `Dato compartido con ${usedIn.join(", ")}: su nombre y su tipo vienen de ahí.`;
 }
 
-/** El editor de un campo, abierto en su lugar dentro de la lista. */
-function EditorDeCampo({
-  campo, tipos, publicada, repetida, sugerencias, listaId, onCambiar, onQuitar, onCerrar,
+/** A field's editor, opened in place inside the list. */
+function FieldEditor({
+  field, types, published, repeated, suggestions, listId, onChange, onRemove, onClose,
 }) {
-  const [claveTocada, setClaveTocada] = useState(campo.code !== "");
+  const [keyTouched, setClaveTocada] = useState(field.code !== "");
 
-  function escribirNombre(name) {
-    if (publicada !== undefined) {
+  function writeName(name) {
+    if (published !== undefined) {
       return;
     }
-    const cambios = { name };
-    if (!claveTocada) {
-      cambios.code = claveSugerida(name);
+    const changes = { name };
+    if (!keyTouched) {
+      changes.code = suggestedKey(name);
     }
-    onCambiar(cambios);
+    onChange(changes);
   }
 
   return (
@@ -90,9 +91,9 @@ function EditorDeCampo({
         <label className="format-field">
           <span className="format-label">Nombre</span>
           <input
-            value={campo.name}
-            onChange={(evento) => escribirNombre(evento.target.value)}
-            readOnly={publicada !== undefined}
+            value={field.name}
+            onChange={(event) => writeName(event.target.value)}
+            readOnly={published !== undefined}
             placeholder="Ej: Medidas del impreso"
           />
         </label>
@@ -100,33 +101,33 @@ function EditorDeCampo({
         <label className="format-field">
           <span className="format-label">
             Clave
-            <Ayuda texto="Con esta clave se guarda el valor en todo el sistema, y con ella lo leen la orden de impresión y la facturación. Se sugiere desde el nombre hasta que la escribas tú." />
+            <Help text="Con esta clave se guarda el valor en todo el sistema, y con ella lo leen la orden de impresión y la facturación. Se sugiere desde el nombre hasta que la escribas tú." />
           </span>
           <input
-            className={repetida ? "format-key is-bad" : "format-key"}
-            value={campo.code}
-            list={listaId}
-            onChange={(evento) => {
-              const code = evento.target.value;
+            className={repeated ? "format-key is-bad" : "format-key"}
+            value={field.code}
+            list={listId}
+            onChange={(event) => {
+              const code = event.target.value;
               setClaveTocada(true);
-              const existente = sugerencias.find((una) => una.key === code);
-              onCambiar(
-                existente === undefined
+              const existing = suggestions.find((one) => one.key === code);
+              onChange(
+                existing === undefined
                   ? { code }
                   : {
                       code,
-                      name: existente.name,
-                      type: existente.type,
-                      note: existente.note ?? "",
+                      name: existing.name,
+                      type: existing.type,
+                      note: existing.note ?? "",
                     },
               );
             }}
             placeholder="Ej: medidas"
           />
-          <datalist id={listaId}>
-            {sugerencias.map((una) => (
-              <option value={una.key} key={una.key}>
-                {una.name} · {tipos.find((tipo) => tipo.code === una.type)?.name ?? una.type}
+          <datalist id={listId}>
+            {suggestions.map((one) => (
+              <option value={one.key} key={one.key}>
+                {one.name} · {types.find((type) => type.code === one.type)?.name ?? one.type}
               </option>
             ))}
           </datalist>
@@ -135,25 +136,25 @@ function EditorDeCampo({
         <label className="format-field">
           <span className="format-label">
             Tipo de dato
-            {publicada === undefined ? null : (
-              <Ayuda texto={textoDeReuso(publicada)} />
+            {published === undefined ? null : (
+              <Help text={reuseText(published)} />
             )}
           </span>
-          {publicada === undefined ? (
+          {published === undefined ? (
             <select
-              value={campo.type}
-              onChange={(evento) => onCambiar({ type: evento.target.value })}
+              value={field.type}
+              onChange={(event) => onChange({ type: event.target.value })}
             >
-              {tipos.map((tipo) => (
-                <option value={tipo.code} key={tipo.code}>
-                  {tipo.name}
+              {types.map((type) => (
+                <option value={type.code} key={type.code}>
+                  {type.name}
                 </option>
               ))}
             </select>
           ) : (
             <p className="format-value">
-              <IconoDeTipo tipo={campo.type} />{" "}
-              {tipos.find((tipo) => tipo.code === campo.type)?.name ?? campo.type}
+              <TypeIcon type={field.type} />{" "}
+              {types.find((type) => type.code === field.type)?.name ?? field.type}
             </p>
           )}
         </label>
@@ -161,11 +162,11 @@ function EditorDeCampo({
         <label className="format-field">
           <span className="format-label">
             Indicación
-            <Ayuda texto="Lo que aparece en el (?) del campo al capturar. No se muestra como texto corrido." />
+            <Help text="Lo que aparece en el (?) del campo al capturar. No se muestra como texto corrido." />
           </span>
           <input
-            value={campo.note ?? ""}
-            onChange={(evento) => onCambiar({ note: evento.target.value })}
+            value={field.note ?? ""}
+            onChange={(event) => onChange({ note: event.target.value })}
             placeholder="Ej: en centímetros, ancho por alto"
           />
         </label>
@@ -173,29 +174,29 @@ function EditorDeCampo({
         <label className="format-check">
           <input
             type="checkbox"
-            checked={campo.required === true}
-            onChange={(evento) => onCambiar({ required: evento.target.checked })}
+            checked={field.required === true}
+            onChange={(event) => onChange({ required: event.target.checked })}
           />
           Obligatorio
         </label>
       </div>
 
-      {repetida ? (
+      {repeated ? (
         <p className="format-bad">
-          Esa clave ya la tiene otro campo de este formato. Cada campo necesita una distinta,
+          Esa key ya la tiene otro field de este format. Cada field necesita one distinta,
           también entre secciones: el valor se guarda bajo su clave y dos campos la pisarían.
         </p>
       ) : null}
 
-      {publicada === undefined ? null : (
-        <p className="format-note">{textoDeReuso(publicada)}</p>
+      {published === undefined ? null : (
+        <p className="format-note">{reuseText(published)}</p>
       )}
 
       <div className="format-action-row">
-        <button className="format-quiet is-danger" type="button" onClick={onQuitar}>
-          Quitar el campo
+        <button className="format-quiet is-danger" type="button" onClick={onRemove}>
+          Quitar el field
         </button>
-        <button className="format-quiet" type="button" onClick={onCerrar}>
+        <button className="format-quiet" type="button" onClick={onClose}>
           Listo
         </button>
       </div>
@@ -203,176 +204,176 @@ function EditorDeCampo({
   );
 }
 
-function SchemaFormat({ formato, formatos, tipos, vocabulario, onCambio, onCerrar }) {
-  const publicadas = new Map(vocabulario.map((una) => [una.key, una]));
+function SchemaFormat({ format, formats, types, vocabulary, onChanged, onClose }) {
+  const publishedKeys = new Map(vocabulary.map((one) => [one.key, one]));
 
-  const [campos, setCampos] = useState(
-    formato?.fields ?? { deliverables: [], information: [] },
+  const [fields, setCampos] = useState(
+    format?.fields ?? { deliverables: [], information: [] },
   );
-  const [nuevo, setNuevo] = useState({ code: "", name: "", partirDe: "" });
-  const [claveTocada, setClaveTocada] = useState(false);
-  const [editando, setEditando] = useState(null);
-  const [versiones, setVersiones] = useState([]);
-  const [clonando, setClonando] = useState(null);
-  const [confirmandoBaja, setConfirmandoBaja] = useState(false);
+  const [draftFormat, setNuevo] = useState({ code: "", name: "", startFrom: "" });
+  const [keyTouched, setClaveTocada] = useState(false);
+  const [editing, setEditando] = useState(null);
+  const [versions, setVersiones] = useState([]);
+  const [cloning, setClonando] = useState(null);
+  const [confirmingDeactivate, setConfirmandoBaja] = useState(false);
   const [error, setError] = useState(null);
-  const [ocupado, setOcupado] = useState(false);
+  const [busy, setOcupado] = useState(false);
 
-  const esNuevo = formato === null || formato === undefined;
+  const isNew = format === null || format === undefined;
 
   useEffect(() => {
-    let cancelado = false;
+    let cancelled = false;
 
-    async function cargarVersiones() {
-      if (esNuevo) {
+    async function loadVersions() {
+      if (isNew) {
         return;
       }
       try {
-        const { versions } = await api.listSchemaVersions(formato.id);
-        if (!cancelado) setVersiones(versions);
-      } catch (fallo) {
-        if (!cancelado) setError(fallo.message);
+        const { versions } = await api.listSchemaVersions(format.id);
+        if (!cancelled) setVersiones(versions);
+      } catch (failure) {
+        if (!cancelled) setError(failure.message);
       }
     }
 
-    cargarVersiones();
+    loadVersions();
     return () => {
-      cancelado = true;
+      cancelled = true;
     };
-  }, [esNuevo, formato?.id, formato?.version]);
+  }, [isNew, format?.id, format?.version]);
 
   useEffect(() => {
-    function alTeclear(evento) {
-      if (evento.key === "Escape") {
-        onCerrar();
+    function onKeyDown(event) {
+      if (event.key === "Escape") {
+        onClose();
       }
     }
 
-    window.addEventListener("keydown", alTeclear);
-    return () => window.removeEventListener("keydown", alTeclear);
-  }, [onCerrar]);
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
 
-  function cambiarCampo(seccion, indice, cambios) {
+  function changeField(section, index, changes) {
     setCampos((actual) => ({
       ...actual,
-      [seccion]: actual[seccion].map((campo, i) =>
-        i === indice ? { ...campo, ...cambios } : campo,
+      [section]: actual[section].map((field, i) =>
+        i === index ? { ...field, ...changes } : field,
       ),
     }));
   }
 
-  function agregarCampo(seccion, base = CAMPO_VACIO) {
+  function addField(section, base = EMPTY_FIELD) {
     setCampos((actual) => {
-      const lista = [...actual[seccion], { ...base }];
-      setEditando({ seccion, indice: lista.length - 1 });
-      return { ...actual, [seccion]: lista };
+      const list = [...actual[section], { ...base }];
+      setEditando({ section, index: list.length - 1 });
+      return { ...actual, [section]: list };
     });
   }
 
-  function quitarCampo(seccion, indice) {
+  function removeField(section, index) {
     setCampos((actual) => ({
       ...actual,
-      [seccion]: actual[seccion].filter((_, i) => i !== indice),
+      [section]: actual[section].filter((_, i) => i !== index),
     }));
     setEditando(null);
   }
 
-  function mover(seccion, indice, salto) {
-    const destino = indice + salto;
+  function move(section, index, salto) {
+    const target = index + salto;
     setCampos((actual) => {
-      const lista = [...actual[seccion]];
-      if (destino < 0 || destino >= lista.length) return actual;
-      [lista[indice], lista[destino]] = [lista[destino], lista[indice]];
-      return { ...actual, [seccion]: lista };
+      const list = [...actual[section]];
+      if (target < 0 || target >= list.length) return actual;
+      [list[index], list[target]] = [list[target], list[index]];
+      return { ...actual, [section]: list };
     });
     setEditando(null);
   }
 
-  /** Partir de otro formato: sus campos entran tal cual, con sus claves compartidas. */
-  function partirDe(id) {
-    setNuevo((actual) => ({ ...actual, partirDe: id }));
+  /** Partir de otro format: sus fields entran tal cual, con sus keys compartidas. */
+  function startFrom(id) {
+    setNuevo((actual) => ({ ...actual, startFrom: id }));
     if (id === "") {
       setCampos({ deliverables: [], information: [] });
       return;
     }
-    const base = formatos.find((uno) => String(uno.id) === String(id));
+    const base = formats.find((one) => String(one.id) === String(id));
     if (base !== undefined && base.fields !== null) {
       setCampos({
-        deliverables: base.fields.deliverables.map((campo) => ({ ...campo })),
-        information: base.fields.information.map((campo) => ({ ...campo })),
+        deliverables: base.fields.deliverables.map((field) => ({ ...field })),
+        information: base.fields.information.map((field) => ({ ...field })),
       });
     }
   }
 
-  const todos = [...campos.deliverables, ...campos.information];
-  const claves = todos.map((campo) => campo.code);
-  const repetidas = [...new Set(claves.filter((code, i) => code !== "" && claves.indexOf(code) !== i))];
+  const everyField = [...fields.deliverables, ...fields.information];
+  const keys = everyField.map((field) => field.code);
+  const repeatedKeys = [...new Set(keys.filter((code, i) => code !== "" && keys.indexOf(code) !== i))];
 
-  let problema = null;
-  if (todos.length === 0) {
-    problema = "Un formato necesita al menos un campo.";
-  } else if (todos.some((campo) => campo.name.trim() === "" || campo.code.trim() === "")) {
-    problema = "Hay un campo sin nombre o sin clave.";
-  } else if (repetidas.length > 0) {
-    problema = `Clave repetida: ${repetidas.join(", ")}.`;
-  } else if (esNuevo && (nuevo.name.trim() === "" || nuevo.code.trim() === "")) {
-    problema = "El formato necesita un nombre y una clave.";
+  let problem = null;
+  if (everyField.length === 0) {
+    problem = "Un formato necesita al menos un campo.";
+  } else if (everyField.some((field) => field.name.trim() === "" || field.code.trim() === "")) {
+    problem = "Hay un campo sin nombre o sin clave.";
+  } else if (repeatedKeys.length > 0) {
+    problem = `Clave repetida: ${repeatedKeys.join(", ")}.`;
+  } else if (isNew && (draftFormat.name.trim() === "" || draftFormat.code.trim() === "")) {
+    problem = "El formato necesita un nombre y una clave.";
   }
 
-  const guardadas = JSON.stringify(formato?.fields ?? { deliverables: [], information: [] });
-  const sucio = JSON.stringify(campos) !== guardadas;
-  const siguiente = esNuevo ? 1 : (formato.version ?? 0) + 1;
+  const savedFields = JSON.stringify(format?.fields ?? { deliverables: [], information: [] });
+  const dirty = JSON.stringify(fields) !== savedFields;
+  const next = isNew ? 1 : (format.version ?? 0) + 1;
 
-  async function publicar() {
+  async function publish() {
     setOcupado(true);
     setError(null);
     try {
-      if (esNuevo) {
+      if (isNew) {
         const { schema } = await api.createSchema({
-          code: nuevo.code,
-          name: nuevo.name,
-          fields: campos,
+          code: draftFormat.code,
+          name: draftFormat.name,
+          fields: fields,
         });
-        onCambio(schema.id);
+        onChanged(schema.id);
       } else {
-        await api.createSchemaVersion(formato.id, campos);
-        onCambio(formato.id);
+        await api.createSchemaVersion(format.id, fields);
+        onChanged(format.id);
       }
-    } catch (fallo) {
-      setError(fallo.message);
+    } catch (failure) {
+      setError(failure.message);
     } finally {
       setOcupado(false);
     }
   }
 
-  async function clonar(evento) {
-    evento.preventDefault();
+  async function clone(event) {
+    event.preventDefault();
     setOcupado(true);
     setError(null);
     try {
-      const { schema } = await api.cloneSchema(formato.id, clonando.code, clonando.name);
+      const { schema } = await api.cloneSchema(format.id, cloning.code, cloning.name);
       setClonando(null);
-      onCambio(schema.id);
-    } catch (fallo) {
-      setError(fallo.message);
+      onChanged(schema.id);
+    } catch (failure) {
+      setError(failure.message);
     } finally {
       setOcupado(false);
     }
   }
 
-  async function cambiarAlta() {
+  async function toggleActive() {
     setOcupado(true);
     setError(null);
     try {
-      if (formato.isActive) {
-        await api.deleteSchema(formato.id);
+      if (format.isActive) {
+        await api.deleteSchema(format.id);
       } else {
-        await api.updateSchema(formato.id, { isActive: true });
+        await api.updateSchema(format.id, { isActive: true });
       }
       setConfirmandoBaja(false);
-      onCambio(formato.id);
-    } catch (fallo) {
-      setError(fallo.message);
+      onChanged(format.id);
+    } catch (failure) {
+      setError(failure.message);
     } finally {
       setOcupado(false);
     }
@@ -384,7 +385,7 @@ function SchemaFormat({ formato, formatos, tipos, vocabulario, onCambio, onCerra
         <button
           className="format-close"
           type="button"
-          onClick={onCerrar}
+          onClick={onClose}
           aria-label="Volver a la lista"
         >
           ✕
@@ -392,26 +393,26 @@ function SchemaFormat({ formato, formatos, tipos, vocabulario, onCambio, onCerra
 
         <div className="format-bar-text">
           <span className="format-bar-eyebrow">
-            {esNuevo ? "Formato nuevo" : formato.code}
-            {esNuevo || formato.isActive ? "" : " · inactivo"}
+            {isNew ? "Formato nuevo" : format.code}
+            {isNew || format.isActive ? "" : " · inactivo"}
           </span>
-          <h2>{esNuevo ? nuevo.name || "Sin nombre todavía" : formato.name}</h2>
+          <h2>{isNew ? draftFormat.name || "Sin nombre todavía" : format.name}</h2>
         </div>
 
-        {esNuevo ? null : (
+        {isNew ? null : (
           <div className="format-bar-actions">
             <button
               className="format-quiet"
               type="button"
               onClick={() =>
-                setClonando({ code: "", name: `${formato.name} (copia)` })
+                setClonando({ code: "", name: `${format.name} (copia)` })
               }
-              disabled={ocupado}
+              disabled={busy}
             >
-              Clonar como formato nuevo
+              Clonar como format draftFormat
             </button>
 
-            {confirmandoBaja ? (
+            {confirmingDeactivate ? (
               <>
                 <span className="format-confirm">
                   Deja de ofrecerse al capturar. Lo capturado con él se sigue leyendo, y se puede
@@ -420,8 +421,8 @@ function SchemaFormat({ formato, formatos, tipos, vocabulario, onCambio, onCerra
                 <button
                   className="format-btn"
                   type="button"
-                  onClick={cambiarAlta}
-                  disabled={ocupado}
+                  onClick={toggleActive}
+                  disabled={busy}
                 >
                   Desactivar
                 </button>
@@ -437,10 +438,10 @@ function SchemaFormat({ formato, formatos, tipos, vocabulario, onCambio, onCerra
               <button
                 className="format-quiet"
                 type="button"
-                onClick={() => (formato.isActive ? setConfirmandoBaja(true) : cambiarAlta())}
-                disabled={ocupado}
+                onClick={() => (format.isActive ? setConfirmandoBaja(true) : toggleActive())}
+                disabled={busy}
               >
-                {formato.isActive ? "Desactivar" : "Reactivar"}
+                {format.isActive ? "Desactivar" : "Reactivar"}
               </button>
             )}
           </div>
@@ -450,8 +451,8 @@ function SchemaFormat({ formato, formatos, tipos, vocabulario, onCambio, onCerra
       <div className="format-body">
         {error !== null ? <p className="format-error">{error}</p> : null}
 
-        {clonando !== null ? (
-          <form className="format-clone" onSubmit={clonar}>
+        {cloning !== null ? (
+          <form className="format-clone" onSubmit={clone}>
             <h3>Clonar como formato nuevo</h3>
             <p className="format-note">
               El formato nuevo empieza con los campos de este, en su versión 1. Este no se toca.
@@ -460,8 +461,8 @@ function SchemaFormat({ formato, formatos, tipos, vocabulario, onCambio, onCerra
               <label className="format-field">
                 <span className="format-label">Nombre</span>
                 <input
-                  value={clonando.name}
-                  onChange={(evento) => setClonando({ ...clonando, name: evento.target.value })}
+                  value={cloning.name}
+                  onChange={(event) => setClonando({ ...cloning, name: event.target.value })}
                   required
                 />
               </label>
@@ -469,8 +470,8 @@ function SchemaFormat({ formato, formatos, tipos, vocabulario, onCambio, onCerra
                 <span className="format-label">Clave</span>
                 <input
                   className="format-key"
-                  value={clonando.code}
-                  onChange={(evento) => setClonando({ ...clonando, code: evento.target.value })}
+                  value={cloning.code}
+                  onChange={(event) => setClonando({ ...cloning, code: event.target.value })}
                   placeholder="Ej: papel_fcq"
                   required
                 />
@@ -480,27 +481,27 @@ function SchemaFormat({ formato, formatos, tipos, vocabulario, onCambio, onCerra
               <button className="format-quiet" type="button" onClick={() => setClonando(null)}>
                 Cancelar
               </button>
-              <button className="format-btn is-primary" type="submit" disabled={ocupado}>
+              <button className="format-btn is-primary" type="submit" disabled={busy}>
                 Clonar
               </button>
             </div>
           </form>
         ) : null}
 
-        {esNuevo ? (
+        {isNew ? (
           <section className="format-sec">
             <h3>El formato</h3>
             <div className="format-grid">
               <label className="format-field">
                 <span className="format-label">Nombre</span>
                 <input
-                  value={nuevo.name}
-                  onChange={(evento) => {
-                    const name = evento.target.value;
+                  value={draftFormat.name}
+                  onChange={(event) => {
+                    const name = event.target.value;
                     setNuevo((actual) => ({
                       ...actual,
                       name,
-                      code: claveTocada ? actual.code : claveSugerida(name),
+                      code: keyTouched ? actual.code : suggestedKey(name),
                     }));
                   }}
                   placeholder="Ej: Papelería institucional"
@@ -511,14 +512,14 @@ function SchemaFormat({ formato, formatos, tipos, vocabulario, onCambio, onCerra
               <label className="format-field">
                 <span className="format-label">
                   Clave
-                  <Ayuda texto="Identifica el formato en el sistema y no se cambia después. Se sugiere desde el nombre hasta que la escribas tú." />
+                  <Help text="Identifica el formato en el sistema y no se cambia después. Se sugiere desde el nombre hasta que la escribas tú." />
                 </span>
                 <input
                   className="format-key"
-                  value={nuevo.code}
-                  onChange={(evento) => {
+                  value={draftFormat.code}
+                  onChange={(event) => {
                     setClaveTocada(true);
-                    setNuevo((actual) => ({ ...actual, code: evento.target.value }));
+                    setNuevo((actual) => ({ ...actual, code: event.target.value }));
                   }}
                   placeholder="Ej: papeleria_institucional"
                   required
@@ -528,18 +529,18 @@ function SchemaFormat({ formato, formatos, tipos, vocabulario, onCambio, onCerra
               <label className="format-field">
                 <span className="format-label">
                   Partir de
-                  <Ayuda texto="Copia los campos de otro formato en su versión más reciente. El otro no se toca." />
+                  <Help text="Copia los campos de otro formato en su versión más reciente. El otro no se toca." />
                 </span>
                 <select
-                  value={nuevo.partirDe}
-                  onChange={(evento) => partirDe(evento.target.value)}
+                  value={draftFormat.startFrom}
+                  onChange={(event) => startFrom(event.target.value)}
                 >
                   <option value="">En blanco</option>
-                  {formatos
-                    .filter((uno) => uno.isActive && uno.fields !== null)
-                    .map((uno) => (
-                      <option value={uno.id} key={uno.id}>
-                        {uno.name}
+                  {formats
+                    .filter((one) => one.isActive && one.fields !== null)
+                    .map((one) => (
+                      <option value={one.id} key={one.id}>
+                        {one.name}
                       </option>
                     ))}
                 </select>
@@ -550,41 +551,41 @@ function SchemaFormat({ formato, formatos, tipos, vocabulario, onCambio, onCerra
 
         <div className="format-columns">
           <div>
-            {SECCIONES.map((seccion) => (
-              <section className="format-sec" key={seccion.clave}>
+            {SECTIONS.map((section) => (
+              <section className="format-sec" key={section.key}>
                 <h3>
-                  {seccion.titulo}
-                  <span className="format-sub">{seccion.ayuda}</span>
+                  {section.titulo}
+                  <span className="format-sub">{section.ayuda}</span>
                 </h3>
 
                 <ul className="format-fields">
-                  {campos[seccion.clave].map((campo, indice) => {
-                    const publicada = publicadas.get(campo.code);
-                    const repetida = campo.code !== "" && repetidas.includes(campo.code);
-                    const abierto =
-                      editando !== null &&
-                      editando.seccion === seccion.clave &&
-                      editando.indice === indice;
+                  {fields[section.key].map((field, index) => {
+                    const published = publishedKeys.get(field.code);
+                    const repeated = field.code !== "" && repeatedKeys.includes(field.code);
+                    const isOpen =
+                      editing !== null &&
+                      editing.section === section.key &&
+                      editing.index === index;
 
                     return (
                       <li
-                        className={`format-field-row${abierto ? " is-open" : ""}${
-                          repetida ? " is-bad" : ""
+                        className={`format-field-row${isOpen ? " is-open" : ""}${
+                          repeated ? " is-bad" : ""
                         }`}
-                        key={indice}
+                        key={index}
                       >
                         <div className="format-field-head">
                           <span className="format-move">
                             <button
                               type="button"
-                              onClick={() => mover(seccion.clave, indice, -1)}
+                              onClick={() => move(section.key, index, -1)}
                               aria-label="Subir"
                             >
                               ↑
                             </button>
                             <button
                               type="button"
-                              onClick={() => mover(seccion.clave, indice, 1)}
+                              onClick={() => move(section.key, index, 1)}
                               aria-label="Bajar"
                             >
                               ↓
@@ -595,46 +596,46 @@ function SchemaFormat({ formato, formatos, tipos, vocabulario, onCambio, onCerra
                             className="format-field-open"
                             type="button"
                             onClick={() =>
-                              setEditando(abierto ? null : { seccion: seccion.clave, indice })
+                              setEditando(isOpen ? null : { section: section.key, index })
                             }
                           >
                             <span className="format-field-name">
-                              {campo.name === "" ? "Campo sin nombre" : campo.name}
+                              {field.name === "" ? "Campo sin nombre" : field.name}
                             </span>
                             <span className="format-field-key">
-                              {campo.code === "" ? "sin clave" : campo.code}
-                              {repetida ? (
+                              {field.code === "" ? "sin clave" : field.code}
+                              {repeated ? (
                                 <span className="format-repeated">clave repetida</span>
                               ) : null}
                             </span>
                           </button>
 
                           <span className="format-type">
-                            <IconoDeTipo tipo={campo.type} />
-                            {tipos.find((tipo) => tipo.code === campo.type)?.name ?? campo.type}
+                            <TypeIcon type={field.type} />
+                            {types.find((type) => type.code === field.type)?.name ?? field.type}
                           </span>
                           <span
                             className={
-                              campo.required ? "format-required is-on" : "format-required"
+                              field.required ? "format-required is-on" : "format-required"
                             }
                           >
-                            {campo.required ? "Obligatorio" : "Opcional"}
+                            {field.required ? "Obligatorio" : "Opcional"}
                           </span>
                         </div>
 
-                        {abierto ? (
-                          <EditorDeCampo
-                            campo={campo}
-                            tipos={tipos}
-                            publicada={publicada}
-                            repetida={repetida}
-                            sugerencias={vocabulario.filter(
-                              (una) => una.key === campo.code || !claves.includes(una.key),
+                        {isOpen ? (
+                          <FieldEditor
+                            field={field}
+                            types={types}
+                            published={published}
+                            repeated={repeated}
+                            suggestions={vocabulary.filter(
+                              (one) => one.key === field.code || !keys.includes(one.key),
                             )}
-                            listaId={`vocabulario-${seccion.clave}-${indice}`}
-                            onCambiar={(cambios) => cambiarCampo(seccion.clave, indice, cambios)}
-                            onQuitar={() => quitarCampo(seccion.clave, indice)}
-                            onCerrar={() => setEditando(null)}
+                            listId={`vocabulario-${section.key}-${index}`}
+                            onChange={(changes) => changeField(section.key, index, changes)}
+                            onRemove={() => removeField(section.key, index)}
+                            onClose={() => setEditando(null)}
                           />
                         ) : null}
                       </li>
@@ -646,21 +647,21 @@ function SchemaFormat({ formato, formatos, tipos, vocabulario, onCambio, onCerra
                   <button
                     className="format-add"
                     type="button"
-                    onClick={() => agregarCampo(seccion.clave)}
+                    onClick={() => addField(section.key)}
                   >
-                    + Agregar campo
+                    + Agregar field
                   </button>
 
                   <select
                     value=""
-                    onChange={(evento) => {
-                      const publicada = publicadas.get(evento.target.value);
-                      if (publicada !== undefined) {
-                        agregarCampo(seccion.clave, {
-                          code: publicada.key,
-                          name: publicada.name,
-                          type: publicada.type,
-                          note: publicada.note ?? "",
+                    onChange={(event) => {
+                      const published = publishedKeys.get(event.target.value);
+                      if (published !== undefined) {
+                        addField(section.key, {
+                          code: published.key,
+                          name: published.name,
+                          type: published.type,
+                          note: published.note ?? "",
                           required: false,
                         });
                       }
@@ -668,11 +669,11 @@ function SchemaFormat({ formato, formatos, tipos, vocabulario, onCambio, onCerra
                     aria-label="Usar un dato que ya existe"
                   >
                     <option value="">o usar un dato que ya existe…</option>
-                    {vocabulario
-                      .filter((una) => !claves.includes(una.key))
-                      .map((una) => (
-                        <option value={una.key} key={una.key}>
-                          {una.name} ({una.type})
+                    {vocabulary
+                      .filter((one) => !keys.includes(one.key))
+                      .map((one) => (
+                        <option value={one.key} key={one.key}>
+                          {one.name} ({one.type})
                         </option>
                       ))}
                   </select>
@@ -680,17 +681,17 @@ function SchemaFormat({ formato, formatos, tipos, vocabulario, onCambio, onCerra
               </section>
             ))}
 
-            {esNuevo || versiones.length <= 1 ? null : (
+            {isNew || versions.length <= 1 ? null : (
               <details className="format-versions">
-                <summary>Versiones anteriores ({versiones.length - 1})</summary>
+                <summary>Versiones anteriores ({versions.length - 1})</summary>
                 <ul>
-                  {versiones.slice(1).map((version) => {
+                  {versions.slice(1).map((version) => {
                     const total =
                       version.fields.deliverables.length + version.fields.information.length;
                     return (
                       <li key={version.id}>
                         <span className="format-label">Versión {version.version}</span>
-                        {fechaCorta(version.publishedAt)} · {total}{" "}
+                        {shortDate(version.publishedAt)} · {total}{" "}
                         {total === 1 ? "campo" : "campos"}
                       </li>
                     );
@@ -702,24 +703,24 @@ function SchemaFormat({ formato, formatos, tipos, vocabulario, onCambio, onCerra
 
           <section className="format-sec format-preview">
             <h3>Así se ve al capturar</h3>
-            {todos.length === 0 ? (
+            {everyField.length === 0 ? (
               <p className="format-note">Agrega un campo y aparecerá aquí.</p>
             ) : (
-              SECCIONES.map((seccion) =>
-                campos[seccion.clave].length === 0 ? null : (
-                  <div className="format-preview-sec" key={seccion.clave}>
-                    <h4>{seccion.titulo}</h4>
+              SECTIONS.map((section) =>
+                fields[section.key].length === 0 ? null : (
+                  <div className="format-preview-sec" key={section.key}>
+                    <h4>{section.titulo}</h4>
                     <div className="format-grid">
-                      {campos[seccion.clave].map((campo, indice) => (
+                      {fields[section.key].map((field, index) => (
                         <FieldInput
                           field={{
-                            ...campo,
-                            code: campo.code === "" ? `sin-clave-${indice}` : campo.code,
-                            name: campo.name === "" ? "Campo sin nombre" : campo.name,
+                            ...field,
+                            code: field.code === "" ? `sin-clave-${index}` : field.code,
+                            name: field.name === "" ? "Campo sin nombre" : field.name,
                           }}
                           value=""
                           onChange={() => {}}
-                          key={indice}
+                          key={index}
                         />
                       ))}
                     </div>
@@ -732,35 +733,35 @@ function SchemaFormat({ formato, formatos, tipos, vocabulario, onCambio, onCerra
       </div>
 
       <footer className="format-foot">
-        {problema !== null ? (
-          <p className="format-problem">{problema}</p>
-        ) : sucio ? (
+        {problem !== null ? (
+          <p className="format-problem">{problem}</p>
+        ) : dirty ? (
           <p className="format-note">
-            {esNuevo
+            {isNew
               ? "Se crea con su versión 1."
-              : `Las solicitudes nuevas se capturan con la versión ${siguiente}. Las ${
-                  formato.requestCount
+              : `Las solicitudes nuevas se capturan con la versión ${next}. Las ${
+                  format.requestCount
                 } capturadas antes se siguen leyendo con la suya.${
-                  formato.sheetCount > 0
-                    ? ` ${formato.sheetCount} ${
-                        formato.sheetCount === 1 ? "libro de Excel sigue" : "libros de Excel siguen"
-                      } mapeados a la versión ${formato.version} hasta que se remapeen.`
+                  format.sheetCount > 0
+                    ? ` ${format.sheetCount} ${
+                        format.sheetCount === 1 ? "libro de Excel sigue" : "libros de Excel siguen"
+                      } mapeados a la versión ${format.version} hasta que se remapeen.`
                     : ""
                 }`}
           </p>
         ) : (
           <p className="format-note">
-            {esNuevo ? "" : `Versión ${formato.version}, sin cambios por publicar.`}
+            {isNew ? "" : `Versión ${format.version}, sin cambios por publicar.`}
           </p>
         )}
 
         <div className="format-foot-right">
-          {sucio && !esNuevo ? (
+          {dirty && !isNew ? (
             <button
               className="format-btn"
               type="button"
-              onClick={() => setCampos(formato.fields ?? { deliverables: [], information: [] })}
-              disabled={ocupado}
+              onClick={() => setCampos(format.fields ?? { deliverables: [], information: [] })}
+              disabled={busy}
             >
               Descartar
             </button>
@@ -768,17 +769,17 @@ function SchemaFormat({ formato, formatos, tipos, vocabulario, onCambio, onCerra
           <button
             className="format-btn is-primary"
             type="button"
-            onClick={publicar}
-            disabled={ocupado || problema !== null || (!sucio && !esNuevo)}
+            onClick={publish}
+            disabled={busy || problem !== null || (!dirty && !isNew)}
           >
-            {ocupado
+            {busy
               ? "Publicando…"
-              : esNuevo
+              : isNew
                 ? "Crear formato"
-                : `Publicar versión ${siguiente}`}
-            {esNuevo ? null : (
-              <Ayuda
-                texto={`Crea la versión ${siguiente} con estos campos. La ${formato.version} queda intacta, porque lo capturado con ella se sigue leyendo como se capturó.`}
+                : `Publicar versión ${next}`}
+            {isNew ? null : (
+              <Help
+                text={`Crea la versión ${next} con estos campos. La ${format.version} queda intacta, porque lo capturado con ella se sigue leyendo como se capturó.`}
               />
             )}
           </button>

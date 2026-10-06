@@ -1,31 +1,29 @@
-// Los libros de Excel registrados (RF-MIG-01): lo que la gente viene a hacer aquí.
+// The registered Excel workbooks (RF-MIG-01): what people come here to do.
 //
-// Los libros van primero y la conexión con Microsoft es una línea: el registro de aplicación de
-// Azure y la cuenta se tocan una vez, y antes ocupaban la pantalla entera cada visita. Solo en la
-// primera vez, cuando todavía no hay nada conectado, la línea se vuelve dos pasos de verdad.
+// The books come first and the Microsoft connection is one line: the Azure app registration and
+// the account are touched once, and they used to take the whole screen on every visit. Only on the
+// first run, when nothing is connected yet, does that line become two real steps.
 //
-// Lo que se hace *con* un libro --- mapearlo, importarlo, ver sus corridas --- no está aquí: vive
-// en «Importar de Excel». Son dos trabajos de dos momentos: dar de alta el libro pasa una vez, y
-// el mapeo se ajusta cada vez que la hoja cambia.
+// What is done *with* a book --- mapping it, importing it, looking at its runs --- is not here: it
+// lives in "Importar de Excel". They are two jobs from two moments: registering a book happens
+// once, and the mapping is adjusted every time the sheet changes.
 //
-// Los libros se leen con el acceso delegado de una persona, así que una cuenta revocada detiene
-// todos los libros que se leen con ella hasta que alguien la reconecte: por eso una cuenta
-// desconectada se dice en ámbar en el renglón del libro, y desconectarla avisa de cuántos libros
-// depende.
+// Books are read with one person's delegated access, so a revoked account stops every book read
+// with it until somebody reconnects: that is why a disconnected account is said in amber on the
+// book's row, and why disconnecting one warns how many books depend on it.
 import { Fragment, useEffect, useState } from "react";
 
 import * as api from "../../api/client.js";
-import { fechaCorta, letraDeColumna } from "../shared/formato.js";
-import Ayuda from "../shared/ayuda.jsx";
+import { shortDate, columnLetter } from "../shared/format.js";
+import Help from "../shared/help.jsx";
 import { MICROSOFT_PARAM } from "../../config.js";
 import "./spreadsheets.css";
 
 /**
- * Por qué no se pudo conectar, en palabras. El servidor manda el código de Microsoft, que no le
- * dice nada a nadie; lo que importa es si se puede volver a intentar o hay que hablar con quien
- * administra.
+ * Why connecting failed, in words. The server sends Microsoft's code, which tells nobody anything;
+ * what matters is whether it can be tried again or somebody has to talk to whoever administers it.
  */
-const MOTIVOS = {
+const REASONS = {
   access_denied: "No se otorgó el permiso en la pantalla de Microsoft.",
   invalid_grant: "El permiso venció antes de terminar. Vuelve a intentarlo.",
   invalid_client: "El registro de aplicación de Azure no es válido: revísalo aquí abajo.",
@@ -33,53 +31,53 @@ const MOTIVOS = {
   state_mismatch: "La vuelta de Microsoft no correspondía a esta sesión. Vuelve a intentarlo.",
 };
 
-/** Lo que dejó el servidor en la URL al volver de Microsoft, o null si no venimos de ahí. */
-function resultadoEnLaUrl() {
+/** What the server left in the URL on the way back from Microsoft, or null if we did not come from there. */
+function resultInTheUrl() {
   const params = new URLSearchParams(window.location.search);
-  const resultado = params.get(MICROSOFT_PARAM);
-  if (!resultado) return null;
+  const result = params.get(MICROSOFT_PARAM);
+  if (!result) return null;
 
-  return { ok: resultado === "connected", reason: params.get("reason") };
+  return { ok: result === "connected", reason: params.get("reason") };
 }
 
-const FORMULARIO_VACIO = { accountId: "", url: "", tableName: "", name: "" };
+const NO_FORM = { accountId: "", url: "", tableName: "", name: "" };
 
 /**
- * El formulario del registro de aplicación de Azure. El secreto siempre empieza vacío: el
- * servidor nunca lo devuelve, y vacío significa «conservar el que ya está».
+ * The Azure app registration form. The secret always starts empty: the server never returns it, and
+ * empty means "keep the one already stored".
  */
-const APP_VACIA = { tenantId: "common", clientId: "", clientSecret: "" };
+const NO_APP = { tenantId: "common", clientId: "", clientSecret: "" };
 
-/** Cómo salió la última importación, en una frase. */
-function ultimaImportacion(libro) {
-  if (libro.markedRows > 0 && libro.lastImport === null) {
-    return `${libro.markedRows} filas marcadas como ya atendidas`;
+/** How the last import went, in one sentence. */
+function lastImport(book) {
+  if (book.markedRows > 0 && book.lastImport === null) {
+    return `${book.markedRows} filas marcadas como ya atendidas`;
   }
-  if (libro.lastImport === null) {
+  if (book.lastImport === null) {
     return "Nunca se ha importado";
   }
 
-  const partes = [fechaCorta(libro.lastImport.finishedAt)];
-  partes.push(
-    `${libro.lastImport.created} ${libro.lastImport.created === 1 ? "nueva" : "nuevas"}`,
+  const parts = [shortDate(book.lastImport.finishedAt)];
+  parts.push(
+    `${book.lastImport.created} ${book.lastImport.created === 1 ? "nueva" : "nuevas"}`,
   );
-  if (libro.lastImport.failed > 0) {
-    partes.push(`${libro.lastImport.failed} con error`);
+  if (book.lastImport.failed > 0) {
+    parts.push(`${book.lastImport.failed} con error`);
   }
-  return partes.join(" · ");
+  return parts.join(" · ");
 }
 
 /**
- * El libro como lo muestra Excel: letras de columna, números de fila y el encabezado teñido.
+ * The book as Excel shows it: column letters, row numbers and the tinted header row.
  *
- * Las filas vienen por posición, no por nombre de columna: Graph devuelve un arreglo por renglón
- * y el encabezado es el renglón 1, así que la celda se busca por su índice.
+ * The rows come by position, not by column name: Graph returns an array per row and the header is
+ * row 1, so a cell is found by its index.
  */
-function Vista({ vista, cargando }) {
-  if (cargando) {
+function SheetPreview({ preview, loading }) {
+  if (loading) {
     return <p className="books-note">Leyendo el libro…</p>;
   }
-  if (vista === null) {
+  if (preview === null) {
     return null;
   }
 
@@ -89,23 +87,23 @@ function Vista({ vista, cargando }) {
         <thead>
           <tr>
             <th className="books-sheet-corner" />
-            {vista.headers.map((_, indice) => (
-              <th key={indice}>{letraDeColumna(indice)}</th>
+            {preview.headers.map((_, index) => (
+              <th key={index}>{columnLetter(index)}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           <tr className="books-sheet-headers">
             <th>1</th>
-            {vista.headers.map((encabezado, indice) => (
-              <td key={indice}>{encabezado}</td>
+            {preview.headers.map((header, index) => (
+              <td key={index}>{header}</td>
             ))}
           </tr>
-          {vista.rows.map((fila, indice) => (
-            <tr key={indice}>
-              <th>{indice + 2}</th>
-              {vista.headers.map((_, columna) => (
-                <td key={columna}>{String(fila[columna] ?? "")}</td>
+          {preview.rows.map((row, index) => (
+            <tr key={index}>
+              <th>{index + 2}</th>
+              {preview.headers.map((_, column) => (
+                <td key={column}>{String(row[column] ?? "")}</td>
               ))}
             </tr>
           ))}
@@ -115,212 +113,212 @@ function Vista({ vista, cargando }) {
   );
 }
 
-function Spreadsheets({ onIr = null }) {
-  const [cuentas, setCuentas] = useState([]);
-  const [libros, setLibros] = useState([]);
+function Spreadsheets({ onGo = null }) {
+  const [accounts, setCuentas] = useState([]);
+  const [books, setLibros] = useState([]);
   const [app, setApp] = useState(null);
-  const [cargando, setCargando] = useState(true);
+  const [loading, setCargando] = useState(true);
   const [error, setError] = useState(null);
-  const [recarga, setRecarga] = useState(0);
-  const [aviso, setAviso] = useState(resultadoEnLaUrl);
+  const [reloads, setRecarga] = useState(0);
+  const [notice, setAviso] = useState(resultInTheUrl);
 
-  const [verConexion, setVerConexion] = useState(false);
-  const [editandoApp, setEditandoApp] = useState(false);
-  const [formApp, setFormApp] = useState(APP_VACIA);
-  const [errorApp, setErrorApp] = useState(null);
-  const [guardandoApp, setGuardandoApp] = useState(false);
-  const [confirmando, setConfirmando] = useState(null);
+  const [showConnection, setVerConexion] = useState(false);
+  const [editingApp, setEditandoApp] = useState(false);
+  const [appForm, setFormApp] = useState(NO_APP);
+  const [appError, setErrorApp] = useState(null);
+  const [savingApp, setGuardandoApp] = useState(false);
+  const [confirming, setConfirmando] = useState(null);
 
-  const [registrando, setRegistrando] = useState(false);
-  const [form, setForm] = useState(FORMULARIO_VACIO);
-  const [encontrado, setEncontrado] = useState(null);
-  const [buscando, setBuscando] = useState(false);
-  const [guardando, setGuardando] = useState(false);
-  const [errorForm, setErrorForm] = useState(null);
+  const [registering, setRegistrando] = useState(false);
+  const [form, setForm] = useState(NO_FORM);
+  const [found, setEncontrado] = useState(null);
+  const [searching, setBuscando] = useState(false);
+  const [saving, setGuardando] = useState(false);
+  const [formError, setErrorForm] = useState(null);
 
-  const [abierto, setAbierto] = useState(null);
-  const [vista, setVista] = useState(null);
-  const [cargandoVista, setCargandoVista] = useState(false);
-
-  useEffect(() => {
-    if (!aviso) return;
-    const limpia = window.location.pathname + window.location.hash;
-    window.history.replaceState(null, "", limpia);
-  }, [aviso]);
+  const [opened, setAbierto] = useState(null);
+  const [preview, setVista] = useState(null);
+  const [loadingPreview, setCargandoVista] = useState(false);
 
   useEffect(() => {
-    let cancelado = false;
+    if (!notice) return;
+    const clean = window.location.pathname + window.location.hash;
+    window.history.replaceState(null, "", clean);
+  }, [notice]);
+
+  useEffect(() => {
+    let cancelled = false;
 
     Promise.all([api.getMicrosoftApp(), api.listMicrosoftAccounts(), api.listSpreadsheets()])
       .then(([datosApp, datosCuentas, datosLibros]) => {
-        if (cancelado) return;
+        if (cancelled) return;
         setApp(datosApp.app);
         setCuentas(datosCuentas.accounts);
         setLibros(datosLibros.sheets);
         setError(null);
       })
-      .catch((fallo) => {
-        if (!cancelado) setError(fallo.message);
+      .catch((failure) => {
+        if (!cancelled) setError(failure.message);
       })
       .finally(() => {
-        if (!cancelado) setCargando(false);
+        if (!cancelled) setCargando(false);
       });
 
     return () => {
-      cancelado = true;
+      cancelled = true;
     };
-  }, [recarga]);
+  }, [reloads]);
 
-  function recargar() {
+  function reload() {
     setRecarga((actual) => actual + 1);
   }
 
-  async function conectar() {
+  async function connect() {
     setError(null);
     try {
       const { url } = await api.connectMicrosoft();
       window.location.href = url;
-    } catch (fallo) {
-      setError(fallo.message);
+    } catch (failure) {
+      setError(failure.message);
     }
   }
 
-  async function desconectar(cuenta) {
+  async function disconnect(account) {
     setError(null);
     try {
-      await api.revokeMicrosoftAccount(cuenta.id);
+      await api.revokeMicrosoftAccount(account.id);
       setConfirmando(null);
-      recargar();
-    } catch (fallo) {
-      setError(fallo.message);
+      reload();
+    } catch (failure) {
+      setError(failure.message);
     }
   }
 
-  async function guardarApp(evento) {
-    evento.preventDefault();
+  async function saveApp(event) {
+    event.preventDefault();
     setErrorApp(null);
     setGuardandoApp(true);
     try {
-      const datos = await api.setMicrosoftApp({
-        tenantId: formApp.tenantId.trim() || "common",
-        clientId: formApp.clientId.trim(),
-        clientSecret: formApp.clientSecret.trim() || undefined,
+      const data = await api.setMicrosoftApp({
+        tenantId: appForm.tenantId.trim() || "common",
+        clientId: appForm.clientId.trim(),
+        clientSecret: appForm.clientSecret.trim() || undefined,
       });
-      setApp(datos.app);
+      setApp(data.app);
       setEditandoApp(false);
-      setFormApp(APP_VACIA);
-    } catch (fallo) {
-      setErrorApp(fallo.message);
+      setFormApp(NO_APP);
+    } catch (failure) {
+      setErrorApp(failure.message);
     } finally {
       setGuardandoApp(false);
     }
   }
 
-  async function olvidarApp() {
+  async function forgetApp() {
     setErrorApp(null);
     try {
-      const datos = await api.clearMicrosoftApp();
-      setApp(datos.app);
+      const data = await api.clearMicrosoftApp();
+      setApp(data.app);
       setConfirmando(null);
-    } catch (fallo) {
-      setErrorApp(fallo.message);
+    } catch (failure) {
+      setErrorApp(failure.message);
     }
   }
 
-  async function buscar(evento) {
-    evento.preventDefault();
+  async function findBook(event) {
+    event.preventDefault();
     setErrorForm(null);
     setEncontrado(null);
     setBuscando(true);
     try {
-      const libro = await api.resolveSpreadsheet(form.accountId, form.url.trim());
-      setEncontrado(libro);
-      const primera = libro.tables[0] ?? libro.worksheets[0];
+      const book = await api.resolveSpreadsheet(form.accountId, form.url.trim());
+      setEncontrado(book);
+      const first = book.tables[0] ?? book.worksheets[0];
       setForm({
         ...form,
-        name: form.name || libro.name,
-        tableName: primera ? primera.name : "",
+        name: form.name || book.name,
+        tableName: first ? first.name : "",
       });
-    } catch (fallo) {
-      setErrorForm(fallo.message);
+    } catch (failure) {
+      setErrorForm(failure.message);
     } finally {
       setBuscando(false);
     }
   }
 
-  async function registrar(evento) {
-    evento.preventDefault();
+  async function registerBook(event) {
+    event.preventDefault();
     setErrorForm(null);
     setGuardando(true);
     try {
       await api.registerSpreadsheet({
         accountId: Number(form.accountId),
         name: form.name.trim(),
-        driveId: encontrado.driveId,
-        itemId: encontrado.itemId,
+        driveId: found.driveId,
+        itemId: found.itemId,
         tableName: form.tableName || null,
-        webUrl: encontrado.webUrl,
+        webUrl: found.webUrl,
       });
-      setForm(FORMULARIO_VACIO);
+      setForm(NO_FORM);
       setEncontrado(null);
       setRegistrando(false);
-      recargar();
-    } catch (fallo) {
-      setErrorForm(fallo.message);
+      reload();
+    } catch (failure) {
+      setErrorForm(failure.message);
     } finally {
       setGuardando(false);
     }
   }
 
-  async function abrir(libro) {
-    if (abierto === libro.id) {
+  async function openBook(book) {
+    if (opened === book.id) {
       setAbierto(null);
       setVista(null);
       return;
     }
 
-    setAbierto(libro.id);
+    setAbierto(book.id);
     setVista(null);
     setError(null);
     setCargandoVista(true);
     try {
-      const datos = await api.previewSpreadsheet(libro.id);
-      setVista({ id: libro.id, ...datos });
-    } catch (fallo) {
-      setError(fallo.message);
+      const data = await api.previewSpreadsheet(book.id);
+      setVista({ id: book.id, ...data });
+    } catch (failure) {
+      setError(failure.message);
     } finally {
       setCargandoVista(false);
     }
   }
 
-  async function quitar(libro) {
+  async function removeBook(book) {
     setError(null);
     try {
-      await api.deleteSpreadsheet(libro.id);
+      await api.deleteSpreadsheet(book.id);
       setAbierto(null);
       setVista(null);
       setConfirmando(null);
-      recargar();
-    } catch (fallo) {
-      setError(fallo.message);
+      reload();
+    } catch (failure) {
+      setError(failure.message);
     }
   }
 
-  if (cargando) {
+  if (loading) {
     return <p className="books-note">Cargando…</p>;
   }
 
-  const vivas = cuentas.filter((cuenta) => cuenta.revokedAt === null);
-  const revocadas = cuentas.filter((cuenta) => cuenta.revokedAt !== null);
-  const primeraVez = app.source === null || vivas.length === 0;
+  const live = accounts.filter((account) => account.revokedAt === null);
+  const revoked = accounts.filter((account) => account.revokedAt !== null);
+  const firstRun = app.source === null || live.length === 0;
 
   return (
     <section className="books">
-      {aviso ? (
-        <p className={aviso.ok ? "books-status" : "books-status is-bad"}>
-          {aviso.ok
+      {notice ? (
+        <p className={notice.ok ? "books-status" : "books-status is-bad"}>
+          {notice.ok
             ? "Cuenta de Microsoft conectada."
-            : (MOTIVOS[aviso.reason] ??
+            : (REASONS[notice.reason] ??
               "No se pudo conectar la cuenta. Vuelve a intentarlo.")}
           <button className="books-quiet" type="button" onClick={() => setAviso(null)}>
             Entendido
@@ -330,14 +328,14 @@ function Spreadsheets({ onIr = null }) {
 
       {error !== null ? <p className="books-error">{error}</p> : null}
 
-      {primeraVez ? (
+      {firstRun ? (
         <div className="books-first">
           <ol>
             <li className={app.source === null ? "is-now" : "is-done"}>
               <span className="books-step">Paso 1</span>
               <strong>Registro de aplicación de Azure</strong>
               <p className="books-note">
-                Es lo que autoriza a este sistema a pedirle archivos a Microsoft en nombre de una
+                Es lo que autoriza a este sistema a pedirle archivos a Microsoft en nombre de one
                 persona. Lo da de alta quien administra el inquilino de la universidad.
               </p>
               <button
@@ -360,15 +358,15 @@ function Spreadsheets({ onIr = null }) {
               <span className="books-step">Paso 2</span>
               <strong>Una cuenta Microsoft</strong>
               <p className="books-note">
-                Los libros se leen con el acceso de una persona, no con el del sistema.
+                Los books se leen con el acceso de one persona, no con el del sistema.
               </p>
               <button
                 className="books-btn is-primary"
                 type="button"
-                onClick={conectar}
+                onClick={connect}
                 disabled={app.source === null}
               >
-                Conectar una cuenta
+                Conectar one account
               </button>
             </li>
           </ol>
@@ -376,60 +374,60 @@ function Spreadsheets({ onIr = null }) {
       ) : (
         <div className="books-strip">
           <span>
-            Conectado a Microsoft con {vivas.length}{" "}
-            {vivas.length === 1 ? "cuenta" : "cuentas"}
-            {revocadas.length === 0 ? "" : ` · ${revocadas.length} desconectada`}
-            {revocadas.length > 1 ? "s" : ""}
+            Conectado a Microsoft con {live.length}{" "}
+            {live.length === 1 ? "cuenta" : "cuentas"}
+            {revoked.length === 0 ? "" : ` · ${revoked.length} desconectada`}
+            {revoked.length > 1 ? "s" : ""}
           </span>
           <button
             className="books-quiet"
             type="button"
-            onClick={() => setVerConexion(!verConexion)}
+            onClick={() => setVerConexion(!showConnection)}
           >
-            {verConexion ? "Ocultar la conexión" : "Administrar conexión"}
+            {showConnection ? "Ocultar la conexión" : "Administrar conexión"}
           </button>
         </div>
       )}
 
-      {verConexion ? (
+      {showConnection ? (
         <div className="books-connection">
           <section>
             <h3>Cuentas</h3>
             <ul className="books-accounts">
-              {cuentas.map((cuenta) => (
+              {accounts.map((account) => (
                 <li
-                  className={cuenta.revokedAt === null ? "books-account" : "books-account is-off"}
-                  key={cuenta.id}
+                  className={account.revokedAt === null ? "books-account" : "books-account is-off"}
+                  key={account.id}
                 >
                   <span className="books-account-who">
-                    {cuenta.email}
-                    {cuenta.revokedAt === null ? null : (
+                    {account.email}
+                    {account.revokedAt === null ? null : (
                       <span className="books-off">desconectada</span>
                     )}
                   </span>
                   <span className="books-note">
-                    La conectó {cuenta.userFullName} el {fechaCorta(cuenta.connectedAt)}
-                    {cuenta.lastUsedAt === null
+                    La conectó {account.userFullName} el {shortDate(account.connectedAt)}
+                    {account.lastUsedAt === null
                       ? ""
-                      : ` · se usó el ${fechaCorta(cuenta.lastUsedAt)}`}{" "}
-                    · {cuenta.sheetCount}{" "}
-                    {cuenta.sheetCount === 1 ? "libro depende" : "libros dependen"} de ella
+                      : ` · se usó el ${shortDate(account.lastUsedAt)}`}{" "}
+                    · {account.sheetCount}{" "}
+                    {account.sheetCount === 1 ? "libro depende" : "libros dependen"} de ella
                   </span>
 
-                  {cuenta.revokedAt === null ? (
-                    confirmando === `cuenta-${cuenta.id}` ? (
+                  {account.revokedAt === null ? (
+                    confirming === `cuenta-${account.id}` ? (
                       <span className="books-action-row">
                         <span className="books-confirm">
-                          {cuenta.sheetCount === 0
+                          {account.sheetCount === 0
                             ? "Ningún libro se lee con ella."
-                            : `${cuenta.sheetCount} ${
-                                cuenta.sheetCount === 1 ? "libro deja" : "libros dejan"
+                            : `${account.sheetCount} ${
+                                account.sheetCount === 1 ? "book deja" : "books dejan"
                               } de poder leerse hasta que alguien la reconecte.`}
                         </span>
                         <button
                           className="books-btn"
                           type="button"
-                          onClick={() => desconectar(cuenta)}
+                          onClick={() => disconnect(account)}
                         >
                           Desconectar
                         </button>
@@ -445,40 +443,40 @@ function Spreadsheets({ onIr = null }) {
                       <button
                         className="books-quiet"
                         type="button"
-                        onClick={() => setConfirmando(`cuenta-${cuenta.id}`)}
+                        onClick={() => setConfirmando(`cuenta-${account.id}`)}
                       >
                         Desconectar
                       </button>
                     )
                   ) : (
-                    <button className="books-quiet" type="button" onClick={conectar}>
+                    <button className="books-quiet" type="button" onClick={connect}>
                       Reconectar
                     </button>
                   )}
                 </li>
               ))}
             </ul>
-            <button className="books-btn" type="button" onClick={conectar}>
-              Conectar otra cuenta
+            <button className="books-btn" type="button" onClick={connect}>
+              Conectar otra account
             </button>
           </section>
 
           <section>
             <h3>
               Registro de aplicación de Azure
-              <Ayuda texto="Es lo que autoriza a este sistema a pedirle archivos a Microsoft en nombre de una persona. Se da de alta una vez, en el portal de Azure de la universidad." />
+              <Help text="Es lo que autoriza a este sistema a pedirle archivos a Microsoft en nombre de una persona. Se da de alta una vez, en el portal de Azure de la universidad." />
             </h3>
 
-            {errorApp !== null ? <p className="books-error">{errorApp}</p> : null}
+            {appError !== null ? <p className="books-error">{appError}</p> : null}
 
-            {editandoApp ? (
-              <form className="books-grid" onSubmit={guardarApp}>
+            {editingApp ? (
+              <form className="books-grid" onSubmit={saveApp}>
                 <label className="books-field">
                   <span className="books-label">Inquilino</span>
                   <input
-                    value={formApp.tenantId}
-                    onChange={(evento) =>
-                      setFormApp({ ...formApp, tenantId: evento.target.value })
+                    value={appForm.tenantId}
+                    onChange={(event) =>
+                      setFormApp({ ...appForm, tenantId: event.target.value })
                     }
                     placeholder="Ej: common"
                   />
@@ -486,9 +484,9 @@ function Spreadsheets({ onIr = null }) {
                 <label className="books-field">
                   <span className="books-label">Id de la aplicación</span>
                   <input
-                    value={formApp.clientId}
-                    onChange={(evento) =>
-                      setFormApp({ ...formApp, clientId: evento.target.value })
+                    value={appForm.clientId}
+                    onChange={(event) =>
+                      setFormApp({ ...appForm, clientId: event.target.value })
                     }
                     required
                   />
@@ -496,13 +494,13 @@ function Spreadsheets({ onIr = null }) {
                 <label className="books-field">
                   <span className="books-label">
                     Secreto
-                    <Ayuda texto="El servidor nunca lo devuelve. Dejarlo vacío conserva el que ya está guardado." />
+                    <Help text="El servidor nunca lo devuelve. Dejarlo vacío conserva el que ya está guardado." />
                   </span>
                   <input
                     type="password"
-                    value={formApp.clientSecret}
-                    onChange={(evento) =>
-                      setFormApp({ ...formApp, clientSecret: evento.target.value })
+                    value={appForm.clientSecret}
+                    onChange={(event) =>
+                      setFormApp({ ...appForm, clientSecret: event.target.value })
                     }
                     placeholder={app.hasSecret ? "Se conserva el guardado" : ""}
                   />
@@ -510,7 +508,7 @@ function Spreadsheets({ onIr = null }) {
 
                 <div className="books-field books-field-wide">
                   <span className="books-label">
-                    URI de redirección que hay que registrar en Azure
+                    URI de redirección que hay que registerBook en Azure
                   </span>
                   <code className="books-code">{app.redirectUri}</code>
                 </div>
@@ -523,8 +521,8 @@ function Spreadsheets({ onIr = null }) {
                   >
                     Cancelar
                   </button>
-                  <button className="books-btn is-primary" type="submit" disabled={guardandoApp}>
-                    {guardandoApp ? "Guardando…" : "Guardar el registro"}
+                  <button className="books-btn is-primary" type="submit" disabled={savingApp}>
+                    {savingApp ? "Guardando…" : "Guardar el registro"}
                   </button>
                 </div>
               </form>
@@ -538,18 +536,18 @@ function Spreadsheets({ onIr = null }) {
                       : `Guardado${
                           app.updatedByName === null ? "" : ` por ${app.updatedByName}`
                         }${
-                          app.updatedAt === null ? "" : ` el ${fechaCorta(app.updatedAt)}`
+                          app.updatedAt === null ? "" : ` el ${shortDate(app.updatedAt)}`
                         }. Id ${app.clientId}.`}
                 </p>
                 <div className="books-action-row">
                   {app.source === "database" ? (
-                    confirmando === "app" ? (
+                    confirming === "app" ? (
                       <>
                         <span className="books-confirm">
                           Si el servidor tiene uno en su archivo de entorno se usará ése; si no,
                           nadie podrá conectar cuentas hasta guardar otro.
                         </span>
-                        <button className="books-btn" type="button" onClick={olvidarApp}>
+                        <button className="books-btn" type="button" onClick={forgetApp}>
                           Olvidarlo
                         </button>
                         <button
@@ -593,15 +591,15 @@ function Spreadsheets({ onIr = null }) {
 
       <div className="books-bar">
         <p className="books-count">
-          {libros.length} {libros.length === 1 ? "libro registrado" : "libros registrados"}
+          {books.length} {books.length === 1 ? "libro registrado" : "libros registrados"}
         </p>
         <button
           className="books-btn is-primary"
           type="button"
           onClick={() => setRegistrando(true)}
-          disabled={vivas.length === 0}
+          disabled={live.length === 0}
         >
-          Registrar libro
+          Registrar book
         </button>
       </div>
 
@@ -616,10 +614,10 @@ function Spreadsheets({ onIr = null }) {
             </tr>
           </thead>
           <tbody>
-            {registrando ? (
+            {registering ? (
               <tr className="books-expanded">
                 <td colSpan={4}>
-                  <form className="books-register" onSubmit={encontrado === null ? buscar : registrar}>
+                  <form className="books-register" onSubmit={found === null ? findBook : registerBook}>
                     <header className="books-register-head">
                       <span className="books-eyebrow">Registrar libro</span>
                       <button
@@ -628,7 +626,7 @@ function Spreadsheets({ onIr = null }) {
                         onClick={() => {
                           setRegistrando(false);
                           setEncontrado(null);
-                          setForm(FORMULARIO_VACIO);
+                          setForm(NO_FORM);
                         }}
                         aria-label="Cerrar"
                       >
@@ -642,31 +640,31 @@ function Spreadsheets({ onIr = null }) {
                         className={
                           form.accountId === ""
                             ? ""
-                            : encontrado === null
+                            : found === null
                               ? "is-now"
                               : "is-done"
                         }
                       >
                         Enlace
                       </li>
-                      <li className={encontrado === null ? "" : "is-now"}>Tabla y nombre</li>
+                      <li className={found === null ? "" : "is-now"}>Tabla y nombre</li>
                     </ol>
 
                     <div className="books-grid">
                       <label className="books-field">
                         <span className="books-label">
                           Se leerá con la cuenta
-                          <Ayuda texto="El libro se lee con el acceso de esa persona. Si su cuenta se desconecta, el libro deja de poder leerse hasta que alguien la reconecte." />
+                          <Help text="El libro se lee con el acceso de esa persona. Si su cuenta se desconecta, el libro deja de poder leerse hasta que alguien la reconecte." />
                         </span>
                         <select
                           value={form.accountId}
-                          onChange={(evento) => setForm({ ...form, accountId: evento.target.value })}
+                          onChange={(event) => setForm({ ...form, accountId: event.target.value })}
                           required
                         >
                           <option value="">Elige una cuenta</option>
-                          {vivas.map((cuenta) => (
-                            <option value={cuenta.id} key={cuenta.id}>
-                              {cuenta.email}
+                          {live.map((account) => (
+                            <option value={account.id} key={account.id}>
+                              {account.email}
                             </option>
                           ))}
                         </select>
@@ -674,53 +672,53 @@ function Spreadsheets({ onIr = null }) {
 
                       <label className="books-field books-field-wide">
                         <span className="books-label">
-                          Enlace del libro
-                          <Ayuda texto="El enlace que da OneDrive o SharePoint al compartir o abrir el archivo. Otro tipo de enlace no se puede resolver." />
+                          Enlace del book
+                          <Help text="El enlace que da OneDrive o SharePoint al compartir o abrir el archivo. Otro tipo de enlace no se puede resolver." />
                         </span>
                         <input
                           value={form.url}
-                          onChange={(evento) => setForm({ ...form, url: evento.target.value })}
+                          onChange={(event) => setForm({ ...form, url: event.target.value })}
                           placeholder="Ej: https://uaq-my.sharepoint.com/:x:/g/personal/…"
                           required
                         />
                       </label>
                     </div>
 
-                    {encontrado === null ? (
+                    {found === null ? (
                       <div className="books-action-row">
-                        <button className="books-btn is-primary" type="submit" disabled={buscando}>
-                          {buscando ? "Buscando…" : "Buscar el libro"}
+                        <button className="books-btn is-primary" type="submit" disabled={searching}>
+                          {searching ? "Buscando…" : "Buscar el libro"}
                         </button>
                       </div>
                     ) : (
                       <>
                         <p className="books-note">
-                          Libro encontrado: {encontrado.name} · {encontrado.tables.length}{" "}
-                          {encontrado.tables.length === 1 ? "tabla" : "tablas"},{" "}
-                          {encontrado.worksheets.length}{" "}
-                          {encontrado.worksheets.length === 1 ? "hoja" : "hojas"}
+                          Libro found: {found.name} · {found.tables.length}{" "}
+                          {found.tables.length === 1 ? "tabla" : "tablas"},{" "}
+                          {found.worksheets.length}{" "}
+                          {found.worksheets.length === 1 ? "hoja" : "hojas"}
                         </p>
 
                         <div className="books-grid">
                           <label className="books-field">
                             <span className="books-label">
-                              Tabla u hoja
-                              <Ayuda texto="Una tabla es mejor: sus columnas tienen nombre propio y no se mueven al insertar filas. Una hoja se lee por el texto de su primer renglón." />
+                              Tabla u worksheet
+                              <Help text="Una tabla es mejor: sus columnas tienen nombre propio y no se mueven al insertar filas. Una hoja se lee por el texto de su primer renglón." />
                             </span>
                             <select
                               value={form.tableName}
-                              onChange={(evento) =>
-                                setForm({ ...form, tableName: evento.target.value })
+                              onChange={(event) =>
+                                setForm({ ...form, tableName: event.target.value })
                               }
                             >
-                              {encontrado.tables.map((tabla) => (
-                                <option value={tabla.name} key={`t-${tabla.name}`}>
-                                  Tabla · {tabla.name}
+                              {found.tables.map((table) => (
+                                <option value={table.name} key={`t-${table.name}`}>
+                                  Tabla · {table.name}
                                 </option>
                               ))}
-                              {encontrado.worksheets.map((hoja) => (
-                                <option value={hoja.name} key={`h-${hoja.name}`}>
-                                  Hoja · {hoja.name}
+                              {found.worksheets.map((worksheet) => (
+                                <option value={worksheet.name} key={`h-${worksheet.name}`}>
+                                  Hoja · {worksheet.name}
                                 </option>
                               ))}
                             </select>
@@ -730,7 +728,7 @@ function Spreadsheets({ onIr = null }) {
                             <span className="books-label">Cómo se va a llamar aquí</span>
                             <input
                               value={form.name}
-                              onChange={(evento) => setForm({ ...form, name: evento.target.value })}
+                              onChange={(event) => setForm({ ...form, name: event.target.value })}
                               required
                             />
                           </label>
@@ -750,99 +748,99 @@ function Spreadsheets({ onIr = null }) {
                           <button
                             className="books-btn is-primary"
                             type="submit"
-                            disabled={guardando}
+                            disabled={saving}
                           >
-                            {guardando ? "Registrando…" : "Registrar libro"}
+                            {saving ? "Registrando…" : "Registrar libro"}
                           </button>
                         </div>
                       </>
                     )}
 
-                    {errorForm !== null ? <p className="books-error">{errorForm}</p> : null}
+                    {formError !== null ? <p className="books-error">{formError}</p> : null}
                   </form>
                 </td>
               </tr>
             ) : null}
 
-            {libros.map((libro) => (
-              <Fragment key={libro.id}>
+            {books.map((book) => (
+              <Fragment key={book.id}>
                 <tr
                   className={
-                    libro.accountRevoked ? "books-row is-stale" : "books-row"
+                    book.accountRevoked ? "books-row is-stale" : "books-row"
                   }
-                  onClick={() => abrir(libro)}
+                  onClick={() => openBook(book)}
                 >
                   <td className="books-cell-main">
                     <span className="books-kind">
-                      {libro.tableName === null ? "Hoja" : "Tabla"}
-                      {libro.tableName === null ? "" : ` · ${libro.tableName}`}
+                      {book.tableName === null ? "Hoja" : "Tabla"}
+                      {book.tableName === null ? "" : ` · ${book.tableName}`}
                     </span>
-                    <span className="books-row-name">{libro.name}</span>
+                    <span className="books-row-name">{book.name}</span>
                   </td>
                   <td>
-                    {libro.accountEmail}
-                    {libro.accountRevoked ? <span className="books-off">desconectada</span> : null}
+                    {book.accountEmail}
+                    {book.accountRevoked ? <span className="books-off">desconectada</span> : null}
                   </td>
                   <td>
-                    {libro.mapped ? (
-                      `${libro.schemaName} v${libro.schemaVersion}`
+                    {book.mapped ? (
+                      `${book.schemaName} v${book.schemaVersion}`
                     ) : (
                       <span className="books-off">Sin mapear</span>
                     )}
                   </td>
-                  <td>{ultimaImportacion(libro)}</td>
+                  <td>{lastImport(book)}</td>
                 </tr>
 
-                {abierto === libro.id ? (
+                {opened === book.id ? (
                   <tr className="books-expanded">
                     <td colSpan={4}>
                       <div className="books-open">
-                        <Vista vista={vista} cargando={cargandoVista} />
+                        <SheetPreview preview={preview} loading={loadingPreview} />
 
                         <div className="books-facts">
                           <div className="books-fact">
                             <span className="books-label">Formato</span>
-                            {libro.mapped
-                              ? `${libro.schemaName} v${libro.schemaVersion}`
+                            {book.mapped
+                              ? `${book.schemaName} v${book.schemaVersion}`
                               : "Sin mapear"}
                           </div>
                           <div className="books-fact">
                             <span className="books-label">Última importación</span>
-                            {ultimaImportacion(libro)}
+                            {lastImport(book)}
                           </div>
                           <div className="books-fact">
                             <span className="books-label">Se lee con</span>
-                            {libro.accountEmail}
-                            {libro.accountRevoked ? " (desconectada)" : ""}
+                            {book.accountEmail}
+                            {book.accountRevoked ? " (desconectada)" : ""}
                           </div>
                           <div className="books-fact">
                             <span className="books-label">Lo registró</span>
-                            {libro.registeredByName ?? "alguien que ya no está"} el{" "}
-                            {fechaCorta(libro.createdAt)}
+                            {book.registeredByName ?? "alguien que ya no está"} el{" "}
+                            {shortDate(book.createdAt)}
                           </div>
-                          {libro.webUrl === null ? null : (
+                          {book.webUrl === null ? null : (
                             <a
                               className="books-quiet"
-                              href={libro.webUrl}
+                              href={book.webUrl}
                               target="_blank"
                               rel="noreferrer"
                             >
-                              Abrir el libro ↗
+                              Abrir el book ↗
                             </a>
                           )}
                         </div>
 
                         <footer className="books-open-foot">
-                          {confirmando === `libro-${libro.id}` ? (
+                          {confirming === `libro-${book.id}` ? (
                             <span className="books-action-row">
                               <span className="books-confirm">
                                 Las solicitudes que ya se importaron se quedan: solo deja de
-                                leerse el libro.
+                                leerse el book.
                               </span>
                               <button
                                 className="books-btn"
                                 type="button"
-                                onClick={() => quitar(libro)}
+                                onClick={() => removeBook(book)}
                               >
                                 Quitarlo
                               </button>
@@ -858,24 +856,24 @@ function Spreadsheets({ onIr = null }) {
                             <button
                               className="books-quiet is-danger"
                               type="button"
-                              onClick={() => setConfirmando(`libro-${libro.id}`)}
+                              onClick={() => setConfirmando(`libro-${book.id}`)}
                             >
                               Quitar del registro
                             </button>
                           )}
 
-                          {libro.accountRevoked ? (
-                            <button className="books-btn is-primary" type="button" onClick={conectar}>
-                              Reconectar la cuenta
+                          {book.accountRevoked ? (
+                            <button className="books-btn is-primary" type="button" onClick={connect}>
+                              Reconectar la account
                             </button>
                           ) : (
                             <button
                               className="books-btn is-primary"
                               type="button"
-                              onClick={() => (onIr === null ? null : onIr("Importar de Excel"))}
-                              disabled={onIr === null}
+                              onClick={() => (onGo === null ? null : onGo("Importar de Excel"))}
+                              disabled={onGo === null}
                             >
-                              {libro.mapped ? "Importar filas nuevas" : "Mapear e importar"}
+                              {book.mapped ? "Importar filas nuevas" : "Mapear e importar"}
                             </button>
                           )}
                         </footer>
@@ -886,11 +884,11 @@ function Spreadsheets({ onIr = null }) {
               </Fragment>
             ))}
 
-            {libros.length === 0 ? (
+            {books.length === 0 ? (
               <tr>
                 <td colSpan={4}>
                   <p className="books-empty">
-                    {vivas.length === 0
+                    {live.length === 0
                       ? "Los libros se registran una vez que hay una cuenta conectada."
                       : "Ningún libro registrado todavía."}
                   </p>

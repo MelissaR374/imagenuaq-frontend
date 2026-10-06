@@ -136,7 +136,7 @@ form:invalid .field-control:required:invalid {
 }
 
 /* El símbolo del tipo, junto al nombre del campo: la forma se reconoce antes que el texto. */
-.field-label .icono-de-tipo {
+.field-label .type-icon {
   align-self: center;
   flex-shrink: 0;
 

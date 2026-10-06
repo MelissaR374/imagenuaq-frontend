@@ -1,5 +1,5 @@
-/* Los libros de Excel registrados. Acomodo portado del prototipo «Lienzo»: los libros primero,
-   la conexión con Microsoft como una línea, y el libro que se abre bajo su renglón. */
+/* The registered Excel workbooks. Layout ported from the "Lienzo" prototype: the books first, the
+   Microsoft connection as one line, and the book opening under its row. */
 
 .books {
   padding-bottom: 30px;
@@ -27,7 +27,7 @@
 }
 
 /* =========================================================
-   LA VUELTA DE MICROSOFT
+   COMING BACK FROM MICROSOFT
 ========================================================= */
 
 .books-status {
@@ -55,7 +55,7 @@
 }
 
 /* =========================================================
-   LA PRIMERA VEZ Y LA LÍNEA DE CONEXIÓN
+   FIRST RUN AND THE CONNECTION LINE
 ========================================================= */
 
 .books-first ol {
@@ -207,7 +207,7 @@
 }
 
 /* =========================================================
-   LOS LIBROS
+   THE BOOKS
 ========================================================= */
 
 .books-bar {
@@ -277,7 +277,7 @@
   background: var(--surface-secondary);
 }
 
-/* Una cuenta desconectada detiene el libro: la línea ámbar lo dice desde la lista. */
+/* A disconnected account stops the book: the amber line says so from the list. */
 .books-row.is-stale td:first-child {
   box-shadow: inset 3px 0 0 var(--warning);
 }
@@ -322,7 +322,7 @@
 }
 
 /* =========================================================
-   EL LIBRO ABIERTO
+   THE OPEN BOOK
 ========================================================= */
 
 .books-open {
@@ -409,7 +409,7 @@
 }
 
 /* =========================================================
-   REGISTRAR UN LIBRO
+   REGISTERING A BOOK
 ========================================================= */
 
 .books-register {
@@ -501,7 +501,7 @@
 }
 
 /* =========================================================
-   CAMPOS Y BOTONES
+   FIELDS AND BUTTONS
 ========================================================= */
 
 .books-grid {

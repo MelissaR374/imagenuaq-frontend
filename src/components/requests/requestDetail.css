@@ -1,5 +1,5 @@
-/* La solicitud abierta bajo su renglón: una tarjeta blanca sobre el tinte del renglón abierto.
-   Acomodo portado del prototipo «Lienzo». */
+/* The request opened under its row: a white card over the open row's tint. Layout ported from the
+   "Lienzo" prototype. */
 
 .request-detail {
   padding: 18px 20px 0;
@@ -21,7 +21,7 @@
 }
 
 /* =========================================================
-   CABEZA
+   THE HEAD
 ========================================================= */
 
 .request-detail-head {
@@ -68,7 +68,7 @@
 }
 
 /* =========================================================
-   EL RECORRIDO
+   THE WALK
 ========================================================= */
 
 .request-detail-walk {
@@ -96,19 +96,19 @@
   text-transform: uppercase;
 }
 
-.request-detail-walk-step.is-hecho {
+.request-detail-walk-step.is-done {
   border-top-color: var(--success);
 
   color: var(--success);
 }
 
-.request-detail-walk-step.is-actual {
+.request-detail-walk-step.is-current {
   border-top-color: var(--warning);
 
   color: var(--text);
 }
 
-.request-detail-walk-step.is-pendiente {
+.request-detail-walk-step.is-pending {
   border-top-style: dashed;
 }
 
@@ -141,7 +141,7 @@
 }
 
 /* =========================================================
-   LAS DOS COLUMNAS Y SUS SECCIONES
+   THE TWO COLUMNS AND THEIR SECTIONS
 ========================================================= */
 
 .request-detail-columns {
@@ -241,7 +241,7 @@
   font-weight: 500;
 }
 
-/* Lo cambiado y todavía sin guardar. */
+/* Changed and not saved yet. */
 .request-detail-field.is-changed input,
 .request-detail-field.is-changed select,
 .request-detail-typed.is-changed input,
@@ -272,7 +272,7 @@
 }
 
 /* =========================================================
-   EL FLUJO A TODO LO ANCHO
+   THE FLOW AT FULL WIDTH
 ========================================================= */
 
 .request-detail-flow-canvas {
@@ -376,7 +376,7 @@
   border-left: 6px solid var(--text-muted);
 }
 
-/* Lo que puede crecer va punteado, en el lugar que ocuparía. */
+/* What can grow is drawn dashed, in the place it would occupy. */
 .request-detail-noflow {
   padding: 12px;
 
@@ -425,7 +425,7 @@
 }
 
 /* =========================================================
-   EL RENGLÓN DE EXCEL Y LOS CONFLICTOS
+   THE EXCEL ROW AND THE CONFLICTS
 ========================================================= */
 
 .request-detail-raw {
@@ -473,7 +473,7 @@
 }
 
 /* =========================================================
-   CONVERTIR EN PROYECTO
+   CONVERTING INTO A PROJECT
 ========================================================= */
 
 .request-detail-convert {
@@ -502,7 +502,7 @@
 }
 
 /* =========================================================
-   BOTONES Y EL PIE
+   BUTTONS AND FOOTER
 ========================================================= */
 
 .request-detail-btn {

@@ -1,12 +1,12 @@
-/* El tablero de proyectos. Acomodo portado del prototipo «Lienzo»: pestañas por estado, una
-   tabla ligera, y el proyecto que se abre a pantalla completa. */
+/* The project board. Layout ported from the "Lienzo" prototype: tabs by state, a light table, and
+   the project opening at full screen. */
 
 .projects {
   padding-bottom: 30px;
 }
 
 /* =========================================================
-   PESTAÑAS POR ESTADO Y ALCANCE
+   TABS BY STATE AND SCOPE
 ========================================================= */
 
 .projects-bar {
@@ -116,7 +116,7 @@
 }
 
 /* =========================================================
-   BOTONES
+   BUTTONS
 ========================================================= */
 
 .projects-btn {
@@ -161,7 +161,7 @@
 }
 
 /* =========================================================
-   FILTROS
+   FILTERS
 ========================================================= */
 
 .projects-filters {
@@ -251,7 +251,7 @@
 }
 
 /* =========================================================
-   LA TABLA
+   THE TABLE
 ========================================================= */
 
 .projects-table-wrap {
@@ -303,7 +303,7 @@
   background: var(--surface-secondary);
 }
 
-/* Sin etapas abiertas y sin cerrar: trabajo que nadie cerró. */
+/* No open stage and not closed: work nobody closed. */
 .projects-row.is-stale td:first-child {
   box-shadow: inset 3px 0 0 var(--warning);
 }
