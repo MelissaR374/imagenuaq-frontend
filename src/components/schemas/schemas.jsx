@@ -1,29 +1,98 @@
 // Los formatos de solicitud (RF-SOL-01). Un formato es la identidad; lo que pide vive en sus
-// versiones, y una versión publicada no se edita: "editar" es publicar la siguiente, para que
-// lo capturado con la anterior siga leyéndose como se capturó.
+// versiones, y una versión publicada no se edita: «editar» es publicar la siguiente, para que lo
+// capturado con la anterior siga leyéndose como se capturó.
 //
-// Clonar es lo que hace de un formato una plantilla: el nuevo empieza con los campos del
-// último del otro. Los cinco formatos sembrados están precisamente para eso.
+// La lista es ligera a propósito: no tiene botones por renglón, porque un formato se abre y todo
+// lo que se le puede hacer vive adentro, junto a lo que va a cambiar. Las versiones se dicen en
+// una línea discreta bajo el nombre: importan al actualizar y al mirar atrás, no al elegir.
+//
+// Lo que cada formato trae en uso —cuántas solicitudes se capturaron con él y cuántos libros de
+// Excel lo tienen mapeado— sale del servidor, porque es lo que vuelve concreta la advertencia de
+// publicar: las solicitudes de antes se siguen leyendo con su versión y un libro se queda en la
+// suya hasta que alguien lo remapee.
 import { useEffect, useState } from "react";
 
 import * as api from "../../api/client.js";
-import SchemaEditor from "./schemaEditor.jsx";
+import { fechaCorta } from "../shared/formato.js";
+import SchemaFormat from "./schemaFormat.jsx";
 import "./schemas.css";
+
+const PESTANAS = [
+  {
+    clave: "activos",
+    etiqueta: "Activos",
+    regla: "Los que se pueden elegir al capturar una solicitud.",
+  },
+  {
+    clave: "inactivos",
+    etiqueta: "Inactivos",
+    regla:
+      "Ya no se ofrecen al capturar. Nada se borra: lo capturado con ellos se sigue leyendo.",
+  },
+];
+
+/** Cuántos campos pide un formato, de qué tipo y cuántos obligatorios. */
+function cuentaDeCampos(formato) {
+  if (formato.fields === null || formato.fields === undefined) {
+    return "Sin versión publicada";
+  }
+  const entrega = formato.fields.deliverables;
+  const informacion = formato.fields.information;
+  const total = entrega.length + informacion.length;
+  const obligatorios = [...entrega, ...informacion].filter((campo) => campo.required).length;
+
+  return `${total} ${total === 1 ? "campo" : "campos"} · ${obligatorios} ${
+    obligatorios === 1 ? "obligatorio" : "obligatorios"
+  } · ${entrega.length} de entrega`;
+}
+
+/** En qué se está usando: lo que vuelve concreta la advertencia de publicar una versión. */
+function uso(formato) {
+  const partes = [];
+  if (formato.requestCount > 0) {
+    partes.push(
+      `${formato.requestCount} ${formato.requestCount === 1 ? "solicitud" : "solicitudes"}`,
+    );
+  }
+  if (formato.sheetCount > 0) {
+    partes.push(
+      `${formato.sheetCount} ${formato.sheetCount === 1 ? "libro de Excel" : "libros de Excel"}`,
+    );
+  }
+  if (partes.length === 0) {
+    return "Sin uso todavía";
+  }
+  return partes.join(" · ");
+}
+
+function FilaDeFormato({ formato, onAbrir }) {
+  return (
+    <tr className="schemas-row" onClick={() => onAbrir(formato)}>
+      <td className="schemas-cell-main">
+        <span className="schemas-code">{formato.code}</span>
+        <span className="schemas-row-name">{formato.name}</span>
+        <span className="schemas-version-line">
+          {formato.version === null ? "Sin versión" : `Versión ${formato.version}`}
+          {formato.publishedAt === null ? "" : ` · ${fechaCorta(formato.publishedAt)}`}
+          {formato.publishedByName === null ? "" : ` · ${formato.publishedByName}`}
+        </span>
+      </td>
+      <td>{cuentaDeCampos(formato)}</td>
+      <td>{uso(formato)}</td>
+    </tr>
+  );
+}
 
 function Schemas() {
   const [formatos, setFormatos] = useState([]);
   const [tipos, setTipos] = useState([]);
   const [vocabulario, setVocabulario] = useState([]);
+  const [pestana, setPestana] = useState("activos");
+  const [busqueda, setBusqueda] = useState("");
+  const [abierto, setAbierto] = useState(null);
+  const [nuevo, setNuevo] = useState(false);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
-  const [aviso, setAviso] = useState(null);
-
-  const [panel, setPanel] = useState(null);
-  const [guardando, setGuardando] = useState(false);
-  const [errorPanel, setErrorPanel] = useState(null);
-
-  const [nuevo, setNuevo] = useState({ code: "", name: "" });
-  const [versiones, setVersiones] = useState({ formatoId: null, lista: [] });
 
   useEffect(() => {
     let cancelado = false;
@@ -53,255 +122,139 @@ function Schemas() {
   }, []);
 
   async function recargar() {
-    const [{ schemas }, { fieldKeys }] = await Promise.all([
-      api.listSchemas(),
-      api.listFieldKeys(),
-    ]);
-    setFormatos(schemas);
-    setVocabulario(fieldKeys);
-  }
-
-  function abrir(modo, formato = null) {
-    setPanel({ modo, formato });
-    setErrorPanel(null);
-    setNuevo({ code: "", name: formato ? `${formato.name} (copia)` : "" });
-  }
-
-  async function crear(campos) {
-    setGuardando(true);
-    setErrorPanel(null);
     try {
-      await api.createSchema({ code: nuevo.code, name: nuevo.name, fields: campos });
-      await recargar();
-      setPanel(null);
-      setAviso("Formato creado.");
-    } catch (fallo) {
-      setErrorPanel(fallo.message);
-    } finally {
-      setGuardando(false);
-    }
-  }
-
-  async function publicarVersion(campos) {
-    setGuardando(true);
-    setErrorPanel(null);
-    try {
-      await api.createSchemaVersion(panel.formato.id, campos);
-      await recargar();
-      setPanel(null);
-      setAviso(
-        "Formato actualizado. Se publicó una versión nueva y la anterior quedó intacta, así que " +
-          "lo capturado con ella se sigue leyendo igual.",
-      );
-    } catch (fallo) {
-      setErrorPanel(fallo.message);
-    } finally {
-      setGuardando(false);
-    }
-  }
-
-  async function clonar(evento) {
-    evento.preventDefault();
-    setGuardando(true);
-    setErrorPanel(null);
-    try {
-      await api.cloneSchema(panel.formato.id, nuevo.code, nuevo.name);
-      await recargar();
-      setPanel(null);
-      setAviso("Formato clonado con los campos del original.");
-    } catch (fallo) {
-      setErrorPanel(fallo.message);
-    } finally {
-      setGuardando(false);
-    }
-  }
-
-  async function cambiarActivo(formato) {
-    setError(null);
-    try {
-      if (formato.isActive) await api.deleteSchema(formato.id);
-      else await api.updateSchema(formato.id, { isActive: true });
-      await recargar();
+      const [{ schemas }, { fieldKeys }] = await Promise.all([
+        api.listSchemas(),
+        api.listFieldKeys(),
+      ]);
+      setFormatos(schemas);
+      setVocabulario(fieldKeys);
+      return schemas;
     } catch (fallo) {
       setError(fallo.message);
+      return formatos;
     }
   }
 
-  async function verVersiones(formato) {
-    if (versiones.formatoId === formato.id) {
-      setVersiones({ formatoId: null, lista: [] });
+  /** Al publicar o clonar, el formato abierto se queda abierto con lo que ya quedó guardado. */
+  async function alCambiar(id) {
+    const lista = await recargar();
+    if (id === undefined || id === null) {
       return;
     }
-    try {
-      const { versions } = await api.listSchemaVersions(formato.id);
-      setVersiones({ formatoId: formato.id, lista: versions });
-    } catch (fallo) {
-      setError(fallo.message);
+    const encontrado = lista.find((uno) => uno.id === id);
+    if (encontrado !== undefined) {
+      setAbierto(encontrado);
+      setNuevo(false);
     }
   }
 
-  if (cargando) return <p className="schemas-loading">Cargando formatos...</p>;
+  if (nuevo || abierto !== null) {
+    return (
+      <SchemaFormat
+        formato={nuevo ? null : abierto}
+        formatos={formatos}
+        tipos={tipos}
+        vocabulario={vocabulario}
+        onCambio={alCambiar}
+        onCerrar={() => {
+          setAbierto(null);
+          setNuevo(false);
+          recargar();
+        }}
+        key={nuevo ? "nuevo" : abierto.id}
+      />
+    );
+  }
+
+  const activa = PESTANAS.find((una) => una.clave === pestana) ?? PESTANAS[0];
+  const texto = busqueda.trim().toLowerCase();
+  const visibles = formatos.filter((formato) => {
+    if (formato.isActive !== (pestana === "activos")) {
+      return false;
+    }
+    if (texto === "") {
+      return true;
+    }
+    return (
+      formato.name.toLowerCase().includes(texto) || formato.code.toLowerCase().includes(texto)
+    );
+  });
 
   return (
     <section className="schemas">
-      <header className="schemas-header">
-        <h2 className="schemas-title">Esquemas de datos</h2>
-        <button type="button" onClick={() => abrir("nuevo")}>
+      {error !== null ? <p className="schemas-error">{error}</p> : null}
+
+      <div className="schemas-bar">
+        <div className="schemas-tabs">
+          {PESTANAS.map((una) => {
+            const cuenta = formatos.filter(
+              (formato) => formato.isActive === (una.clave === "activos"),
+            ).length;
+            return (
+              <button
+                className={una.clave === pestana ? "schemas-tab is-active" : "schemas-tab"}
+                type="button"
+                onClick={() => setPestana(una.clave)}
+                key={una.clave}
+              >
+                {una.etiqueta}
+                <span className="schemas-tab-count">{cuenta}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <button
+          className="schemas-btn schemas-btn-primary"
+          type="button"
+          onClick={() => setNuevo(true)}
+        >
           Nuevo formato
         </button>
-      </header>
+      </div>
 
-      {error ? <p className="schemas-error">{error}</p> : null}
-      {aviso ? <p className="schemas-notice">{aviso}</p> : null}
+      <p className="schemas-rule">{activa.regla}</p>
 
-      <table className="schemas-table">
-        <thead>
-          <tr>
-            <th>Nombre</th>
-            <th>Clave</th>
-            <th>Versión</th>
-            <th>Campos</th>
-            <th>Estado</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {formatos.map((formato) => (
-            <tr className="schemas-row" key={formato.id}>
-              <td>{formato.name}</td>
-              <td className="schemas-cell-code">
-                <code className="schemas-code">{formato.code}</code>
-              </td>
-              <td>{formato.version ?? "—"}</td>
-              <td>
-                {formato.fields
-                  ? `${formato.fields.deliverables.length} entregables, ${formato.fields.information.length} de información`
-                  : "sin versión"}
-              </td>
-              <td>{formato.isActive ? "Activo" : "Inactivo"}</td>
-              <td className="schemas-actions">
-                <button type="button" onClick={() => verVersiones(formato)}>
-                  {versiones.formatoId === formato.id ? "Ocultar versiones" : "Versiones"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => abrir("version", formato)}
-                  disabled={!formato.isActive}
-                >
-                  Actualizar
-                </button>
-                <button type="button" onClick={() => abrir("clon", formato)}>
-                  Clonar
-                </button>
-                <button type="button" onClick={() => cambiarActivo(formato)}>
-                  {formato.isActive ? "Desactivar" : "Reactivar"}
-                </button>
-              </td>
+      <div className="schemas-filters">
+        <div className="schemas-search">
+          <input
+            value={busqueda}
+            onChange={(evento) => setBusqueda(evento.target.value)}
+            placeholder="Ej: nombre o clave"
+            aria-label="Buscar"
+          />
+        </div>
+      </div>
+
+      <div className="schemas-table-wrap">
+        <table className="schemas-table">
+          <thead>
+            <tr>
+              <th>Formato</th>
+              <th>Qué pide</th>
+              <th>En uso</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-
-      {versiones.formatoId !== null ? (
-        <div className="schemas-versions">
-          <h3>Versiones</h3>
-          <ul>
-            {versiones.lista.map((version) => (
-              <li key={version.id}>
-                v{version.version} — {version.fields.deliverables.length} entregables,{" "}
-                {version.fields.information.length} de información
-                {version.publishedAt
-                  ? ` — publicada el ${new Date(version.publishedAt).toLocaleDateString()}`
-                  : null}
-              </li>
+          </thead>
+          <tbody>
+            {visibles.map((formato) => (
+              <FilaDeFormato formato={formato} onAbrir={setAbierto} key={formato.id} />
             ))}
-          </ul>
-        </div>
-      ) : null}
 
-      {panel?.modo === "nuevo" ? (
-        <div className="schemas-panel">
-          <label className="schemas-field">
-            Clave del formato
-            <input
-              value={nuevo.code}
-              onChange={(evento) => setNuevo({ ...nuevo, code: evento.target.value })}
-              placeholder="papel_institucional"
-            />
-          </label>
-          <label className="schemas-field">
-            Nombre
-            <input
-              value={nuevo.name}
-              onChange={(evento) => setNuevo({ ...nuevo, name: evento.target.value })}
-              placeholder="Papel institucional"
-            />
-          </label>
-
-          <SchemaEditor
-            tipos={tipos}
-            vocabulario={vocabulario}
-            titulo="Campos del formato"
-            onGuardar={crear}
-            onCancelar={() => setPanel(null)}
-            error={errorPanel}
-            guardando={guardando}
-          />
-        </div>
-      ) : null}
-
-      {panel?.modo === "version" ? (
-        <div className="schemas-panel">
-          <p className="schemas-panel-help">
-            Actualizar <strong>{panel.formato.name}</strong>. Los campos se guardan como una
-            versión nueva y la anterior no se toca: lo capturado con ella se sigue leyendo como se
-            capturó.
-          </p>
-          <SchemaEditor
-            tipos={tipos}
-            vocabulario={vocabulario}
-            inicial={panel.formato.fields ?? undefined}
-            titulo={`Campos del formato (quedará como versión ${(panel.formato.version ?? 0) + 1})`}
-            onGuardar={publicarVersion}
-            onCancelar={() => setPanel(null)}
-            error={errorPanel}
-            guardando={guardando}
-          />
-        </div>
-      ) : null}
-
-      {panel?.modo === "clon" ? (
-        <form className="schemas-panel" onSubmit={clonar}>
-          <p className="schemas-panel-help">
-            El formato nuevo empieza con los campos de <strong>{panel.formato.name}</strong>.
-          </p>
-          <label className="schemas-field">
-            Clave del formato nuevo
-            <input
-              value={nuevo.code}
-              onChange={(evento) => setNuevo({ ...nuevo, code: evento.target.value })}
-              required
-            />
-          </label>
-          <label className="schemas-field">
-            Nombre
-            <input
-              value={nuevo.name}
-              onChange={(evento) => setNuevo({ ...nuevo, name: evento.target.value })}
-              required
-            />
-          </label>
-          {errorPanel ? <p className="schemas-error">{errorPanel}</p> : null}
-          <div className="schemas-panel-actions">
-            <button type="submit" disabled={guardando}>
-              {guardando ? "Clonando..." : "Clonar"}
-            </button>
-            <button type="button" onClick={() => setPanel(null)}>
-              Cancelar
-            </button>
-          </div>
-        </form>
-      ) : null}
+            {!cargando && visibles.length === 0 ? (
+              <tr>
+                <td colSpan={3}>
+                  <p className="schemas-empty">
+                    {texto === ""
+                      ? `Nada en «${activa.etiqueta}».`
+                      : "Ningún formato coincide con lo que buscas."}
+                  </p>
+                </td>
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
+      </div>
     </section>
   );
 }

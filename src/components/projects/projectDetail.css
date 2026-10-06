@@ -4,7 +4,8 @@
 .project-full {
   position: fixed;
   inset: 0;
-  z-index: 20;
+  /* Encima de la barra lateral, que se queda en 1000: a pantalla completa es sobre todo. */
+  z-index: 1100;
 
   display: flex;
   flex-direction: column;

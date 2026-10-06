@@ -39,15 +39,6 @@
   font-weight: 700;
 }
 
-/* La indicación del campo, que la escribió quien armó el formato. */
-.field-note {
-  max-width: 46ch;
-  margin: 0;
-  font-size: 10px;
-  line-height: 1.5;
-  color: var(--text-muted);
-}
-
 /* =========================================================
    EL CONTROL
    ========================================================= */

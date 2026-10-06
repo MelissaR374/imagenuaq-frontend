@@ -23,9 +23,8 @@
 
 .inbox-tabs {
   display: flex;
-  gap: 20px;
-
-  overflow-x: auto;
+  flex-wrap: wrap;
+  gap: 8px 20px;
 }
 
 .inbox-tab {

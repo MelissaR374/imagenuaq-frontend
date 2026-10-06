@@ -36,10 +36,9 @@ const DESCRIPCIONES = {
     "El organigrama de la coordinación y quién está en cada área.",
   "Roles y permisos": "Lo que puede hacer cada rol.",
   "Formatos de solicitud":
-    "Los libros de Excel registrados y la conexión con Microsoft.",
-  "Esquemas de datos":
     "Los formatos con que se capturan las solicitudes y sus versiones.",
-  "Configuración de formatos de solicitud":
+  "Libros de Excel": "Los libros de Excel registrados y la conexión con Microsoft.",
+  "Importar de Excel":
     "El mapeo de cada libro de Excel y la importación de sus filas.",
   "Bandeja de solicitudes":
     "Solicitudes recibidas que todavía no son proyecto.",
@@ -73,7 +72,7 @@ function App() {
   const [usuario, setUsuario] = useState(null);
   const [pestana, setPestana] = useState(() =>
     new URLSearchParams(window.location.search).has(MICROSOFT_PARAM)
-      ? "Formatos de solicitud"
+      ? "Libros de Excel"
       : null,
   );
 
@@ -205,10 +204,10 @@ function App() {
         ) : activa === "Roles y permisos" && usuario.role === "admin" ? (
           <Roles />
         ) : activa === "Formatos de solicitud" && usuario.role === "admin" ? (
-          <Spreadsheets />
-        ) : activa === "Esquemas de datos" && usuario.role === "admin" ? (
           <Schemas />
-        ) : activa === "Configuración de formatos de solicitud" && usuario.role === "admin" ? (
+        ) : activa === "Libros de Excel" && usuario.role === "admin" ? (
+          <Spreadsheets />
+        ) : activa === "Importar de Excel" && usuario.role === "admin" ? (
           <ImportConfig />
         ) : activa === "Bandeja de solicitudes" && usuario.role === "admin" ? (
           <Inbox />

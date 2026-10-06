@@ -24,9 +24,8 @@
 .projects-tabs {
   display: flex;
   align-items: flex-end;
-  gap: 20px;
-
-  overflow-x: auto;
+  flex-wrap: wrap;
+  gap: 8px 20px;
 }
 
 .projects-tab {

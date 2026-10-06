@@ -25,6 +25,7 @@ import {
   MdMenu,
   MdContacts,
   MdAdminPanelSettings,
+  MdLabel,
   MdSwapHoriz,
   MdSchema,
 } from "react-icons/md";
@@ -135,17 +136,22 @@ const menuSections = [
         roles: ["admin"],
       },
       {
+        label: "Catálogo de estatus",
+        icon: MdLabel,
+        roles: ["admin"],
+      },
+      {
         label: "Formatos de solicitud",
         icon: MdDescription,
         roles: ["admin"],
       },
       {
-        label: "Esquemas de datos",
+        label: "Libros de Excel",
         icon: MdSchema,
         roles: ["admin"],
       },
       {
-        label: "Configuración de formatos de solicitud",
+        label: "Importar de Excel",
         icon: MdSwapHoriz,
         roles: ["admin"],
       },
