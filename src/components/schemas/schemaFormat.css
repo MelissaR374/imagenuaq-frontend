@@ -252,6 +252,9 @@
 }
 
 .format-type {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   flex-shrink: 0;
 
   padding: 1px 8px;
@@ -427,7 +430,45 @@
   font-family: ui-monospace, "SF Mono", Menlo, monospace;
 }
 
+.icono-de-tipo {
+  color: var(--text-muted);
+
+  font-size: 14px;
+}
+
+.format-field-row.is-bad {
+  border-color: var(--danger);
+}
+
+.format-repeated {
+  margin-left: 6px;
+
+  color: var(--danger);
+
+  font-family: "Poppins", sans-serif;
+  font-weight: 600;
+}
+
+.format-key.is-bad {
+  border-color: var(--danger);
+}
+
+.format-bad {
+  margin: 10px 0 0;
+  padding-left: 9px;
+
+  border-left: 3px solid var(--danger);
+
+  color: var(--text-secondary);
+
+  font-size: var(--size-small);
+}
+
 .format-value {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
   margin: 0;
   padding: 6px 0;
 

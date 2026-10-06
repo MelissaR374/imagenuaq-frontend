@@ -25,6 +25,7 @@ import * as api from "../../api/client.js";
 import { fechaCorta } from "../shared/formato.js";
 import Ayuda from "../shared/ayuda.jsx";
 import FieldInput from "../shared/fieldInput.jsx";
+import IconoDeTipo from "../shared/iconoDeTipo.jsx";
 import "./schemaFormat.css";
 
 const SECCIONES = [
@@ -67,7 +68,9 @@ function textoDeReuso(publicada) {
 }
 
 /** El editor de un campo, abierto en su lugar dentro de la lista. */
-function EditorDeCampo({ campo, tipos, publicada, onCambiar, onQuitar, onCerrar }) {
+function EditorDeCampo({
+  campo, tipos, publicada, repetida, sugerencias, listaId, onCambiar, onQuitar, onCerrar,
+}) {
   const [claveTocada, setClaveTocada] = useState(campo.code !== "");
 
   function escribirNombre(name) {
@@ -100,15 +103,33 @@ function EditorDeCampo({ campo, tipos, publicada, onCambiar, onQuitar, onCerrar 
             <Ayuda texto="Con esta clave se guarda el valor en todo el sistema, y con ella lo leen la orden de impresión y la facturación. Se sugiere desde el nombre hasta que la escribas tú." />
           </span>
           <input
-            className="format-key"
+            className={repetida ? "format-key is-bad" : "format-key"}
             value={campo.code}
+            list={listaId}
             onChange={(evento) => {
+              const code = evento.target.value;
               setClaveTocada(true);
-              onCambiar({ code: evento.target.value });
+              const existente = sugerencias.find((una) => una.key === code);
+              onCambiar(
+                existente === undefined
+                  ? { code }
+                  : {
+                      code,
+                      name: existente.name,
+                      type: existente.type,
+                      note: existente.note ?? "",
+                    },
+              );
             }}
-            readOnly={publicada !== undefined}
             placeholder="Ej: medidas"
           />
+          <datalist id={listaId}>
+            {sugerencias.map((una) => (
+              <option value={una.key} key={una.key}>
+                {una.name} · {tipos.find((tipo) => tipo.code === una.type)?.name ?? una.type}
+              </option>
+            ))}
+          </datalist>
         </label>
 
         <label className="format-field">
@@ -131,6 +152,7 @@ function EditorDeCampo({ campo, tipos, publicada, onCambiar, onQuitar, onCerrar 
             </select>
           ) : (
             <p className="format-value">
+              <IconoDeTipo tipo={campo.type} />{" "}
               {tipos.find((tipo) => tipo.code === campo.type)?.name ?? campo.type}
             </p>
           )}
@@ -157,6 +179,13 @@ function EditorDeCampo({ campo, tipos, publicada, onCambiar, onQuitar, onCerrar 
           Obligatorio
         </label>
       </div>
+
+      {repetida ? (
+        <p className="format-bad">
+          Esa clave ya la tiene otro campo de este formato. Cada campo necesita una distinta,
+          también entre secciones: el valor se guarda bajo su clave y dos campos la pisarían.
+        </p>
+      ) : null}
 
       {publicada === undefined ? null : (
         <p className="format-note">{textoDeReuso(publicada)}</p>
@@ -531,13 +560,19 @@ function SchemaFormat({ formato, formatos, tipos, vocabulario, onCambio, onCerra
                 <ul className="format-fields">
                   {campos[seccion.clave].map((campo, indice) => {
                     const publicada = publicadas.get(campo.code);
+                    const repetida = campo.code !== "" && repetidas.includes(campo.code);
                     const abierto =
                       editando !== null &&
                       editando.seccion === seccion.clave &&
                       editando.indice === indice;
 
                     return (
-                      <li className={abierto ? "format-field-row is-open" : "format-field-row"} key={indice}>
+                      <li
+                        className={`format-field-row${abierto ? " is-open" : ""}${
+                          repetida ? " is-bad" : ""
+                        }`}
+                        key={indice}
+                      >
                         <div className="format-field-head">
                           <span className="format-move">
                             <button
@@ -568,10 +603,14 @@ function SchemaFormat({ formato, formatos, tipos, vocabulario, onCambio, onCerra
                             </span>
                             <span className="format-field-key">
                               {campo.code === "" ? "sin clave" : campo.code}
+                              {repetida ? (
+                                <span className="format-repeated">clave repetida</span>
+                              ) : null}
                             </span>
                           </button>
 
                           <span className="format-type">
+                            <IconoDeTipo tipo={campo.type} />
                             {tipos.find((tipo) => tipo.code === campo.type)?.name ?? campo.type}
                           </span>
                           <span
@@ -588,6 +627,11 @@ function SchemaFormat({ formato, formatos, tipos, vocabulario, onCambio, onCerra
                             campo={campo}
                             tipos={tipos}
                             publicada={publicada}
+                            repetida={repetida}
+                            sugerencias={vocabulario.filter(
+                              (una) => una.key === campo.code || !claves.includes(una.key),
+                            )}
+                            listaId={`vocabulario-${seccion.clave}-${indice}`}
                             onCambiar={(cambios) => cambiarCampo(seccion.clave, indice, cambios)}
                             onQuitar={() => quitarCampo(seccion.clave, indice)}
                             onCerrar={() => setEditando(null)}

@@ -134,3 +134,15 @@ form:invalid .field-control:required:invalid {
     max-width: none;
   }
 }
+
+/* El símbolo del tipo, junto al nombre del campo: la forma se reconoce antes que el texto. */
+.field-label .icono-de-tipo {
+  align-self: center;
+  flex-shrink: 0;
+
+  margin-right: 2px;
+
+  color: var(--text-muted);
+
+  font-size: 14px;
+}

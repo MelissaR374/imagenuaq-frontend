@@ -206,7 +206,7 @@ function App() {
         ) : activa === "Formatos de solicitud" && usuario.role === "admin" ? (
           <Schemas />
         ) : activa === "Libros de Excel" && usuario.role === "admin" ? (
-          <Spreadsheets />
+          <Spreadsheets onIr={setPestana} />
         ) : activa === "Importar de Excel" && usuario.role === "admin" ? (
           <ImportConfig />
         ) : activa === "Bandeja de solicitudes" && usuario.role === "admin" ? (

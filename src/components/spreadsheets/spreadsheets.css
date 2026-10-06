@@ -1,708 +1,650 @@
-@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap");
+/* Los libros de Excel registrados. Acomodo portado del prototipo «Lienzo»: los libros primero,
+   la conexión con Microsoft como una línea, y el libro que se abre bajo su renglón. */
 
-/* =========================================================
-   PANEL GENERAL
-   ========================================================= */
+.books {
+  padding-bottom: 30px;
+}
 
-.spreadsheets-panel {
-  min-height: 100vh;
-  padding: 28px 32px 40px;
-  background: var(--background);
-  box-sizing: border-box;
-  font-family: "Poppins", sans-serif;
+.books-note {
+  margin: 6px 0 0;
+
+  color: var(--text-secondary);
+
+  font-size: var(--size-small);
+}
+
+.books-error {
+  margin: 0 0 12px;
+  padding: 9px 12px;
+
+  border-left: 3px solid var(--danger);
+  border-radius: 0 6px 6px 0;
+
+  background: var(--danger-soft);
   color: var(--text);
-  transition:
-    background-color 0.3s ease,
-    color 0.3s ease;
-}
 
-.spreadsheets-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 20px;
-}
-
-.spreadsheets-title {
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--text);
-  margin: 0 5px 0;
-  transition: color 0.3s ease;
-}
-
-.spreadsheets-count {
-  margin: 0;
-  font-size: 13px;
-  color: var(--text-muted);
-}
-
-/* Encabezado de cada sección interna (título + acción) */
-.spreadsheets-section-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 14px;
-}
-
-/* Título de sección: alineado con roles-title y permissions-title */
-.spreadsheets-subtitle {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--text);
-  line-height: 1.4;
-  text-align: left;
+  font-size: var(--size-small);
 }
 
 /* =========================================================
-   AVISOS Y ERRORES
-   ========================================================= */
+   LA VUELTA DE MICROSOFT
+========================================================= */
 
-.spreadsheets-notice,
-.spreadsheets-notice-error {
+.books-status {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
+  flex-wrap: wrap;
+
+  margin: 0 0 12px;
+  padding: 8px 12px;
+
+  border-left: 3px solid var(--success);
+  border-radius: 0 6px 6px 0;
+
+  background: var(--success-soft);
+
+  font-size: var(--size-small);
+}
+
+.books-status.is-bad {
+  border-left-color: var(--warning);
+
+  background: var(--warning-soft);
+}
+
+/* =========================================================
+   LA PRIMERA VEZ Y LA LÍNEA DE CONEXIÓN
+========================================================= */
+
+.books-first ol {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+
   margin: 0 0 18px;
-  padding: 10px 14px;
-  border-radius: 6px;
-  font-size: 12px;
-  line-height: 1.4;
+  padding: 0;
+
+  list-style: none;
 }
 
-.spreadsheets-notice {
-  border: 1px solid rgba(46, 125, 50, 0.35);
-  background: rgba(46, 125, 50, 0.08);
-  color: #2e7d32;
-}
+.books-first li {
+  padding: 12px 14px;
 
-.spreadsheets-notice-error {
-  border: 1px solid rgba(217, 83, 79, 0.35);
-  background: rgba(217, 83, 79, 0.08);
-  color: #b23c38;
-}
-
-.spreadsheets-notice-close {
-  flex-shrink: 0;
-  height: 26px;
-  padding: 0 12px;
-  border: 1px solid currentColor;
-  border-radius: 5px;
-  background: transparent;
-  color: inherit;
-  font-family: inherit;
-  font-size: 10px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s ease;
-}
-
-.spreadsheets-notice-close:hover {
-  background: rgba(0, 0, 0, 0.06);
-}
-
-.spreadsheets-error {
-  margin: 10px 0;
-  font-size: 11px;
-  color: #d9534f;
-}
-
-.spreadsheets-error:empty {
-  display: none;
-}
-
-.spreadsheets-loading,
-.spreadsheets-empty {
-  margin: 20px 0;
-  text-align: center;
-  font-size: 11px;
-  color: var(--text-muted);
-  font-family: "Poppins", sans-serif;
-}
-
-/* =========================================================
-   TARJETAS DE SECCIÓN
-   ========================================================= */
-
-.spreadsheets-app,
-.spreadsheets-accounts,
-.spreadsheets-register,
-.spreadsheets-list {
-  position: relative;
-  padding: 20px 24px 24px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
-  box-sizing: border-box;
-  font-family: "Poppins", sans-serif;
-  margin-bottom: 22px;
-  transition:
-    background-color 0.3s ease,
-    border-color 0.3s ease;
-}
-
-/* =========================================================
-   REGISTRO DE APLICACIÓN
-   ========================================================= */
-
-.spreadsheets-app-summary {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  column-gap: 24px;
-  row-gap: 10px;
-  margin: 0;
-}
-
-.spreadsheets-app-summary-row {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.spreadsheets-app-summary dt {
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-muted);
-}
-
-.spreadsheets-app-summary dd {
-  margin: 0;
-  font-size: 12px;
-  color: var(--text-secondary);
-  word-break: break-word;
-}
-
-.spreadsheets-app-summary code {
-  padding: 2px 7px;
-  border-radius: 10px;
-  background: rgba(59, 115, 185, 0.12);
-  color: #3270b5;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 10px;
-  font-weight: 600;
-}
-
-.spreadsheets-app-edit {
-  height: 28px;
-  padding: 0 14px;
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  background: var(--surface);
-  color: var(--text-secondary);
-  font-family: inherit;
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  transition:
-    border-color 0.15s ease,
-    color 0.15s ease;
-}
-
-.spreadsheets-app-edit:hover {
-  border-color: #3b73b9;
-  color: #3270b5;
-}
-
-.spreadsheets-app-clear {
-  margin-top: 16px;
-  height: 30px;
-  padding: 0 14px;
-  border: 1px solid rgba(228, 92, 92, 0.4);
-  border-radius: 5px;
-  background: transparent;
-  color: #e45c5c;
-  font-family: inherit;
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s ease;
-}
-
-.spreadsheets-app-clear:hover {
-  background: rgba(228, 92, 92, 0.08);
-}
-
-.spreadsheets-app-help {
-  margin: 0 0 14px;
-  font-size: 11px;
-  line-height: 1.5;
-  color: var(--text-muted);
-}
-
-.spreadsheets-app-help code {
-  padding: 1px 6px;
+  border: 1px dashed var(--border);
   border-radius: 8px;
-  background: rgba(59, 115, 185, 0.12);
-  color: #3270b5;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 10px;
+
+  background: var(--surface);
+}
+
+.books-first li.is-now {
+  border-style: solid;
+  border-color: var(--accent-line);
+}
+
+.books-first li.is-done {
+  border-style: solid;
+  border-top: 2px solid var(--success);
+}
+
+.books-first strong {
+  display: block;
+
+  margin-top: 2px;
+
+  font-size: var(--size-body);
+}
+
+.books-first .books-btn {
+  margin-top: 10px;
+}
+
+.books-step {
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
   font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.books-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+
+  margin-bottom: 14px;
+  padding: 8px 12px;
+
+  border: 1px solid var(--border);
+  border-radius: 7px;
+
+  background: var(--surface);
+
+  font-size: var(--size-small);
+}
+
+.books-connection {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 18px 28px;
+
+  margin-bottom: 18px;
+  padding: 14px 16px;
+
+  border: 1px solid var(--border);
+  border-radius: 8px;
+
+  background: var(--surface);
+}
+
+.books-connection h3 {
+  margin: 0 0 10px;
+
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.books-accounts {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  margin: 0 0 12px;
+  padding: 0;
+
+  list-style: none;
+}
+
+.books-account {
+  padding-left: 9px;
+
+  border-left: 2px solid var(--border);
+}
+
+.books-account.is-off {
+  border-left-color: var(--warning);
+}
+
+.books-account-who {
+  display: block;
+
+  font-size: var(--size-body);
+  font-weight: 600;
+}
+
+.books-off {
+  margin-left: 6px;
+
+  color: var(--warning);
+
+  font-size: var(--size-caps);
+  font-weight: 600;
+}
+
+.books-code {
+  display: block;
+
+  padding: 6px 8px;
+
+  border: 1px solid var(--border);
+  border-radius: 6px;
+
+  background: var(--surface-secondary);
+  color: var(--text-secondary);
+
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: var(--size-small);
+
+  overflow-wrap: anywhere;
 }
 
 /* =========================================================
-   FORMULARIOS
-   ========================================================= */
+   LOS LIBROS
+========================================================= */
 
-.spreadsheets-form-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  column-gap: 12px;
-  row-gap: 13px;
+.books-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+
+  margin-bottom: 10px;
 }
 
-.spreadsheets-field {
+.books-count {
+  margin: 0;
+
+  color: var(--text-secondary);
+
+  font-size: var(--size-small);
+}
+
+.books-table-wrap {
+  overflow-x: auto;
+
+  border: 1px solid var(--border);
+  border-radius: 8px;
+
+  background: var(--surface);
+}
+
+.books-table {
+  width: 100%;
+
+  border-collapse: collapse;
+
+  font-size: var(--size-body);
+}
+
+.books-table th {
+  padding: 9px 12px;
+
+  border-bottom: 1px solid var(--border);
+
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.books-table td {
+  padding: 10px 12px;
+
+  border-bottom: 1px solid var(--border-light);
+
+  color: var(--text);
+  vertical-align: top;
+}
+
+.books-row {
+  cursor: pointer;
+}
+
+.books-row:hover {
+  background: var(--surface-secondary);
+}
+
+/* Una cuenta desconectada detiene el libro: la línea ámbar lo dice desde la lista. */
+.books-row.is-stale td:first-child {
+  box-shadow: inset 3px 0 0 var(--warning);
+}
+
+.books-cell-main {
+  min-width: 220px;
+}
+
+.books-kind {
+  display: block;
+
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.books-row-name {
+  display: block;
+
+  font-weight: 600;
+}
+
+.books-empty {
+  margin: 0;
+  padding: 30px;
+
+  color: var(--text-muted);
+
+  font-size: var(--size-small);
+  text-align: center;
+}
+
+.books-expanded > td {
+  padding: 14px 16px 20px;
+
+  border-bottom: 1px solid var(--border);
+
+  background: var(--accent-soft);
+}
+
+/* =========================================================
+   EL LIBRO ABIERTO
+========================================================= */
+
+.books-open {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(220px, 1fr);
+  gap: 16px 24px;
+
+  padding: 14px 16px;
+
+  border: 1px solid var(--border);
+  border-radius: 8px;
+
+  background: var(--surface);
+}
+
+.books-sheet-wrap {
+  overflow-x: auto;
+
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.books-sheet {
+  border-collapse: collapse;
+
+  font-size: var(--size-small);
+}
+
+.books-sheet th,
+.books-sheet td {
+  padding: 4px 8px;
+
+  border: 1px solid var(--border-light);
+
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.books-sheet thead th,
+.books-sheet tbody th {
+  background: var(--surface-secondary);
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
+  font-weight: 600;
+  text-align: center;
+}
+
+.books-sheet-corner {
+  width: 28px;
+}
+
+.books-sheet-headers td {
+  background: var(--accent-soft);
+
+  font-weight: 600;
+}
+
+.books-facts {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-secondary);
+  gap: 10px;
 }
 
-.spreadsheets-field--full {
+.books-fact {
+  display: flex;
+  flex-direction: column;
+
+  font-size: var(--size-body);
+}
+
+.books-open-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+
+  grid-column: 1 / -1;
+
+  padding-top: 12px;
+
+  border-top: 1px solid var(--border-light);
+}
+
+/* =========================================================
+   REGISTRAR UN LIBRO
+========================================================= */
+
+.books-register {
+  padding: 14px 16px;
+
+  border: 1px solid var(--border);
+  border-radius: 8px;
+
+  background: var(--surface);
+}
+
+.books-register-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+
+  margin-bottom: 10px;
+}
+
+.books-eyebrow {
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.books-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  width: 26px;
+  height: 26px;
+
+  border: 0;
+  border-radius: 4px;
+
+  background: var(--surface-secondary);
+  color: var(--text-muted);
+
+  font: inherit;
+  font-size: 15px;
+
+  cursor: pointer;
+}
+
+.books-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+
+  margin: 0 0 14px;
+  padding: 0;
+
+  list-style: none;
+}
+
+.books-steps li {
+  flex: 1 1 120px;
+
+  padding-top: 7px;
+
+  border-top: 2px dashed var(--border);
+
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+.books-steps li.is-now {
+  border-top-style: solid;
+  border-top-color: var(--warning);
+
+  color: var(--text);
+}
+
+.books-steps li.is-done {
+  border-top-style: solid;
+  border-top-color: var(--success);
+
+  color: var(--success);
+}
+
+/* =========================================================
+   CAMPOS Y BOTONES
+========================================================= */
+
+.books-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.books-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  min-width: 0;
+}
+
+.books-field-wide {
   grid-column: 1 / -1;
 }
 
-.spreadsheets-field input,
-.spreadsheets-field select {
-  width: 100%;
-  height: 36px;
-  padding: 0 11px;
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  background: var(--surface-secondary);
-  color: var(--text);
-  font-family: inherit;
-  font-size: 11px;
-  outline: none;
-  box-sizing: border-box;
-  transition:
-    background-color 0.3s ease,
-    color 0.3s ease,
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
-}
-
-.spreadsheets-field input::placeholder {
-  color: var(--text-muted);
-}
-
-.spreadsheets-field input:focus,
-.spreadsheets-field select:focus {
-  border-color: #3b73b9;
-  box-shadow: 0 0 0 2px rgba(59, 115, 185, 0.08);
-}
-
-.spreadsheets-field input:disabled,
-.spreadsheets-field select:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.spreadsheets-found {
-  margin: 14px 0 12px;
-  font-size: 12px;
+.books-label {
   color: var(--text-secondary);
+
+  font-size: var(--size-small);
 }
 
-.spreadsheets-found strong {
-  color: var(--text);
-}
-
-/* =========================================================
-   BOTONES
-   ========================================================= */
-
-.spreadsheets-form-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin-top: 16px;
-}
-
-.spreadsheets-search,
-.spreadsheets-save,
-.spreadsheets-app-save,
-.spreadsheets-connect {
+.books-field input,
+.books-field select {
   height: 32px;
-  min-width: 140px;
-  padding: 0 16px;
-  border: none;
-  border-radius: 5px;
-  background: #2864a8;
-  color: #ffffff;
-  font-family: inherit;
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  transition:
-    background 0.15s ease,
-    transform 0.1s ease;
-}
+  padding: 0 8px;
 
-.spreadsheets-search {
-  margin-top: 14px;
-}
-
-.spreadsheets-search:hover,
-.spreadsheets-save:hover,
-.spreadsheets-app-save:hover,
-.spreadsheets-connect:hover {
-  background: #205895;
-}
-
-.spreadsheets-search:active,
-.spreadsheets-save:active,
-.spreadsheets-app-save:active,
-.spreadsheets-connect:active {
-  transform: translateY(1px);
-}
-
-.spreadsheets-search:disabled,
-.spreadsheets-save:disabled,
-.spreadsheets-app-save:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.spreadsheets-cancel {
-  height: 32px;
-  padding: 0 16px;
   border: 1px solid var(--border);
-  border-radius: 5px;
-  background: var(--surface);
-  color: var(--text-secondary);
-  font-family: inherit;
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  transition:
-    border-color 0.15s ease,
-    color 0.15s ease;
-}
-
-.spreadsheets-cancel:hover {
-  border-color: #3b73b9;
-  color: #3270b5;
-}
-
-.spreadsheets-form-error {
-  margin: 12px 0 0;
-  font-size: 10px;
-  color: #d9534f;
-}
-
-.spreadsheets-form-error:empty {
-  display: none;
-}
-
-/* =========================================================
-   TABLAS
-   ========================================================= */
-
-.spreadsheets-table-wrap {
-  width: 100%;
-  overflow-x: auto;
-}
-
-.spreadsheets-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
-  font-family: "Poppins", sans-serif;
-  transition:
-    background-color 0.3s ease,
-    border-color 0.3s ease;
-}
-
-.spreadsheets-table > thead {
-  background: var(--surface);
-}
-
-.spreadsheets-table > thead > tr > th {
-  height: 32px;
-  padding: 0 18px;
-  border-bottom: 1px solid var(--border-light);
-  text-align: left;
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-secondary);
-  white-space: nowrap;
-}
-
-.spreadsheets-table > tbody > tr > td {
-  height: 40px;
-  padding: 0 18px;
-  border-bottom: 1px solid var(--border-light);
-  font-size: 12px;
-  color: var(--text-secondary);
-  text-align: left;
-}
-
-.spreadsheets-table > tbody > tr:last-child > td {
-  border-bottom: none;
-}
-
-.spreadsheets-table > tbody > tr:hover > td {
-  background: var(--surface-secondary);
-}
-
-.spreadsheets-cell-strong {
-  font-weight: 600;
-  color: var(--text) !important;
-  white-space: nowrap;
-}
-
-.spreadsheets-cell-actions {
-  text-align: right;
-  white-space: nowrap;
-}
-
-/* Enlaces dentro de la tabla */
-.spreadsheets-cell-strong a {
-  color: #3270b5;
-  text-decoration: none;
-}
-
-.spreadsheets-cell-strong a:hover {
-  text-decoration: underline;
-}
-
-/* Acciones de fila (texto, como roles-action) */
-.spreadsheets-action {
-  padding: 0;
-  border: none;
-  background: transparent;
-  font-family: inherit;
-  font-size: 10px;
-  font-weight: 600;
-  color: #3270b5;
-  cursor: pointer;
-}
-
-.spreadsheets-action:hover {
-  text-decoration: underline;
-}
-
-.spreadsheets-action + .spreadsheets-action {
-  margin-left: 12px;
-}
-
-.spreadsheets-action-danger {
-  color: #e45c5c;
-}
-
-.spreadsheets-action:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.spreadsheets-action:disabled:hover {
-  text-decoration: none;
-}
-
-/* Etiqueta para la tabla/hoja */
-.spreadsheets-tag {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 10px;
-  background: rgba(59, 115, 185, 0.1);
-  color: #3270b5;
-  font-size: 10px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-/* Badge mapeado / sin mapear */
-.spreadsheets-badge {
-  display: inline-block;
-  padding: 2px 10px;
-  border-radius: 10px;
-  font-size: 10px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.spreadsheets-badge--ok {
-  background: rgba(46, 125, 50, 0.12);
-  color: #2e7d32;
-}
-
-.spreadsheets-badge--pending {
-  background: rgba(214, 153, 30, 0.14);
-  color: #a8701a;
-}
-
-.spreadsheets-revoked {
-  color: #e45c5c;
-  font-size: 10px;
-}
-
-/* =========================================================
-   PREVIEW TIPO HOJA DE CÁLCULO (sutil)
-   ========================================================= */
-
-.spreadsheets-table > tbody > tr.spreadsheets-headers-row > td {
-  height: auto;
-  padding: 12px 18px 16px;
-  background: var(--surface-secondary);
-  border-bottom: 1px solid var(--border-light);
-}
-
-/* La fila del libro y su fila de encabezados se leen como una sola */
-.spreadsheets-table > tbody > tr:has(+ .spreadsheets-headers-row) > td {
-  border-bottom: none;
-}
-
-/* width: 0 + min-width: 100% -- la vista no aporta ancho a la tabla exterior (una celda
-   crece con su contenido aunque tenga overflow) y luego se estira a la celda ya medida. */
-.sheet-preview {
-  width: 0;
-  min-width: 100%;
-  margin: 0;
-  border: 1px solid rgba(15, 138, 138, 0.3);
   border-radius: 6px;
-  background: var(--surface);
-  overflow: hidden;
-  box-sizing: border-box;
+
+  background: var(--field);
+  color: var(--text);
+
+  font: inherit;
+  font-size: var(--size-body);
+  font-weight: 500;
 }
 
-/* Encabezado compacto */
-.sheet-preview-head {
+.books-field input:focus-visible,
+.books-field select:focus-visible {
+  border-color: var(--accent-line);
+
+  outline: none;
+}
+
+.books-action-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  border-bottom: 1px solid rgba(15, 138, 138, 0.2);
-  background: rgba(15, 138, 138, 0.06);
-  font-size: 11px;
-}
-
-.sheet-preview-label {
-  padding: 2px 8px;
-  border-radius: 10px;
-  background: rgba(15, 138, 138, 0.14);
-  color: #0f8a8a;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.sheet-preview-name {
-  flex: 1;
-  min-width: 0;
-  color: var(--text);
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.sheet-preview-count {
-  margin-left: auto;
-  color: var(--text-muted);
-  font-size: 10px;
-  white-space: nowrap;
-}
-
-/* Wrapper con scroll horizontal */
-.sheet-preview-scroll {
-  width: 100%;
-  overflow-x: auto;
-  background: var(--surface);
-}
-
-/* === CLAVE: la tabla NO se estira al ancho del contenedor === */
-.sheet-preview-grid {
-  border-collapse: collapse;
-  table-layout: auto;
-  width: max-content;   /* se ajusta al contenido, no al 100% */
-  min-width: 0;
-  font-family: "Poppins", sans-serif;
-  font-size: 11px;
-  color: var(--text-secondary);
-}
-
-.sheet-preview-grid th,
-.sheet-preview-grid td {
-  height: 24px;
-  padding: 0 10px;
-  border: 1px solid rgba(15, 138, 138, 0.16);
-  text-align: left;
-  white-space: nowrap;
-  max-width: 220px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Números de fila y letras de columna */
-.sheet-preview-corner,
-.sheet-preview-col,
-.sheet-preview-row {
-  background: rgba(15, 138, 138, 0.08);
-  color: #0f8a8a;
-  font-weight: 500;
-  font-size: 10px;
-  text-align: center !important;
-  border-color: rgba(15, 138, 138, 0.16);
-}
-
-.sheet-preview-corner,
-.sheet-preview-row {
-  width: 28px;
-  min-width: 28px;
-}
-
-.sheet-preview-col {
-  width: 88px;
-  min-width: 88px;
-}
-
-/* Celdas */
-.sheet-preview-cell {
-  background: var(--surface);
-}
-
-.sheet-preview-cell--header {
-  background: rgba(15, 138, 138, 0.12);
-  color: var(--text);
-  font-weight: 600;
-}
-/* Importación: el resumen de la corrida y el historial (RF-MIG-02) */
-.sheet-import {
-  display: flex;
-  flex-direction: column;
+  justify-content: flex-end;
   gap: 8px;
-  padding: 12px;
+  flex-wrap: wrap;
+
+  margin-top: 12px;
 }
 
-.sheet-import-errors {
-  margin: 0;
-  padding-left: 20px;
+.books-confirm {
+  color: var(--text-secondary);
+
+  font-size: var(--size-small);
 }
 
-.sheet-imports {
-  width: 100%;
-  border-collapse: collapse;
+.books-btn {
+  height: 32px;
+  padding: 0 12px;
+
+  border: 1px solid var(--border);
+  border-radius: 6px;
+
+  background: var(--surface);
+  color: var(--text);
+
+  font: inherit;
+  font-size: var(--size-small);
+
+  cursor: pointer;
 }
 
-.sheet-imports th,
-.sheet-imports td {
-  padding: 6px 8px;
-  text-align: left;
+.books-btn:hover:not(:disabled) {
+  border-color: var(--accent-line);
+}
+
+.books-btn:disabled {
+  color: var(--text-muted);
+  cursor: default;
+}
+
+.books-btn.is-primary {
+  border-color: var(--accent);
+
+  background: var(--accent);
+  color: #ffffff;
+
+  font-weight: 600;
+}
+
+.books-btn.is-primary:hover:not(:disabled) {
+  border-color: var(--accent-hover);
+  background: var(--accent-hover);
+}
+
+.books-btn.is-primary:disabled {
+  border-color: var(--border);
+
+  background: var(--surface-secondary);
+  color: var(--text-muted);
+}
+
+.books-quiet {
+  padding: 2px 8px;
+
+  border: 1px solid transparent;
+  border-radius: 4px;
+
+  background: transparent;
+  color: var(--accent-line);
+
+  font: inherit;
+  font-size: var(--size-small);
+
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.books-quiet:hover:not(:disabled) {
+  background: var(--accent-soft);
+}
+
+.books-quiet.is-danger {
+  color: var(--danger);
+}
+
+.books-quiet.is-danger:hover:not(:disabled) {
+  border-color: var(--danger);
+
+  background: var(--danger-soft);
+}
+
+@media (max-width: 900px) {
+  .books-open {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

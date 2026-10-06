@@ -7,6 +7,7 @@
 // La indicación del campo vive detrás del (?) de su etiqueta y no como texto corrido: un
 // formulario con un párrafo bajo cada campo se vuelve ilegible justo donde hay que leerlo.
 import Ayuda from "./ayuda.jsx";
+import IconoDeTipo from "./iconoDeTipo.jsx";
 import "./fieldInput.css";
 
 const TIPOS = {
@@ -48,6 +49,7 @@ function FieldInput({ field, value, onChange }) {
   return (
     <div className="field-input">
       <label className="field-label" htmlFor={id}>
+        <IconoDeTipo tipo={field.type} />
         <span className="field-name">{field.name}</span>
         {field.required ? <span className="field-required"> *</span> : null}
         {field.note ? <Ayuda texto={field.note} /> : null}
