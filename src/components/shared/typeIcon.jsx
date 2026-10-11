@@ -39,8 +39,8 @@ const SYMBOLS = {
  * @param {{ type: string }} props `type` is a `data_types.code`.
  */
 function TypeIcon({ type }) {
-  const Symbol = SYMBOLS[type] ?? MdShortText;
-  return <Symbol className="type-icon" aria-hidden="true" />;
+  const Glyph = SYMBOLS[type] ?? MdShortText;
+  return <Glyph className="type-icon" aria-hidden="true" />;
 }
 
 export default TypeIcon;

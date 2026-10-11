@@ -111,7 +111,7 @@ function HowItIs({ detail, statuses, busy, onStatus }) {
   return (
     <section className="project-how">
       <div className="project-how-half">
-        <h3>Estatus que se muestra</h3>
+        <h3>Estatus</h3>
         <select
           value={detail.statusId}
           onChange={(event) => onStatus(event.target.value)}
@@ -125,15 +125,13 @@ function HowItIs({ detail, statuses, busy, onStatus }) {
           ))}
         </select>
         <p className="project-note">
-          Desde {shortDate(detail.statusSince)}. Es lo que se le dice a quien preguntó, y se
-          guarda al elegirlo.
+          Desde {shortDate(detail.statusSince)}. 
         </p>
       </div>
 
       <div className="project-how-half">
         <h3>Estado del trabajo</h3>
         <p className="project-how-work">{work}</p>
-        <p className="project-note">La mueve un visto bueno, no el estatus.</p>
       </div>
 
       {workFinished && !statusSaysSo ? (
