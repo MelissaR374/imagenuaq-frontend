@@ -39,15 +39,6 @@
   font-weight: 700;
 }
 
-/* La indicación del campo, que la escribió quien armó el formato. */
-.field-note {
-  max-width: 46ch;
-  margin: 0;
-  font-size: 10px;
-  line-height: 1.5;
-  color: var(--text-muted);
-}
-
 /* =========================================================
    EL CONTROL
    ========================================================= */
@@ -142,4 +133,16 @@ form:invalid .field-control:required:invalid {
   .field-control[type="number"] {
     max-width: none;
   }
+}
+
+/* El símbolo del tipo, junto al nombre del campo: la forma se reconoce antes que el texto. */
+.field-label .type-icon {
+  align-self: center;
+  flex-shrink: 0;
+
+  margin-right: 2px;
+
+  color: var(--text-muted);
+
+  font-size: 14px;
 }

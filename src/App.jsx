@@ -18,12 +18,38 @@ import Projects from "./components/projects/projects.jsx";
 import Profile from "./components/profile/profile.jsx";
 import Notifications from "./components/notifications/notifications.jsx";
 import FlowDesigner from "./components/FlowDesigner/FlowDesigner.jsx";
+import StatusCatalog from "./components/statusCatalog/statusCatalog.jsx";
 
 import * as api from "./api/client.js";
 import { MICROSOFT_PARAM } from "./config.js";
 import "./App.css";
 
-// El menú usa nombres de rol en español y el servidor los manda en inglés.
+/**
+ * Lo que es cada vista, en una frase declarativa: el encabezado nombra la pantalla y la
+ * sitúa en el proceso, sin instrucciones ni controles.
+ */
+const DESCRIPCIONES = {
+  Notificaciones: "Lo que pasó en tus solicitudes, proyectos y etapas.",
+  "Mi perfil": "Tus datos de cuenta y tu foto.",
+  Empleados: "Las personas registradas y el rol de cada una.",
+  "Áreas y usuarios":
+    "El organigrama de la coordinación y quién está en cada área.",
+  "Roles y permisos": "Lo que puede hacer cada rol.",
+  "Formatos de solicitud":
+    "Los formatos con que se capturan las solicitudes y sus versiones.",
+  "Libros de Excel": "Los libros de Excel registrados y la conexión con Microsoft.",
+  "Importar de Excel":
+    "El mapeo de cada libro de Excel y la importación de sus filas.",
+  "Bandeja de solicitudes":
+    "Solicitudes recibidas que todavía no son proyecto.",
+  Proyectos: "Los proyectos y el avance de sus etapas.",
+  "Catálogo de estatus":
+    "Los estatus con que se muestran solicitudes y proyectos, globales y por área.",
+  "Diseñador de flujos":
+    "Las plantillas de flujo: sus fases y las etapas de cada una.",
+};
+
+/** El menú usa nombres de rol en español y el servidor los manda en inglés. */
 const ROLES = {
   admin: "admin",
   area_lead: "lider",
@@ -31,8 +57,10 @@ const ROLES = {
   worker: "trabajador",
 };
 
-// El cambio de foto como actualizador de estado: libera el object URL anterior y crea el
-// del Blob nuevo, o deja null para quitarla.
+/**
+ * El cambio de foto como actualizador de estado: libera el object URL anterior y crea el
+ * del Blob nuevo, o deja null para quitarla.
+ */
 function reemplazarFoto(blob) {
   return (anterior) => {
     if (anterior) URL.revokeObjectURL(anterior);
@@ -41,16 +69,13 @@ function reemplazarFoto(blob) {
 }
 
 function App() {
-  // Quién entró; null mientras nadie lo haya hecho.
   const [usuario, setUsuario] = useState(null);
-  // Si venimos de iniciar sesión con Microsoft, abrir directo la pestaña que lo pidió.
   const [pestana, setPestana] = useState(() =>
     new URLSearchParams(window.location.search).has(MICROSOFT_PARAM)
-      ? "Formatos de solicitud"
+      ? "Libros de Excel"
       : null,
   );
 
-  //MODO OSCURO Y CLARO
   const [modoOscuro, setModoOscuro] = useState(() => {
     const savedTheme = localStorage.getItem("theme");
     if (savedTheme) {
@@ -69,11 +94,8 @@ function App() {
     }
   }, [modoOscuro]);
 
-  // La foto de perfil como object URL, o null si no hay. Vive aquí porque la barra
-  // lateral y la pestaña "Mi perfil" la muestran las dos.
   const [foto, setFoto] = useState(null);
 
-  // Si no hay token guardado no hay nada que verificar y se entra directo al login.
   const [verificando, setVerificando] = useState(() => Boolean(api.getToken()));
 
   useEffect(() => {
@@ -86,8 +108,6 @@ function App() {
       .finally(() => setVerificando(false));
   }, []);
 
-  // Al entrar alguien se pide su foto una vez (no cada vez que edita su nombre); 404
-  // significa que no tiene.
   const usuarioId = usuario?.id ?? null;
 
   useEffect(() => {
@@ -107,13 +127,10 @@ function App() {
     };
   }, [usuarioId]);
 
-  // Lo que la pestaña "Mi perfil" llama al subir o quitar la foto.
   function cambiarFoto(blob) {
     setFoto(reemplazarFoto(blob));
   }
 
-  // La pestaña "Mi perfil" avisa cuando cambian los datos, para que el nombre del
-  // encabezado y de la barra lateral se actualicen sin volver a entrar.
   function actualizarUsuario(datos) {
     setUsuario({ ...usuario, fullName: datos.fullName, email: datos.email });
   }
@@ -128,7 +145,6 @@ function App() {
   if (verificando) return <p className="app-booting">Cargando...</p>;
   if (!usuario) return <Login onEntrar={setUsuario} />;
 
-  // Pestaña de inicio según el rol, hasta que la persona elija otra.
   const activa =
     pestana ?? (usuario.role === "admin" ? "Empleados" : "Notificaciones");
 
@@ -149,14 +165,12 @@ function App() {
 
       <main className="main-content">
         <header className="main-header">
-          {/* El nombre abre "Mi perfil", igual que el usuario de la barra lateral. */}
-          <button
-            className="main-user"
-            type="button"
-            onClick={() => setPestana("Mi perfil")}
-          >
-            {usuario.fullName}
-          </button>
+          <div className="main-header-text">
+            <h1 className="main-title">{activa}</h1>
+            {DESCRIPCIONES[activa] ? (
+              <p className="main-description">{DESCRIPCIONES[activa]}</p>
+            ) : null}
+          </div>
 
           <div className="header-actions">
             <button
@@ -171,24 +185,9 @@ function App() {
                 {modoOscuro ? <MdDarkMode /> : <MdLightMode />}
               </span>
             </button>
-
-            <button
-              className="main-logout"
-              type="button"
-              onClick={cerrarSesion}
-            >
-              Cerrar sesión
-            </button>
           </div>
         </header>
 
-        {/* Las pestañas con pantalla: "Notificaciones" (todavía con datos de prueba, sin
-            backend), "Mi perfil", "Empleados", "Áreas y usuarios", "Roles y permisos",
-            "Formatos de solicitud" (da de alta las cuentas y los libros de Excel), "Esquemas de
-            datos" (qué datos lleva un proyecto), "Configuración de formatos de solicitud" (mapea
-            las columnas de un libro e importa sus filas), "Bandeja de solicitudes", "Proyectos"
-            y "Diseñador de flujos" (también con datos de prueba). Las demás muestran su
-            nombre. */}
         {activa === "Notificaciones" ? (
           <Notifications />
         ) : activa === "Mi perfil" ? (
@@ -205,20 +204,20 @@ function App() {
         ) : activa === "Roles y permisos" && usuario.role === "admin" ? (
           <Roles />
         ) : activa === "Formatos de solicitud" && usuario.role === "admin" ? (
-          <Spreadsheets />
-        ) : activa === "Esquemas de datos" && usuario.role === "admin" ? (
           <Schemas />
-        ) : activa === "Configuración de formatos de solicitud" && usuario.role === "admin" ? (
-          <ImportConfig />
+        ) : activa === "Libros de Excel" && usuario.role === "admin" ? (
+          <Spreadsheets onIr={setPestana} />
+        ) : activa === "Importar de Excel" && usuario.role === "admin" ? (
+          <ImportConfig onIr={setPestana} />
         ) : activa === "Bandeja de solicitudes" && usuario.role === "admin" ? (
           <Inbox />
         ) : activa === "Proyectos" && usuario.role === "admin" ? (
           <Projects usuario={usuario} />
+        ) : activa === "Catálogo de estatus" && usuario.role === "admin" ? (
+          <StatusCatalog />
         ) : activa === "Diseñador de flujos" && usuario.role === "admin" ? (
           <FlowDesigner />
-        ) : (
-          <h1>{activa}</h1>
-        )}
+        ) : null}
       </main>
     </div>
   );

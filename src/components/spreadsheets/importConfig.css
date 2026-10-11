@@ -1,193 +1,950 @@
-/* =========================================================
-   CONFIGURACIÓN DE FORMATOS DE SOLICITUD
-   Elegir el libro que se va a mapear. Mismos tokens que el
-   resto del sistema; la pastilla `.spreadsheets-tag` se reusa
-   de `spreadsheets.css`.
-   ========================================================= */
+/* Importing from Excel: the list of books, the mapping, the test and the import. Layout ported
+   from the "Lienzo" prototype. The screen's three parts share this sheet because they are one. */
 
-.config {
-  padding: 28px 32px 40px;
-  background: var(--background);
-  color: var(--text);
-  transition:
-    background-color 0.3s ease,
-    color 0.3s ease;
+.imp {
+  padding-bottom: 30px;
 }
 
-.config-loading {
-  padding: 28px 32px;
-  font-size: 12px;
-  color: var(--text-muted);
-}
+.imp-note {
+  margin: 6px 0 0;
 
-.config-header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 12px;
-  margin-bottom: 8px;
-}
-
-.config-title {
-  margin: 0;
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.config-count {
-  font-size: 13px;
-  color: var(--text-muted);
-}
-
-.config-intro {
-  max-width: 78ch;
-  margin: 0 0 24px;
-  font-size: 12px;
-  line-height: 1.6;
   color: var(--text-secondary);
+
+  font-size: var(--size-small);
 }
 
-.config-error {
-  max-width: 78ch;
-  margin: 0 0 16px;
-  padding: 10px 14px;
-  border: 1px solid rgba(217, 83, 79, 0.35);
-  border-radius: 6px;
-  background: rgba(217, 83, 79, 0.08);
-  font-size: 12px;
-  color: #b23c38;
-}
-
-.config-empty {
-  max-width: 78ch;
-  margin: 0;
-  padding: 16px 18px;
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  background: var(--surface);
-  font-size: 12px;
-  line-height: 1.6;
+.imp-label {
   color: var(--text-secondary);
+
+  font-size: var(--size-small);
+}
+
+.imp-error {
+  margin: 0 0 12px;
+  padding: 9px 12px;
+
+  border-left: 3px solid var(--danger);
+  border-radius: 0 6px 6px 0;
+
+  background: var(--danger-soft);
+  color: var(--text);
+
+  font-size: var(--size-small);
+}
+
+.imp-ok {
+  margin: 0 0 12px;
+  padding: 9px 12px;
+
+  border-left: 3px solid var(--success);
+  border-radius: 0 6px 6px 0;
+
+  background: var(--success-soft);
+  color: var(--text);
+
+  font-size: var(--size-small);
+}
+
+.imp-confirm {
+  color: var(--text-secondary);
+
+  font-size: var(--size-small);
 }
 
 /* =========================================================
-   LOS LIBROS
-   Una lista, no una rejilla de tarjetas: son pocos y se
-   comparan leyendo hacia abajo la misma columna.
-   ========================================================= */
+   THE LIST OF BOOKS
+========================================================= */
 
-.config-books {
-  margin: 0;
-  padding: 0;
-  list-style: none;
+.imp-count {
+  margin: 0 0 10px;
+
+  color: var(--text-secondary);
+
+  font-size: var(--size-small);
+}
+
+.imp-table-wrap {
+  overflow-x: auto;
+
   border: 1px solid var(--border);
-  border-radius: 9px;
+  border-radius: 8px;
+
   background: var(--surface);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
-  overflow: hidden;
 }
 
-.config-book + .config-book {
-  border-top: 1px solid var(--border-light);
-}
-
-.config-book-button {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+.imp-table {
   width: 100%;
-  padding: 16px 18px;
-  border: none;
-  background: transparent;
-  font-family: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition: background 0.15s ease;
+
+  border-collapse: collapse;
+
+  font-size: var(--size-body);
 }
 
-.config-book-button:hover {
+.imp-table th {
+  padding: 9px 12px;
+
+  border-bottom: 1px solid var(--border);
+
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.imp-table td {
+  padding: 10px 12px;
+
+  border-bottom: 1px solid var(--border-light);
+
+  color: var(--text);
+  vertical-align: top;
+}
+
+.imp-row {
+  cursor: pointer;
+}
+
+.imp-row:hover {
   background: var(--surface-secondary);
 }
 
-.config-book-main {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
+.imp-row.is-stale td:first-child {
+  box-shadow: inset 3px 0 0 var(--warning);
 }
 
-.config-book-name {
-  font-size: 14px;
+.imp-cell-main {
+  min-width: 200px;
+}
+
+.imp-kind {
+  display: block;
+
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
   font-weight: 600;
-  color: var(--text);
-  overflow-wrap: anywhere;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
 }
 
-.config-book-meta {
-  display: flex;
-  flex-wrap: wrap;
+.imp-row-name {
+  display: block;
+
+  font-weight: 600;
+}
+
+/* The symbols: a state is recognised before it is read. */
+.imp-state,
+.imp-field-sample,
+.imp-field-bad,
+.imp-col-used,
+.imp-try-verdict,
+.imp-tally li {
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
-  font-size: 11px;
+  gap: 4px;
+}
+
+.imp-state svg,
+.imp-field-sample svg,
+.imp-field-bad svg,
+.imp-col-used svg,
+.imp-try-verdict svg,
+.imp-tally svg {
+  flex-shrink: 0;
+
+  font-size: 14px;
+}
+
+.imp-tally {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+
+  margin: 10px 0 0;
+  padding: 0;
+
+  font-size: var(--size-small);
+  font-weight: 600;
+
+  list-style: none;
+}
+
+.imp-tally .is-ok {
+  color: var(--success);
+}
+
+.imp-tally .is-skip {
   color: var(--text-muted);
 }
 
-.config-book-side {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex-shrink: 0;
+.imp-tally .is-bad {
+  color: var(--danger);
 }
 
-/* El estado toma los colores que ya significan eso en este sistema. */
-.config-book-state {
-  padding: 2px 10px;
-  border-radius: 10px;
-  font-size: 10px;
+.imp-try.is-warn {
+  border-left-color: var(--warning);
+}
+
+.imp-try.is-warn .imp-try-verdict {
+  color: var(--warning);
+}
+
+.imp-try-warnings {
+  margin: 0;
+  padding: 0 12px 10px 28px;
+
+  color: var(--warning);
+
+  font-size: var(--size-small);
+}
+
+.imp-state.is-pending {
+  color: var(--warning);
   font-weight: 600;
-  white-space: nowrap;
 }
 
-.config-book-state.is-pendiente {
-  background: rgba(214, 153, 30, 0.14);
-  color: #a8701a;
-}
-
-.config-book-state.is-listo {
-  background: rgba(59, 115, 185, 0.12);
-  color: #3270b5;
-}
-
-.config-book-state.is-hecho {
-  background: rgba(46, 125, 50, 0.12);
-  color: #2e7d32;
-}
-
-.config-book-action {
-  font-size: 10px;
+.imp-state.is-ready {
+  color: var(--success);
   font-weight: 600;
-  color: #3270b5;
-  white-space: nowrap;
 }
 
-.config-book-button:hover .config-book-action {
-  text-decoration: underline;
+.imp-state.is-bad {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.imp-off {
+  color: var(--warning);
+
+  font-size: var(--size-small);
+  font-weight: 600;
+}
+
+.imp-empty {
+  margin: 0;
+  padding: 30px;
+
+  color: var(--text-muted);
+
+  font-size: var(--size-small);
+  text-align: center;
 }
 
 /* =========================================================
-   PANTALLAS ANGOSTAS
-   ========================================================= */
+   THE OPEN BOOK
+========================================================= */
 
-@media (max-width: 860px) {
-  .config {
-    padding: 20px 16px 32px;
+.imp-full {
+  position: fixed;
+  inset: 0;
+  /* Encima de la barra lateral, que se queda en 1000. */
+  z-index: 1100;
+
+  display: flex;
+  flex-direction: column;
+
+  background: var(--background);
+}
+
+.imp-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+
+  padding: 12px 20px;
+
+  border-bottom: 1px solid var(--border);
+
+  background: var(--surface);
+}
+
+.imp-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  width: 30px;
+  height: 30px;
+
+  border: 1px solid var(--border);
+  border-radius: 6px;
+
+  background: var(--surface-secondary);
+  color: var(--text-muted);
+
+  font: inherit;
+  font-size: 15px;
+
+  cursor: pointer;
+}
+
+.imp-close:hover {
+  border-color: var(--accent-line);
+  color: var(--text);
+}
+
+.imp-bar-text {
+  min-width: 0;
+}
+
+.imp-eyebrow {
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.imp-bar-text h2 {
+  margin: 2px 0 0;
+
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.imp-steps {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+
+  margin: 0 0 0 auto;
+  padding: 0;
+
+  list-style: none;
+}
+
+.imp-step {
+  padding: 5px 0 0;
+
+  border: 0;
+  border-top: 2px dashed var(--border);
+
+  background: transparent;
+  color: var(--text-muted);
+
+  font: inherit;
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+
+  cursor: pointer;
+}
+
+.imp-step.is-now {
+  border-top-style: solid;
+  border-top-color: var(--accent-line);
+
+  color: var(--text);
+}
+
+.imp-step:disabled {
+  color: var(--text-muted);
+  cursor: default;
+  opacity: 0.55;
+}
+
+.imp-leaving {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+
+  padding: 10px 20px;
+
+  border-bottom: 1px solid var(--warning);
+
+  background: var(--warning-soft);
+
+  font-size: var(--size-small);
+}
+
+.imp-leaving p {
+  margin: 0;
+}
+
+.imp-leaving .imp-action-row {
+  margin: 0;
+}
+
+.imp-body {
+  flex: 1;
+
+  overflow-y: auto;
+
+  padding: 18px 20px 24px;
+}
+
+/* =========================================================
+   THE MAPPING
+========================================================= */
+
+.imp-mapper {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 300px);
+  gap: 0 24px;
+}
+
+.imp-mapper-main {
+  min-width: 0;
+}
+
+.imp-sec {
+  padding: 14px 0 18px;
+
+  border-top: 1px solid var(--border-light);
+}
+
+.imp-sec:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.imp-sec h3 {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+
+  margin: 0 0 10px;
+
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.imp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.imp-field-plain {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  min-width: 0;
+}
+
+.imp-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.imp-field {
+  padding: 10px 12px;
+
+  border: 1px solid var(--border);
+  border-radius: 7px;
+
+  background: var(--surface);
+}
+
+.imp-field-head {
+  margin-bottom: 6px;
+}
+
+.imp-field-name {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  font-size: var(--size-body);
+  font-weight: 600;
+}
+
+.imp-required {
+  color: var(--warning);
+  font-weight: 700;
+}
+
+.imp-field-body {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.imp-field-default {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+
+  margin-top: 8px;
+}
+
+.imp-field-sample {
+  margin: 8px 0 0;
+
+  color: var(--success);
+
+  font-size: var(--size-small);
+  font-weight: 600;
+}
+
+.imp-field-bad {
+  margin: 8px 0 0;
+
+  color: var(--danger);
+
+  font-size: var(--size-small);
+}
+
+.imp-mapper select,
+.imp-mapper input,
+.imp-field-plain select,
+.imp-field-plain input {
+  height: 32px;
+  min-width: 0;
+  padding: 0 8px;
+
+  border: 1px solid var(--border);
+  border-radius: 6px;
+
+  background: var(--field);
+  color: var(--text);
+
+  font: inherit;
+  font-size: var(--size-body);
+  font-weight: 500;
+}
+
+.imp-small {
+  width: 70px;
+}
+
+/* Para todo el libro: lo que este libro da igual a todas sus filas. */
+.imp-fixed {
+  padding: 12px 14px;
+
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+
+  background: var(--surface-secondary);
+}
+
+.imp-chips {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.imp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  padding: 4px 10px;
+
+  border: 1px solid var(--accent-line);
+  border-radius: 999px;
+
+  background: var(--accent-soft);
+
+  font-size: var(--size-small);
+}
+
+.imp-chip button {
+  border: 0;
+
+  background: transparent;
+  color: var(--text-muted);
+
+  font: inherit;
+
+  cursor: pointer;
+}
+
+.imp-equiv {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+/* Las columnas del libro, al lado. */
+.imp-columns {
+  align-self: start;
+  position: sticky;
+  top: 0;
+
+  padding: 12px 14px;
+
+  border: 1px solid var(--border);
+  border-radius: 8px;
+
+  background: var(--surface);
+}
+
+.imp-columns h3 {
+  margin: 0 0 10px;
+
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.imp-columns ul {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  margin: 0;
+  padding: 0;
+
+  list-style: none;
+}
+
+.imp-columns li {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 2px 8px;
+
+  font-size: var(--size-small);
+}
+
+.imp-col-letter {
+  grid-row: span 2;
+
+  color: var(--text-muted);
+
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: var(--size-caps);
+  text-align: center;
+}
+
+.imp-col-name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.imp-col-sample {
+  display: block;
+
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
+  font-weight: 400;
+}
+
+.imp-col-used {
+  color: var(--accent-line);
+}
+
+.imp-col-free {
+  color: var(--text-muted);
+}
+
+/* =========================================================
+   THE TEST
+========================================================= */
+
+.imp-tries {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  margin: 12px 0 0;
+  padding: 0;
+
+  list-style: none;
+}
+
+.imp-try {
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border);
+  border-radius: 7px;
+
+  background: var(--surface);
+}
+
+.imp-try.is-ok {
+  border-left-color: var(--success);
+}
+
+.imp-try.is-skip {
+  border-left-color: var(--text-muted);
+}
+
+.imp-try.is-bad {
+  border-left-color: var(--danger);
+}
+
+.imp-try-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+
+  width: 100%;
+  padding: 8px 10px;
+
+  border: 0;
+
+  background: transparent;
+  color: var(--text);
+
+  font: inherit;
+  text-align: left;
+
+  cursor: pointer;
+}
+
+.imp-try-row {
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.imp-try-title {
+  flex: 1;
+
+  font-size: var(--size-body);
+  font-weight: 600;
+}
+
+.imp-try-verdict {
+  font-size: var(--size-small);
+  font-weight: 600;
+}
+
+.imp-try.is-ok .imp-try-verdict {
+  color: var(--success);
+}
+
+.imp-try.is-bad .imp-try-verdict {
+  color: var(--danger);
+}
+
+.imp-try.is-skip .imp-try-verdict {
+  color: var(--text-muted);
+}
+
+.imp-try-errors {
+  margin: 0;
+  padding: 0 12px 10px 28px;
+
+  color: var(--danger);
+
+  font-size: var(--size-small);
+}
+
+.imp-try-values {
+  display: grid;
+  grid-template-columns: minmax(0, 40%) minmax(0, 1fr);
+  gap: 5px 12px;
+
+  margin: 0;
+  padding: 0 12px 12px;
+
+  font-size: var(--size-small);
+}
+
+.imp-try-values dt {
+  color: var(--text-muted);
+}
+
+.imp-try-values dd {
+  margin: 0;
+
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+/* =========================================================
+   THE IMPORT
+========================================================= */
+
+.imp-baseline {
+  padding: 12px 14px;
+
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+
+  background: var(--surface-secondary);
+}
+
+.imp-history {
+  padding: 14px 0 0;
+
+  border-top: 1px solid var(--border-light);
+}
+
+.imp-history summary {
+  color: var(--accent-line);
+
+  font-size: var(--size-small);
+
+  cursor: pointer;
+}
+
+.imp-history ul {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  margin: 10px 0 0;
+  padding: 0;
+
+  font-size: var(--size-small);
+
+  list-style: none;
+}
+
+.imp-history li {
+  display: flex;
+  flex-direction: column;
+}
+
+/* =========================================================
+   BUTTONS AND FOOTERS
+========================================================= */
+
+.imp-action-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+
+  margin-top: 12px;
+}
+
+.imp-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+
+  margin-top: 16px;
+  padding-top: 12px;
+
+  border-top: 1px solid var(--border);
+}
+
+.imp-foot .imp-note {
+  margin: 0;
+}
+
+.imp-foot-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+
+  margin-left: auto;
+}
+
+.imp-btn {
+  height: 32px;
+  padding: 0 12px;
+
+  border: 1px solid var(--border);
+  border-radius: 6px;
+
+  background: var(--surface);
+  color: var(--text);
+
+  font: inherit;
+  font-size: var(--size-small);
+
+  cursor: pointer;
+}
+
+.imp-btn:hover:not(:disabled) {
+  border-color: var(--accent-line);
+}
+
+.imp-btn:disabled {
+  color: var(--text-muted);
+  cursor: default;
+}
+
+.imp-btn.is-primary {
+  border-color: var(--accent);
+
+  background: var(--accent);
+  color: #ffffff;
+
+  font-weight: 600;
+}
+
+.imp-btn.is-primary:hover:not(:disabled) {
+  border-color: var(--accent-hover);
+  background: var(--accent-hover);
+}
+
+.imp-btn.is-primary:disabled {
+  border-color: var(--border);
+
+  background: var(--surface-secondary);
+  color: var(--text-muted);
+}
+
+.imp-quiet {
+  padding: 2px 8px;
+
+  border: 1px solid transparent;
+  border-radius: 4px;
+
+  background: transparent;
+  color: var(--accent-line);
+
+  font: inherit;
+  font-size: var(--size-small);
+
+  cursor: pointer;
+}
+
+.imp-quiet:hover:not(:disabled) {
+  background: var(--accent-soft);
+}
+
+.imp-add {
+  border-style: dashed !important;
+}
+
+@media (max-width: 1000px) {
+  .imp-mapper {
+    grid-template-columns: minmax(0, 1fr);
   }
 
-  .config-book-side {
-    width: 100%;
-    justify-content: space-between;
+  .imp-columns {
+    position: static;
+
+    margin-top: 16px;
+  }
+}
+
+@media (max-width: 900px) {
+  .imp-bar {
+    padding: 12px 14px;
+  }
+
+  .imp-body {
+    padding: 14px 14px 20px;
   }
 }

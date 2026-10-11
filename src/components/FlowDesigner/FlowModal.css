@@ -211,3 +211,58 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* Solo acomodo: el diseño lo revisa quien lleva el CSS. */
+
+.flow-modal-error {
+    margin: 0 0 8px;
+}
+
+.modal-field textarea {
+    width: 100%;
+    min-height: 72px;
+    box-sizing: border-box;
+    resize: vertical;
+}
+
+/* La ventana de una etapa lleva más campos que la de una fase. */
+.flow-modal:not(.phase-modal) {
+    max-width: 560px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.flow-field-help {
+    margin: 0 0 6px;
+}
+
+.flow-key-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin: 0 0 4px;
+    padding: 0;
+    list-style: none;
+}
+
+.flow-key-chip {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.flow-key-remove {
+    padding: 0;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.flow-key-add {
+    display: flex;
+    gap: 4px;
+}
+
+.flow-modal-remove {
+    margin-right: auto;
+}

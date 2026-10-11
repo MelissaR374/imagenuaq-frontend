@@ -11,23 +11,28 @@
 // firmado dentro de cada token de sesión como `aud` y el servidor lo vuelve a revisar en
 // cada petición, así que si no coinciden los tokens se rechazan en vez de fallar de a poco.
 
-// A dónde se manda cada petición. Absoluta apunta directo al backend, sin proxy inverso en
-// medio, y entonces el backend tiene que permitir este origen en su CORS_ORIGIN. El valor
-// "/api" a secas deja todo en el mismo origen y delega el reenvío a Vite o a nginx.
+/**
+ * A dónde se manda cada petición. Absoluta apunta directo al backend, que entonces tiene que
+ * permitir este origen en su CORS_ORIGIN; "/api" a secas delega el reenvío a Vite o a nginx.
+ */
 export const API_URL = import.meta.env.VITE_API_URL ?? "/api";
 
-// El origen público de esta aplicación, para armar enlaces que apunten de vuelta aquí. Sin
-// diagonal al final. Si no está definido se usa el origen del navegador, que es lo correcto
-// mientras la aplicación se abra desde el mismo lugar que quiere enlazar.
+/**
+ * El origen público de esta aplicación, para armar enlaces que apunten de vuelta aquí. Sin
+ * diagonal al final. Si no está definido se usa el origen del navegador, que es lo correcto
+ * mientras la aplicación se abra desde el mismo lugar que quiere enlazar.
+ */
 export const FRONTEND_DOMAIN = (
   import.meta.env.VITE_FRONTEND_DOMAIN ?? window.location.origin
 ).replace(/\/+$/, "");
 
-// Nombre del parámetro donde viaja la invitación en el enlace de activación.
+/** Nombre del parámetro donde viaja la invitación en el enlace de activación. */
 export const INVITE_PARAM = "invite";
 
-// Nombre del parámetro con el que el servidor regresa aquí después de iniciar sesión con
-// Microsoft: "connected", o "error" acompañado de reason y description.
+/**
+ * Nombre del parámetro con el que el servidor regresa aquí después de iniciar sesión con
+ * Microsoft: "connected", o "error" acompañado de reason y description.
+ */
 export const MICROSOFT_PARAM = "microsoft";
 
 /**

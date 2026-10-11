@@ -1,23 +1,51 @@
+// The project board (RF-PRY-02). The most urgent first: there is no order of arrival here, a
+// person sets the urgency (RF-FLW-08).
+//
+// The tabs are the project's state and not one more filter, because they are exclusive and each
+// carries its own rule. Beside them, "Mis proyectos" or "Todos": by default only what is mine,
+// which is a project I created or one where I am responsible for a stage (`mine` on the server,
+// which also marks every row). The counts follow that switch, so they cannot say one thing while
+// the list says another.
+//
+// The "Dónde va" column names the open stages instead of counting them: "Diseño gráfico ·
+// Propuesta" is something somebody can act on, a 2 is not. A project with no open stage whose
+// status does not say it is finished is work nobody closed, and it carries the amber line.
+//
+// A project opens full screen, over the list and over the sidebar: it carries a live process with
+// many parts, and in place under its row it was cut short.
 import { useEffect, useState } from "react";
 
 import * as api from "../../api/client.js";
+import { shortDate } from "../shared/format.js";
+import { vocabularyOf } from "../shared/vocabulary.js";
 import ProjectDetail from "./projectDetail.jsx";
 import ProjectForm from "./projectForm.jsx";
-import StatusCatalog from "./statusCatalog.jsx";
 import "./projects.css";
 
-// El tablero de proyectos (RF-PRY-02). Por omisión los abiertos, los más urgentes arriba:
-// aquí no hay orden de llegada, la urgencia la pone una persona (RF-FLW-08).
-//
-// «Estatus» y «Etapas abiertas» van pegadas a propósito: son los dos vocabularios de estado de
-// DATAMODEL.md §8.1 y no se mueven solos ni juntos. Un proyecto con cero etapas abiertas y un
-// estatus que no dice «terminado» es trabajo que nadie cerró, y así se ve desde la lista.
-//
-// El catálogo de estatus se edita desde esta misma pantalla, en un panel aparte, porque es
-// donde se usa.
-const FILTROS_VACIOS = {
+const PER_PAGE = 20;
+
+/** A project's states, each with the rule that defines it in one sentence. */
+const TABS = [
+  {
+    key: "open",
+    label: "Abiertos",
+    rule: "Trabajo en curso: ni concluido ni quitado de en medio.",
+  },
+  {
+    key: "closed",
+    label: "Cerrados",
+    rule: "Ya se concluyeron. Cerrar se niega mientras alguna etapa siga abierta.",
+  },
+  {
+    key: "archived",
+    label: "Archivados",
+    rule: "Quitados de en medio. Archivar es otra cosa que concluir.",
+  },
+  { key: "all", label: "Todos", rule: "Todo lo que existe, en cualquier estado." },
+];
+
+const NO_FILTERS = {
   q: "",
-  state: "open",
   areaId: "",
   statusId: "",
   hasCost: "",
@@ -26,333 +54,520 @@ const FILTROS_VACIOS = {
   sort: "priority",
 };
 
-function oGuion(valor) {
-  if (valor === null || valor === undefined || valor === "") {
-    return "—";
-  }
-  return valor;
+/** The days between today and a date, to say "en 9 d" or "vencido hace 21 d". */
+function daysUntil(fecha) {
+  const day = 24 * 60 * 60 * 1000;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Math.round((new Date(fecha).setHours(0, 0, 0, 0) - today) / day);
 }
 
-function FiltroSelect({ etiqueta, valor, opciones, onCambio }) {
+/** The due date with what is left of it, or how long ago it passed. */
+function DueDate({ dueOn, closed }) {
+  if (dueOn === null || dueOn === undefined) {
+    return <span className="projects-none">Sin fecha</span>;
+  }
+
+  const days = daysUntil(dueOn);
+
+  let due = `en ${days} d`;
+  let className = "projects-due-note";
+  if (days === 0) {
+    due = "hoy";
+  } else if (days < 0) {
+    due = `vencido hace ${-days} d`;
+    className = "projects-due-note is-late";
+  }
+  if (closed) {
+    due = "";
+  }
+
   return (
-    <label className="projects-filter">
-      {etiqueta}
-      <select value={valor} onChange={(evento) => onCambio(evento.target.value)}>
-        {opciones.map((opcion) => (
-          <option value={opcion.valor} key={opcion.valor}>
-            {opcion.texto}
-          </option>
-        ))}
-      </select>
-    </label>
+    <>
+      {shortDate(dueOn)}
+      {due === "" ? null : <span className={className}>{due}</span>}
+    </>
   );
 }
 
-function FilaDeProyecto({ proyecto, onAbrir }) {
+/** Where it is: every open stage by its area and title, amber when it waits on a third party. */
+function WhereItIs({ project }) {
+  if (project.openStages.length === 0) {
+    if (project.closedAt !== null || project.archivedAt !== null) {
+      return <span className="projects-none">Nada abierto</span>;
+    }
+    return <span className="projects-stale">Sin etapas abiertas</span>;
+  }
+
   return (
-    <tr className="projects-row">
-      <td className="projects-key">{proyecto.key}</td>
-      <td>{proyecto.title}</td>
-      <td>{oGuion(proyecto.requester)}</td>
-      <td>{proyecto.statusLabel}</td>
-      <td className="projects-cell-center">{proyecto.priority}</td>
-      <td className="projects-cell-center">{proyecto.openStageCount}</td>
-      <td className="projects-cell-center">{proyecto.requestCount}</td>
-      <td>{oGuion(proyecto.dueOn)}</td>
-      <td>
-        <button type="button" onClick={() => onAbrir(proyecto)}>
-          Abrir
-        </button>
+    <ul className="projects-stages">
+      {project.openStages.map((stage) => (
+        <li
+          className={
+            stage.status === "waiting_external" ? "projects-stage is-waiting" : "projects-stage"
+          }
+          key={stage.id}
+        >
+          <span className="projects-stage-area">{stage.areaName}</span>
+          {stage.title}
+          {stage.status === "waiting_external" ? " · en espera" : ""}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function ProjectRow({ project, onOpen }) {
+  let myPart = null;
+  if (project.mineResponsible) {
+    myPart = <span className="projects-mine">Eres responsable</span>;
+  } else if (project.mineCreated) {
+    myPart = <span className="projects-mine">Lo creaste</span>;
+  }
+
+  const unclosed =
+    project.openStages.length === 0 &&
+    project.closedAt === null &&
+    project.archivedAt === null;
+
+  return (
+    <tr
+      className={unclosed ? "projects-row is-stale" : "projects-row"}
+      onClick={() => onOpen(project)}
+    >
+      <td className="projects-cell-main">
+        <span className="projects-key">{project.key}</span>
+        <span className="projects-row-title">{project.title}</span>
+        {myPart}
       </td>
+      <td>
+        {project.requester === null || project.requester === "" ? (
+          <span className="projects-none">Sin dato</span>
+        ) : (
+          project.requester
+        )}
+      </td>
+      <td>
+        <WhereItIs project={project} />
+      </td>
+      <td>{project.statusLabel}</td>
+      <td className="projects-due">
+        <DueDate
+          dueOn={project.dueOn}
+          closed={project.closedAt !== null || project.archivedAt !== null}
+        />
+      </td>
+      <td className="projects-num">{project.priority}</td>
     </tr>
   );
 }
 
-function Projects({ usuario }) {
-  const [proyectos, setProyectos] = useState([]);
+function Projects({ user }) {
+  const [projects, setProyectos] = useState([]);
   const [areas, setAreas] = useState([]);
-  const [estatus, setEstatus] = useState([]);
-  const [filtros, setFiltros] = useState(FILTROS_VACIOS);
-  const [cargando, setCargando] = useState(true);
+  const [statuses, setEstatus] = useState([]);
+  const [vocabulary, setVocabulario] = useState(new Map());
+  const [tab, setPestana] = useState("open");
+  const [onlyMine, setSoloMios] = useState(true);
+  const [counts, setCuentas] = useState({});
+  const [filters, setFiltros] = useState(NO_FILTERS);
+  const [page, setPagina] = useState(0);
+  const [total, setTotal] = useState(0);
+  const [loading, setCargando] = useState(true);
   const [error, setError] = useState(null);
-  const [abierto, setAbierto] = useState(null);
-  const [capturando, setCapturando] = useState(false);
-  const [verCatalogo, setVerCatalogo] = useState(false);
+  const [opened, setAbierto] = useState(null);
+  const [capturing, setCapturando] = useState(false);
   const [version, setVersion] = useState(0);
 
-  useEffect(() => {
-    let cancelado = false;
+  const activeTab = TABS.find((one) => one.key === tab) ?? TABS[0];
 
-    async function cargarCatalogos() {
+  const filterSignature = JSON.stringify({
+    q: filters.q,
+    areaId: filters.areaId,
+    statusId: filters.statusId,
+    hasCost: filters.hasCost,
+    fieldKey: filters.fieldKey,
+    fieldValue: filters.fieldKey === "" ? "" : filters.fieldValue,
+    mine: onlyMine ? "true" : "",
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadCatalogs() {
       try {
-        const [respuestaAreas, respuestaEstatus] = await Promise.all([
+        const [respuestaAreas, respuestaEstatus, respuestaFormatos] = await Promise.all([
           api.listAreas(),
           api.listStatuses(),
+          api.listSchemas(),
         ]);
-        if (cancelado) {
+        if (cancelled) {
           return;
         }
         setAreas(respuestaAreas.areas);
         setEstatus(respuestaEstatus.statuses);
-      } catch (fallo) {
-        if (!cancelado) {
-          setError(fallo.message);
+        setVocabulario(vocabularyOf(respuestaFormatos.schemas));
+      } catch (failure) {
+        if (!cancelled) {
+          setError(failure.message);
         }
       }
     }
 
-    cargarCatalogos();
+    loadCatalogs();
     return () => {
-      cancelado = true;
+      cancelled = true;
     };
   }, []);
 
   useEffect(() => {
-    let cancelado = false;
+    let cancelled = false;
 
-    async function cargarProyectos() {
+    async function loadProjects() {
       setCargando(true);
       try {
-        const respuesta = await api.listProjects(filtros);
-        if (!cancelado) {
-          setProyectos(respuesta.projects);
+        const response = await api.listProjects({
+          ...JSON.parse(filterSignature),
+          state: tab,
+          sort: filters.sort,
+          limit: PER_PAGE,
+          offset: page * PER_PAGE,
+        });
+        if (!cancelled) {
+          setProyectos(response.projects);
+          setTotal(response.total);
         }
-      } catch (fallo) {
-        if (!cancelado) {
-          setError(fallo.message);
+      } catch (failure) {
+        if (!cancelled) {
+          setError(failure.message);
         }
       } finally {
-        if (!cancelado) {
+        if (!cancelled) {
           setCargando(false);
         }
       }
     }
 
-    cargarProyectos();
+    loadProjects();
     return () => {
-      cancelado = true;
+      cancelled = true;
     };
-  }, [filtros, version]);
+  }, [filterSignature, filters.sort, tab, version, page]);
 
-  function cambiarFiltro(clave, valor) {
-    setFiltros((actual) => ({ ...actual, [clave]: valor }));
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadCounts() {
+      const base = JSON.parse(filterSignature);
+      try {
+        const responses = await Promise.all(
+          TABS.map((one) => api.listProjects({ ...base, state: one.key, limit: 1 })),
+        );
+        if (cancelled) {
+          return;
+        }
+        const fresh = {};
+        TABS.forEach((one, index) => {
+          fresh[one.key] = responses[index].total;
+        });
+        setCuentas(fresh);
+      } catch (failure) {
+        if (!cancelled) {
+          setError(failure.message);
+        }
+      }
+    }
+
+    loadCounts();
+    return () => {
+      cancelled = true;
+    };
+  }, [filterSignature, version]);
+
+  function changeFilter(key, value) {
+    setFiltros((actual) => ({ ...actual, [key]: value }));
+    setPagina(0);
   }
 
-  function limpiarFiltros() {
-    setFiltros(FILTROS_VACIOS);
+  function changeTab(key) {
+    setPestana(key);
+    setPagina(0);
   }
 
-  function recargar() {
+  function changeScope(mios) {
+    setSoloMios(mios);
+    setPagina(0);
+  }
+
+  function clearFilters() {
+    setFiltros(NO_FILTERS);
+    setPagina(0);
+  }
+
+  function reload() {
     setVersion((actual) => actual + 1);
   }
 
-  function abrirCaptura() {
-    setCapturando(true);
-  }
-
-  function cerrarCaptura() {
+  function finishCapture(project) {
     setCapturando(false);
+    reload();
+    setAbierto(project);
   }
 
-  function terminarCaptura(proyecto) {
-    setCapturando(false);
-    recargar();
-    setAbierto(proyecto);
+  /** Step to the neighbour in the list without closing: the ‹ › in the project's bar. */
+  function moveTo(offset) {
+    const index = projects.findIndex((one) => one.id === opened.id);
+    const target = projects[index + offset];
+    if (target !== undefined) {
+      setAbierto(target);
+    }
   }
 
-  function alternarCatalogo() {
-    setVerCatalogo(!verCatalogo);
-  }
+  const filtered =
+    filters.q !== "" ||
+    filters.areaId !== "" ||
+    filters.statusId !== "" ||
+    filters.hasCost !== "" ||
+    filters.fieldKey !== "";
 
-  function cerrarDetalle() {
-    setAbierto(null);
-  }
+  const first = total === 0 ? 0 : page * PER_PAGE + 1;
+  const last = page * PER_PAGE + projects.length;
+  const openIndex = opened === null ? -1 : projects.findIndex((one) => one.id === opened.id);
 
-  const opcionesDeEstado = [
-    { valor: "open", texto: "Abiertos" },
-    { valor: "closed", texto: "Cerrados" },
-    { valor: "archived", texto: "Archivados" },
-    { valor: "all", texto: "Todos" },
-  ];
-
-  const opcionesDeArea = [{ valor: "", texto: "Todas" }];
-  for (const area of areas) {
-    opcionesDeArea.push({ valor: String(area.id), texto: area.name });
-  }
-
-  const opcionesDeEstatus = [{ valor: "", texto: "Todos" }];
-  for (const uno of estatus) {
-    opcionesDeEstatus.push({ valor: String(uno.id), texto: uno.label });
-  }
-
-  const opcionesDeCosto = [
-    { valor: "", texto: "Todos" },
-    { valor: "true", texto: "Con costo" },
-    { valor: "false", texto: "Sin costo" },
-  ];
-
-  const opcionesDeOrden = [
-    { valor: "priority", texto: "Por urgencia" },
-    { valor: "due", texto: "Por fecha de entrega" },
-  ];
-
-  let textoDelCatalogo = "Catálogo de estatus";
-  if (verCatalogo) {
-    textoDelCatalogo = "Ocultar catálogo de estatus";
-  }
-
-  let bloqueDeError = null;
-  if (error !== null) {
-    bloqueDeError = <p className="projects-error">{error}</p>;
-  }
-
-  let panelDelCatalogo = null;
-  if (verCatalogo) {
-    panelDelCatalogo = <StatusCatalog areas={areas} />;
-  }
-
-  let bloqueDeCarga = null;
-  if (cargando) {
-    bloqueDeCarga = <p className="projects-loading">Cargando...</p>;
-  }
-
-  let bloqueVacio = null;
-  if (!cargando && proyectos.length === 0) {
-    bloqueVacio = <p className="projects-empty">No hay proyectos con esos filtros.</p>;
-  }
-
-  let formularioDeCaptura = null;
-  if (capturando) {
-    formularioDeCaptura = (
-      <ProjectForm areas={areas} onCreado={terminarCaptura} onCancelar={cerrarCaptura} />
-    );
-  }
-
-  let detalle = null;
-  if (abierto !== null) {
-    detalle = (
+  if (opened !== null) {
+    return (
       <ProjectDetail
-        proyecto={abierto}
+        project={opened}
         areas={areas}
-        usuario={usuario}
-        onCerrar={cerrarDetalle}
-        onCambio={recargar}
+        statuses={statuses}
+        vocabulary={vocabulary}
+        user={user}
+        place={openIndex === -1 ? null : { position: openIndex + 1, total: projects.length }}
+        onAnterior={openIndex > 0 ? () => moveTo(-1) : null}
+        onSiguiente={
+          openIndex !== -1 && openIndex < projects.length - 1 ? () => moveTo(1) : null
+        }
+        onClose={() => {
+          setAbierto(null);
+          reload();
+        }}
+        onChanged={reload}
+        key={opened.id}
       />
     );
   }
 
   return (
     <section className="projects">
-      <header className="projects-header">
-        <h2 className="projects-title">Proyectos</h2>
-        <div className="projects-header-actions">
-          <button type="button" onClick={abrirCaptura}>
-            Nuevo proyecto
-          </button>
-          <button type="button" onClick={alternarCatalogo}>
-            {textoDelCatalogo}
-          </button>
+      {error !== null ? <p className="projects-error">{error}</p> : null}
+
+      <div className="projects-bar">
+        <div className="projects-tabs">
+          {TABS.map((one) => (
+            <button
+              className={one.key === tab ? "projects-tab is-active" : "projects-tab"}
+              type="button"
+              onClick={() => changeTab(one.key)}
+              key={one.key}
+            >
+              {one.label}
+              {counts[one.key] === undefined ? null : (
+                <span className="projects-tab-count">{counts[one.key]}</span>
+              )}
+            </button>
+          ))}
+
+          <div className="projects-scope">
+            <button
+              className={onlyMine ? "projects-scope-btn is-on" : "projects-scope-btn"}
+              type="button"
+              onClick={() => changeScope(true)}
+            >
+              Mis projects
+            </button>
+            <button
+              className={onlyMine ? "projects-scope-btn" : "projects-scope-btn is-on"}
+              type="button"
+              onClick={() => changeScope(false)}
+            >
+              Todos
+            </button>
+          </div>
         </div>
-      </header>
 
-      {bloqueDeError}
-      {panelDelCatalogo}
-
-      <div className="projects-filters">
-        <label className="projects-filter">
-          Buscar
-          <input
-            value={filtros.q}
-            onChange={(evento) => cambiarFiltro("q", evento.target.value)}
-            placeholder="Título o llave"
-          />
-        </label>
-
-        <FiltroSelect
-          etiqueta="Estado"
-          valor={filtros.state}
-          opciones={opcionesDeEstado}
-          onCambio={(valor) => cambiarFiltro("state", valor)}
-        />
-
-        <FiltroSelect
-          etiqueta="Área con etapa"
-          valor={filtros.areaId}
-          opciones={opcionesDeArea}
-          onCambio={(valor) => cambiarFiltro("areaId", valor)}
-        />
-
-        <FiltroSelect
-          etiqueta="Estatus"
-          valor={filtros.statusId}
-          opciones={opcionesDeEstatus}
-          onCambio={(valor) => cambiarFiltro("statusId", valor)}
-        />
-
-        <FiltroSelect
-          etiqueta="Costo"
-          valor={filtros.hasCost}
-          opciones={opcionesDeCosto}
-          onCambio={(valor) => cambiarFiltro("hasCost", valor)}
-        />
-
-        {/* RF-IMP-08: encontrar el proyecto por un valor que una etapa produjo. */}
-        <label className="projects-filter">
-          Por valor: clave
-          <input
-            value={filtros.fieldKey}
-            onChange={(evento) => cambiarFiltro("fieldKey", evento.target.value)}
-            placeholder="numero_orden"
-          />
-        </label>
-
-        <label className="projects-filter">
-          y valor
-          <input
-            value={filtros.fieldValue}
-            onChange={(evento) => cambiarFiltro("fieldValue", evento.target.value)}
-            placeholder="A-77"
-          />
-        </label>
-
-        <FiltroSelect
-          etiqueta="Orden"
-          valor={filtros.sort}
-          opciones={opcionesDeOrden}
-          onCambio={(valor) => cambiarFiltro("sort", valor)}
-        />
-
-        <button type="button" onClick={limpiarFiltros}>
-          Limpiar
+        <button
+          className="projects-btn projects-btn-primary"
+          type="button"
+          onClick={() => setCapturando(true)}
+        >
+          Nuevo project
         </button>
       </div>
 
-      {bloqueDeCarga}
+      <p className="projects-rule">
+        {activeTab.rule}
+        {onlyMine ? " Solo los que creaste o en los que eres responsable de una etapa." : ""}
+      </p>
 
-      <table className="projects-table">
-        <thead>
-          <tr>
-            <th>Llave</th>
-            <th>Título</th>
-            <th>Solicitante</th>
-            <th>Estatus</th>
-            <th>Urgencia</th>
-            <th>Etapas abiertas</th>
-            <th>Solicitudes</th>
-            <th>Entrega</th>
-            <th />
-          </tr>
-        </thead>
-        <tbody>
-          {proyectos.map((proyecto) => (
-            <FilaDeProyecto proyecto={proyecto} onAbrir={setAbierto} key={proyecto.id} />
+      <div className="projects-filters">
+        <div className="projects-search">
+          <input
+            value={filters.q}
+            onChange={(event) => changeFilter("q", event.target.value)}
+            placeholder="Ej: llave o título"
+            aria-label="Buscar"
+          />
+        </div>
+
+        <select
+          value={filters.areaId}
+          onChange={(event) => changeFilter("areaId", event.target.value)}
+          aria-label="Con etapa en un área"
+        >
+          <option value="">Con etapa en cualquier área</option>
+          {areas.map((area) => (
+            <option value={area.id} key={area.id}>
+              Con stage en {area.name}
+            </option>
           ))}
-        </tbody>
-      </table>
+        </select>
 
-      {bloqueVacio}
-      {formularioDeCaptura}
-      {detalle}
+        <select
+          value={filters.statusId}
+          onChange={(event) => changeFilter("statusId", event.target.value)}
+          aria-label="Estatus"
+        >
+          <option value="">Todos los estatus</option>
+          {statuses.map((one) => (
+            <option value={one.id} key={one.id}>
+              {one.label}
+            </option>
+          ))}
+        </select>
+
+        <select
+          value={filters.sort}
+          onChange={(event) => changeFilter("sort", event.target.value)}
+          aria-label="Orden"
+        >
+          <option value="priority">Por urgencia</option>
+          <option value="due">Por fecha de entrega</option>
+        </select>
+
+        <button
+          className={filters.hasCost === "true" ? "projects-chip is-on" : "projects-chip"}
+          type="button"
+          onClick={() => changeFilter("hasCost", filters.hasCost === "true" ? "" : "true")}
+        >
+          Con costo
+        </button>
+
+        <select
+          value={filters.fieldKey}
+          onChange={(event) => changeFilter("fieldKey", event.target.value)}
+          aria-label="Buscar por un dato"
+        >
+          <option value="">Buscar por un dato…</option>
+          {[...vocabulary.entries()].map(([key, field]) => (
+            <option value={key} key={key}>
+              {field.name}
+            </option>
+          ))}
+        </select>
+
+        {filters.fieldKey === "" ? null : (
+          <input
+            className="projects-field-value"
+            value={filters.fieldValue}
+            onChange={(event) => changeFilter("fieldValue", event.target.value)}
+            placeholder={`Valor de ${vocabulary.get(filters.fieldKey)?.name ?? filters.fieldKey}`}
+          />
+        )}
+
+        {filtered ? (
+          <button className="projects-clear" type="button" onClick={clearFilters}>
+            Quitar filters
+          </button>
+        ) : null}
+      </div>
+
+      <div className="projects-table-wrap">
+        <table className="projects-table">
+          <thead>
+            <tr>
+              <th>Proyecto</th>
+              <th>Solicitante</th>
+              <th>Dónde va</th>
+              <th>Estatus</th>
+              <th>Entrega</th>
+              <th className="projects-num">Urgencia</th>
+            </tr>
+          </thead>
+          <tbody>
+            {capturing ? (
+              <tr className="projects-expanded">
+                <td colSpan={6}>
+                  <ProjectForm
+                    onCreated={finishCapture}
+                    onCancel={() => setCapturando(false)}
+                  />
+                </td>
+              </tr>
+            ) : null}
+
+            {projects.map((project) => (
+              <ProjectRow project={project} onOpen={setAbierto} key={project.id} />
+            ))}
+
+            {!loading && projects.length === 0 && !capturing ? (
+              <tr>
+                <td colSpan={6}>
+                  <p className="projects-empty">
+                    {onlyMine && !filtered
+                      ? "No hay proyectos tuyos aquí."
+                      : "Ningún proyecto coincide con lo que está filtrado."}
+                    {onlyMine ? (
+                      <button
+                        className="projects-clear"
+                        type="button"
+                        onClick={() => changeScope(false)}
+                      >
+                        Ver todos
+                      </button>
+                    ) : null}
+                  </p>
+                </td>
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
+      </div>
+
+      {total > PER_PAGE ? (
+        <div className="projects-pages">
+          <p className="projects-range">
+            {first}–{last} of {total}
+          </p>
+          <div className="projects-page-actions">
+            <button
+              className="projects-btn"
+              type="button"
+              onClick={() => setPagina(page - 1)}
+              disabled={page === 0 || loading}
+            >
+              Anteriores
+            </button>
+            <button
+              className="projects-btn"
+              type="button"
+              onClick={() => setPagina(page + 1)}
+              disabled={last >= total || loading}
+            >
+              Siguientes
+            </button>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

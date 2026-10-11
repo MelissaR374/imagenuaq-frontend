@@ -1,653 +1,855 @@
+// Areas and the people in them (RF-USR-09). An area is a place in the organigram, so the list is
+// drawn as the organigram: depth is indentation, and a child is read under its parent.
+//
+// Who answers for an area is the fact the screen is built around -- an area without anybody
+// responsible is the thing that silently stops work -- so it has its own column and is counted in
+// the line above the table.
+//
+// An area opens in place, with its data beside its people, and everything is saved together: the
+// changes are marked while they are drafted and committed in one "Guardar cambios", instead of
+// each toggle writing to the server on its own.
 import { Fragment, useEffect, useState } from "react";
 
 import * as api from "../../api/client.js";
+import Help from "../shared/help.jsx";
+import { initials } from "../shared/format.js";
 import "./areas.css";
 
-const PERSONAS_MAX = 50;
+const USERS_MAX = 200;
 
-// Los roles llegan del servidor en inglés; los mismos nombres que usa users.jsx.
-const ROLES_EN_ESPANOL = {
+/** The server names the roles in English; the same names users.jsx shows. */
+const ROLE_NAMES = {
   admin: "Coordinación",
   area_lead: "Responsable de área",
   worker: "Integrante",
   finance: "Finanzas",
 };
 
-// El formulario vacío: sirve para empezar y para limpiarlo después de crear un área.
-const FORMULARIO_VACIO = {
-  name: "",
-  description: "",
-  parentAreaId: "",
-  leaderUserId: "",
-};
+const EMPTY_NEW = { name: "", parentAreaId: "", leaderUserId: "", description: "" };
 
-// Recorre el árbol de arriba a abajo y devuelve las áreas en una sola lista, cada una con
-// su `depth` y el nombre de su área superior, en el orden en que se leen en un organigrama.
-function aplanar(nodos, padre = null, acumulado = []) {
-  for (const nodo of nodos) {
-    acumulado.push({ ...nodo, parentName: padre ? padre.name : null });
-    aplanar(nodo.children, nodo, acumulado);
-  }
-  return acumulado;
+/** "1 área" / "3 áreas": the count and its word, so a sentence reads. */
+function plural(n, one, many) {
+  return `${n} ${n === 1 ? one : many}`;
 }
 
-// Las áreas que cuelgan de area (ella incluida): un área no puede ser su propia superior
-// ni colgar de una de sus hijas, así que estas se sacan del <select> al editar.
-function descendientes(area) {
+/**
+ * The org chart as one list in reading order -- roots first, each child under its parent -- with
+ * the depth that draws the indentation and the path that names it when the search flattens it.
+ */
+function flatten(nodes, parents = [], out = []) {
+  for (const node of nodes) {
+    out.push({ ...node, depth: parents.length, path: [...parents, node.name] });
+    flatten(node.children, [...parents, node.name], out);
+  }
+  return out;
+}
+
+/**
+ * The area and everything hanging from it: an area cannot depend on itself or on one of its own
+ * descendants, so these are left out of the "Depende de" list.
+ */
+function descendants(area) {
   const ids = new Set([area.id]);
-  for (const hija of area.children) {
-    for (const id of descendientes(hija)) ids.add(id);
+  for (const child of area.children) {
+    for (const id of descendants(child)) ids.add(id);
   }
   return ids;
 }
 
+/** The draft an open area starts from: what the server has, before anybody touches it. */
+function draftOf(area) {
+  return {
+    name: area.name,
+    description: area.description ?? "",
+    parentAreaId: area.parentAreaId === null ? "" : String(area.parentAreaId),
+    members: area.members.map((person) => ({
+      id: person.id,
+      fullName: person.fullName,
+      email: person.email,
+      role: person.role,
+      lead: person.isAreaLeader,
+    })),
+  };
+}
+
+/** How many things the draft changes, which is what the footer says and the save button needs. */
+function countChanges(area, draft) {
+  let n = 0;
+  if (draft.name.trim() !== area.name) n += 1;
+  if (draft.description.trim() !== (area.description ?? "")) n += 1;
+  if (draft.parentAreaId !== (area.parentAreaId === null ? "" : String(area.parentAreaId))) n += 1;
+  for (const person of area.members) {
+    const drafted = draft.members.find((member) => member.id === person.id);
+    if (!drafted || drafted.lead !== person.isAreaLeader) n += 1;
+  }
+  for (const member of draft.members) {
+    if (!area.members.some((person) => person.id === member.id)) n += 1;
+  }
+  return n;
+}
+
+function Avatar({ person, lead }) {
+  return (
+    <span className={`areas-av ${lead ? "is-lead" : ""}`} title={person.fullName}>
+      {initials(person.fullName)}
+    </span>
+  );
+}
+
+function MemberRow({ area, member, removing, onLead, onAskRemove, onRemove, onCancelRemove }) {
+  const original = area.members.find((person) => person.id === member.id);
+  const changed = !original || original.isAreaLeader !== member.lead;
+  const mismatch = member.lead && member.role === "worker";
+
+  return (
+    <li className={`areas-member ${changed ? "is-changed" : ""}`}>
+      <Avatar person={member} lead={member.lead} />
+
+      <span className="areas-who">
+        <strong>{member.fullName}</strong>
+        <span className="areas-muted">
+          {member.email} · rol {ROLE_NAMES[member.role] ?? member.role}
+        </span>
+      </span>
+
+      {removing ? (
+        <span className="areas-inline-confirm">
+          ¿Quitarla del área? Deja de ver su trabajo.
+          <button className="areas-btn" type="button" onClick={onCancelRemove}>
+            Cancelar
+          </button>
+          <button className="areas-btn is-danger" type="button" onClick={onRemove}>
+            Quitar
+          </button>
+        </span>
+      ) : (
+        <>
+          <span className="areas-lead" role="radiogroup" aria-label={`Papel de ${member.fullName}`}>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={!member.lead}
+              onClick={() => onLead(false)}
+            >
+              Integrante
+            </button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={member.lead}
+              onClick={() => onLead(true)}
+            >
+              Responsable
+            </button>
+          </span>
+
+          <button
+            className="areas-rm"
+            type="button"
+            title="Quitar del área"
+            aria-label={`Quitar a ${member.fullName} del área`}
+            onClick={onAskRemove}
+          >
+            ✕
+          </button>
+        </>
+      )}
+
+      {mismatch && (
+        <span className="areas-warn">
+          Responsable aquí, pero su rol es Integrante: no tiene los permisos de un responsable. El
+          rol se cambia en Empleados.
+        </span>
+      )}
+    </li>
+  );
+}
+
 function Areas() {
   const [areas, setAreas] = useState([]);
-  const [cargando, setCargando] = useState(true);
-
-  // Sube de uno en uno para volver a pedir la lista después de crear, editar o borrar.
-  const [recarga, setRecarga] = useState(0);
-
-  const [personas, setPersonas] = useState([]);
-
-  // El formulario de alta
-  const [form, setForm] = useState(FORMULARIO_VACIO);
-  const [guardando, setGuardando] = useState(false);
-
-  const [edicion, setEdicion] = useState(null);
-
-  // El área cuyo panel de integrantes está desplegado: null si ninguno.
-  const [abierta, setAbierta] = useState(null);
-
-  // El formulario de "agregar integrante" del panel desplegado.
-  const [nuevoMiembro, setNuevoMiembro] = useState({
-    userId: "",
-    isAreaLeader: false,
-  });
-
+  const [people, setPeople] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [reload, setReload] = useState(0);
   const [error, setError] = useState(null);
-  const [errorForm, setErrorForm] = useState(null);
+  const [notice, setNotice] = useState(null);
+
+  const [query, setQuery] = useState("");
+  const [openId, setOpenId] = useState(null);
+  const [draft, setDraft] = useState(null);
+  const [mode, setMode] = useState(null);
+  const [adding, setAdding] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const [creating, setCreating] = useState(null);
+  const [createError, setCreateError] = useState(null);
 
   useEffect(() => {
     api
-      .listUsers({ limit: PERSONAS_MAX })
-      .then((pagina) => setPersonas(pagina.users))
+      .listUsers({ limit: USERS_MAX })
+      .then((page) => setPeople(page.users))
       .catch((err) => setError(err.message));
   }, []);
 
   useEffect(() => {
-    let cancelado = false;
+    let cancelled = false;
 
     api
       .getOrgChart()
       .then((data) => {
-        if (cancelado) return;
-        setAreas(aplanar(data.roots));
+        if (cancelled) return;
+        setAreas(flatten(data.roots));
         setError(null);
       })
       .catch((err) => {
-        if (!cancelado) setError(err.message);
+        if (!cancelled) setError(err.message);
       })
       .finally(() => {
-        if (!cancelado) setCargando(false);
+        if (!cancelled) setLoading(false);
       });
 
     return () => {
-      cancelado = true;
+      cancelled = true;
     };
-  }, [recarga]);
+  }, [reload]);
 
-  function handleChange(event) {
-    const { name, value } = event.target;
-    setForm({ ...form, [name]: value });
+  function openArea(area) {
+    if (openId === area.id) {
+      closeArea();
+      return;
+    }
+    setCreating(null);
+    setMode(null);
+    setAdding("");
+    setOpenId(area.id);
+    setDraft(draftOf(area));
   }
 
-  async function handleCrear(event) {
+  function closeArea() {
+    setOpenId(null);
+    setDraft(null);
+    setMode(null);
+    setAdding("");
+  }
+
+  function startCreating() {
+    closeArea();
+    setCreateError(null);
+    setCreating(EMPTY_NEW);
+  }
+
+  async function handleCreate(event) {
     event.preventDefault();
-    setErrorForm(null);
-    setGuardando(true);
+    setCreateError(null);
+    setSaving(true);
 
     const input = {
-      name: form.name.trim(),
-      description: form.description.trim() || null,
-      leaderUserId: form.leaderUserId ? Number(form.leaderUserId) : null,
+      name: creating.name.trim(),
+      description: creating.description.trim() || null,
+      leaderUserId: creating.leaderUserId ? Number(creating.leaderUserId) : null,
     };
-    if (form.parentAreaId === "raiz") input.parentAreaId = null;
-    else if (form.parentAreaId) input.parentAreaId = Number(form.parentAreaId);
+    if (creating.parentAreaId === "") input.parentAreaId = null;
+    else input.parentAreaId = Number(creating.parentAreaId);
 
     try {
       await api.createArea(input);
-      setForm(FORMULARIO_VACIO);
-      setRecarga(recarga + 1);
+      setCreating(null);
+      setNotice(`Se registró el área ${input.name}.`);
+      setReload(reload + 1);
     } catch (err) {
-      setErrorForm(err.message);
+      setCreateError(err.message);
     } finally {
-      setGuardando(false);
+      setSaving(false);
     }
   }
 
-  function handleEditar(area) {
+  /**
+   * Commits the draft: the area's own data first, then its parent, then one call per person whose
+   * membership changed. Reloading afterwards is what makes the counts and the tree agree again.
+   */
+  async function handleSave(area) {
     setError(null);
-    setEdicion({
-      id: area.id,
-      name: area.name,
-      description: area.description ?? "",
-      parentAreaId:
-        area.parentAreaId === null ? "raiz" : String(area.parentAreaId),
-      parentOriginal: area.parentAreaId,
-    });
-  }
+    setSaving(true);
 
-  function handleEdicionChange(event) {
-    const { name, value } = event.target;
-    setEdicion({ ...edicion, [name]: value });
-  }
-
-  async function handleGuardar(event) {
-    event.preventDefault();
-    setError(null);
-
-    const padreNuevo =
-      edicion.parentAreaId === "raiz" ? null : Number(edicion.parentAreaId);
+    const parent = draft.parentAreaId === "" ? null : Number(draft.parentAreaId);
 
     try {
-      await api.updateArea(edicion.id, {
-        name: edicion.name.trim(),
-        description: edicion.description.trim() || null,
-      });
-
-      if (padreNuevo !== edicion.parentOriginal) {
-        if (padreNuevo === null) await api.clearAreaParent(edicion.id);
-        else await api.setAreaParent(edicion.id, padreNuevo);
+      if (
+        draft.name.trim() !== area.name ||
+        draft.description.trim() !== (area.description ?? "")
+      ) {
+        await api.updateArea(area.id, {
+          name: draft.name.trim(),
+          description: draft.description.trim() || null,
+        });
       }
 
-      setEdicion(null);
+      if (parent !== area.parentAreaId) {
+        if (parent === null) await api.clearAreaParent(area.id);
+        else await api.setAreaParent(area.id, parent);
+      }
+
+      for (const member of draft.members) {
+        const original = area.members.find((person) => person.id === member.id);
+        if (!original || original.isAreaLeader !== member.lead) {
+          await api.setAreaMember(area.id, member.id, member.lead);
+        }
+      }
+
+      for (const person of area.members) {
+        if (!draft.members.some((member) => member.id === person.id)) {
+          await api.removeAreaMember(area.id, person.id);
+        }
+      }
+
+      closeArea();
     } catch (err) {
       setError(err.message);
     } finally {
-      setRecarga(recarga + 1);
+      setSaving(false);
+      setReload(reload + 1);
     }
   }
 
-  async function handleBorrar(area) {
-    const seguro = window.confirm(
-      `¿Eliminar el área ${area.name}? Las áreas que cuelgan de ella pasan a ser raíces.`,
-    );
-    if (!seguro) return;
-
+  async function handleDelete(area) {
     setError(null);
+    setSaving(true);
 
     try {
       await api.deleteArea(area.id);
-      setRecarga(recarga + 1);
+      setNotice(`Se eliminó el área ${area.name}.`);
+      closeArea();
     } catch (err) {
       setError(err.message);
+    } finally {
+      setSaving(false);
+      setReload(reload + 1);
     }
   }
 
-  function handleDesplegar(area) {
-    setError(null);
-    setNuevoMiembro({ userId: "", isAreaLeader: false });
-    setAbierta(abierta === area.id ? null : area.id);
+  const term = query.trim().toLowerCase();
+  const matches = (area) =>
+    term === "" ||
+    area.name.toLowerCase().includes(term) ||
+    area.members.some((person) => person.fullName.toLowerCase().includes(term));
+  const rows = areas.filter(matches);
+
+  const open = areas.find((area) => area.id === openId) ?? null;
+  const changes = open && draft ? countChanges(open, draft) : 0;
+  const withoutLead = areas.filter((area) => area.leaders.length === 0).length;
+  const unplaced = people.filter(
+    (person) => !areas.some((area) => area.members.some((member) => member.id === person.id)),
+  );
+
+  function parentOptions(excluded) {
+    return areas
+      .filter((area) => !excluded.has(area.id))
+      .map((area) => (
+        <option key={area.id} value={area.id}>
+          {" ".repeat(area.depth * 3)}
+          {area.name}
+        </option>
+      ));
   }
-
-  function handleNuevoMiembroChange(event) {
-    const { name, type, value, checked } = event.target;
-    setNuevoMiembro({
-      ...nuevoMiembro,
-      [name]: type === "checkbox" ? checked : value,
-    });
-  }
-
-  async function handleAgregarMiembro(event, area) {
-    event.preventDefault();
-    setError(null);
-
-    try {
-      await api.setAreaMember(
-        area.id,
-        Number(nuevoMiembro.userId),
-        nuevoMiembro.isAreaLeader,
-      );
-      setNuevoMiembro({ userId: "", isAreaLeader: false });
-      setRecarga(recarga + 1);
-    } catch (err) {
-      setError(err.message);
-    }
-  }
-  async function handleResponsable(area, persona, isAreaLeader) {
-    setError(null);
-
-    try {
-      await api.setAreaMember(area.id, persona.id, isAreaLeader);
-      setRecarga(recarga + 1);
-    } catch (err) {
-      setError(err.message);
-    }
-  }
-
-  async function handleQuitarMiembro(area, persona) {
-    const seguro = window.confirm(
-      `¿Quitar a ${persona.fullName} (${persona.email}) del área ${area.name}?`,
-    );
-    if (!seguro) return;
-
-    setError(null);
-
-    try {
-      await api.removeAreaMember(area.id, persona.id);
-      setRecarga(recarga + 1);
-    } catch (err) {
-      setError(err.message);
-    }
-  }
-
-  const enEdicion = edicion
-    ? areas.find((area) => area.id === edicion.id)
-    : null;
-  const excluidas = enEdicion ? descendientes(enEdicion) : new Set();
 
   return (
-    <section className="areas-panel">
-      <header className="areas-header">
-        <h1 className="areas-title">Áreas</h1>
-
-        <p className="areas-count">
-          {areas.length} {areas.length === 1 ? "área" : "áreas"}
+    <section className="areas">
+      {notice !== null && (
+        <p className="areas-notice" role="status">
+          {notice}
+          <button className="areas-quiet" type="button" onClick={() => setNotice(null)}>
+            Cerrar
+          </button>
         </p>
-      </header>
+      )}
 
-      {/* FORMULARIO DE ALTA */}
-      <form className="area-form" onSubmit={handleCrear}>
-        <h2 className="area-form-title">Registrar un área</h2>
-
-        <div className="area-form-field">
-          <label className="area-form-label" htmlFor="area-name">
-            Nombre
-          </label>
-
-          <input
-            className="area-form-input"
-            id="area-name"
-            name="name"
-            type="text"
-            required
-            maxLength={200}
-            value={form.name}
-            onChange={handleChange}
-          />
-        </div>
-
-        <div className="area-form-field">
-          <label className="area-form-label" htmlFor="area-description">
-            Descripción (opcional)
-          </label>
-
-          <textarea
-            className="area-form-textarea"
-            id="area-description"
-            name="description"
-            rows={3}
-            value={form.description}
-            onChange={handleChange}
-          />
-        </div>
-
-        <div className="area-form-field">
-          <label className="area-form-label" htmlFor="area-parent">
-            Área superior
-          </label>
-
-          <select
-            className="area-form-select"
-            id="area-parent"
-            name="parentAreaId"
-            value={form.parentAreaId}
-            onChange={handleChange}
-          >
-            <option value="">Coordinación (predeterminada)</option>
-            <option value="raiz">Ninguna: es una raíz del organigrama</option>
-
-            {areas.map((area) => (
-              <option key={area.id} value={area.id}>
-                {area.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="area-form-field">
-          <label className="area-form-label" htmlFor="area-leader">
-            Responsable del área (opcional)
-          </label>
-
-          <select
-            className="area-form-select"
-            id="area-leader"
-            name="leaderUserId"
-            value={form.leaderUserId}
-            onChange={handleChange}
-          >
-            <option value="">Sin responsable por ahora</option>
-
-            {personas.map((persona) => (
-              <option key={persona.id} value={persona.id}>
-                {persona.fullName} — {persona.email}
-              </option>
-            ))}
-          </select>
-          <p className="area-form-hint">
-            La persona queda asignada al área como responsable. Después se
-            pueden nombrar más desde el panel de integrantes de cada área.
-          </p>
-        </div>
-
-        <p className="area-form-error" role="alert">
-          {errorForm}
+      {error !== null && (
+        <p className="areas-error" role="alert">
+          {error}
         </p>
+      )}
 
-        <button className="area-form-submit" type="submit" disabled={guardando}>
-          {guardando ? "Registrando..." : "Registrar área"}
+      <div className="areas-bar">
+        <span className="areas-count">
+          {plural(areas.length, "área", "áreas")} · {plural(people.length, "persona", "personas")}
+          {withoutLead > 0 && (
+            <>
+              {" · "}
+              <b className="areas-flag">
+                {plural(withoutLead, "área sin responsable", "áreas sin responsable")}
+              </b>
+            </>
+          )}
+        </span>
+
+        <button
+          className="areas-btn is-primary"
+          type="button"
+          disabled={creating !== null}
+          onClick={startCreating}
+        >
+          Nueva área
         </button>
-      </form>
+      </div>
 
-      <p className="areas-error" role="alert">
-        {error}
+      <p className="areas-rule">
+        Cada área depende de otra. Quien es responsable de un área ve el trabajo de ella y de las
+        que dependen de ella.
       </p>
 
-      {/* TABLA */}
-      <table className="areas-table">
-        <thead>
-          <tr>
-            <th>Nombre</th>
-            <th>Descripción</th>
-            <th>Área superior</th>
-            <th>Responsables</th>
-            <th>Integrantes</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
+      <div className="areas-filters">
+        <label className="areas-search">
+          <input
+            type="search"
+            placeholder="Área o persona"
+            aria-label="Buscar un área o una persona"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </label>
+      </div>
 
-        <tbody>
-          {areas.map((area) =>
-            edicion && edicion.id === area.id ? (
-              // La fila en edición: los mismos campos que el formulario de alta, menos el
-              // responsable, que se administra desde el panel de integrantes.
-              <tr className="areas-row editing" key={area.id}>
-                <td className="areas-cell-name">
-                  <input
-                    className="areas-edit-input"
-                    name="name"
-                    type="text"
-                    required
-                    maxLength={200}
-                    form={`area-edit-${area.id}`}
-                    value={edicion.name}
-                    onChange={handleEdicionChange}
-                  />
-                </td>
+      <div className="areas-table-wrap">
+        <table className="areas-table">
+          <thead>
+            <tr>
+              <th>Área</th>
+              <th>Responsable</th>
+              <th>Integrantes</th>
+            </tr>
+          </thead>
 
-                <td className="areas-cell-description">
-                  <input
-                    className="areas-edit-input"
-                    name="description"
-                    type="text"
-                    form={`area-edit-${area.id}`}
-                    value={edicion.description}
-                    onChange={handleEdicionChange}
-                  />
-                </td>
+          <tbody>
+            {creating !== null && (
+              <tr className="areas-expanded">
+                <td colSpan={3}>
+                  <form className="areas-open" onSubmit={handleCreate}>
+                    <div className="areas-open-head">
+                      <span className="areas-eyebrow">NUEVA ÁREA</span>
+                      <button
+                        className="areas-close"
+                        type="button"
+                        aria-label="Cancelar"
+                        onClick={() => setCreating(null)}
+                      >
+                        ✕
+                      </button>
+                    </div>
 
-                <td className="areas-cell-parent">
-                  <select
-                    className="areas-edit-select"
-                    name="parentAreaId"
-                    form={`area-edit-${area.id}`}
-                    value={edicion.parentAreaId}
-                    onChange={handleEdicionChange}
-                  >
-                    <option value="raiz">Ninguna (raíz)</option>
+                    <div className="areas-fields">
+                      <label className="areas-field">
+                        <span className="areas-label">Nombre</span>
+                        <input
+                          type="text"
+                          required
+                          maxLength={200}
+                          placeholder="Ej: Fotografía"
+                          value={creating.name}
+                          onChange={(event) =>
+                            setCreating({ ...creating, name: event.target.value })
+                          }
+                        />
+                      </label>
 
-                    {areas
-                      .filter((opcion) => !excluidas.has(opcion.id))
-                      .map((opcion) => (
-                        <option key={opcion.id} value={opcion.id}>
-                          {opcion.name}
-                        </option>
-                      ))}
-                  </select>
-                </td>
+                      <label className="areas-field">
+                        <span className="areas-label">
+                          Depende de
+                          <Help text="«Ninguna» la deja fuera del organigrama: nadie arriba ve su trabajo." />
+                        </span>
+                        <select
+                          value={creating.parentAreaId}
+                          onChange={(event) =>
+                            setCreating({ ...creating, parentAreaId: event.target.value })
+                          }
+                        >
+                          <option value="">Ninguna: queda fuera del organigrama</option>
+                          {parentOptions(new Set())}
+                        </select>
+                      </label>
 
-                <td className="areas-cell-leaders">
-                  {area.leaders.map((persona) => persona.fullName).join(", ") ||
-                    "—"}
-                </td>
+                      <label className="areas-field">
+                        <span className="areas-label">
+                          Responsable
+                          <Help text="Queda como integrante y responsable. Después se agregan más personas desde el área." />
+                        </span>
+                        <select
+                          value={creating.leaderUserId}
+                          onChange={(event) =>
+                            setCreating({ ...creating, leaderUserId: event.target.value })
+                          }
+                        >
+                          <option value="">Sin responsable por ahora</option>
+                          {people.map((person) => (
+                            <option key={person.id} value={person.id}>
+                              {person.fullName} · {ROLE_NAMES[person.role] ?? person.role}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
 
-                <td className="areas-cell-members">{area.memberCount}</td>
+                      <label className="areas-field is-wide">
+                        <span className="areas-label">
+                          Descripción
+                          <Help text="Qué hace el área, en una o dos líneas. Se lee al asignarle trabajo." />
+                        </span>
+                        <textarea
+                          rows={2}
+                          placeholder="Ej: Sesiones de fotografía de producto y de eventos."
+                          value={creating.description}
+                          onChange={(event) =>
+                            setCreating({ ...creating, description: event.target.value })
+                          }
+                        />
+                      </label>
+                    </div>
 
-                <td className="areas-cell-actions">
-                  {/* El <form> vive aquí y los inputs de las otras celdas lo referencian con
-                      `form=`: un <form> no puede envolver varios <td>. */}
-                  <form id={`area-edit-${area.id}`} onSubmit={handleGuardar}>
-                    <button className="areas-action" type="submit">
-                      Guardar
-                    </button>
+                    {createError !== null && <p className="areas-bad">{createError}</p>}
 
-                    <button
-                      className="areas-action"
-                      type="button"
-                      onClick={() => setEdicion(null)}
-                    >
-                      Cancelar
-                    </button>
+                    <footer className="areas-open-foot">
+                      <span />
+                      <span className="areas-right">
+                        <button
+                          className="areas-btn"
+                          type="button"
+                          onClick={() => setCreating(null)}
+                        >
+                          Cancelar
+                        </button>
+                        <button className="areas-btn is-primary" type="submit" disabled={saving}>
+                          {saving ? "Creando…" : "Crear área"}
+                        </button>
+                      </span>
+                    </footer>
                   </form>
                 </td>
               </tr>
-            ) : (
+            )}
+
+            {rows.map((area) => (
               <Fragment key={area.id}>
                 <tr
-                  className={`areas-row ${abierta === area.id ? "open" : ""}`}
-                  data-depth={area.depth}
+                  className={`areas-row ${area.leaders.length === 0 ? "is-pending" : ""} ${
+                    openId === area.id ? "is-open" : ""
+                  }`}
+                  tabIndex={0}
+                  aria-expanded={openId === area.id}
+                  onClick={() => openArea(area)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") openArea(area);
+                  }}
                 >
-                  <td className="areas-cell-name">{area.name}</td>
-
-                  <td className="areas-cell-description">
-                    {area.description ?? "—"}
-                  </td>
-
-                  <td className="areas-cell-parent">
-                    {area.parentName ?? "—"}
-                  </td>
-
-                  <td className="areas-cell-leaders">
-                    {area.leaders
-                      .map((persona) => persona.fullName)
-                      .join(", ") || "—"}
-                  </td>
-
-                  <td className="areas-cell-members">
-                    <button
-                      className="areas-members-toggle"
-                      type="button"
-                      aria-expanded={abierta === area.id}
-                      onClick={() => handleDesplegar(area)}
+                  <td className="areas-cell-main">
+                    <div
+                      className={`areas-node ${area.depth > 0 && term === "" ? "is-nested" : ""}`}
+                      style={{ "--depth": term === "" ? area.depth : 0 }}
                     >
-                      {area.memberCount} {abierta === area.id ? "▴" : "▾"}
-                    </button>
+                      {term !== "" && area.depth > 0 && (
+                        <span className="areas-path">
+                          {area.path.slice(0, -1).join(" › ").toUpperCase()}
+                        </span>
+                      )}
+                      <span className="areas-row-name">{area.name}</span>
+                      {area.description !== null && (
+                        <span className="areas-desc">{area.description}</span>
+                      )}
+                      {area.children.length > 0 && (
+                        <span className="areas-kids">
+                          {plural(area.children.length, "subárea", "subáreas")}
+                        </span>
+                      )}
+                    </div>
                   </td>
 
-                  <td className="areas-cell-actions">
-                    <button
-                      className="areas-action"
-                      type="button"
-                      disabled={edicion !== null}
-                      onClick={() => handleEditar(area)}
-                    >
-                      Editar
-                    </button>
+                  <td>
+                    {area.leaders.length > 0 ? (
+                      area.leaders.map((person) => person.fullName).join(", ")
+                    ) : (
+                      <span className="areas-flag">Sin responsable</span>
+                    )}
+                  </td>
 
-                    {/* El servidor rechaza borrar un área con gente; se deshabilita aquí para
-                        no prometer algo que va a fallar. Primero hay que quitarlos desde el
-                        panel de integrantes. */}
-                    <button
-                      className="areas-action areas-action-danger"
-                      type="button"
-                      disabled={edicion !== null || area.memberCount > 0}
-                      title={
-                        area.memberCount > 0
-                          ? "Quita a sus integrantes antes de eliminarla."
-                          : undefined
-                      }
-                      onClick={() => handleBorrar(area)}
-                    >
-                      Eliminar
-                    </button>
+                  <td>
+                    <span className="areas-stack">
+                      {area.members.slice(0, 4).map((person) => (
+                        <Avatar key={person.id} person={person} lead={person.isAreaLeader} />
+                      ))}
+                    </span>
+                    <span className="areas-member-count">
+                      {area.members.length === 0 ? "Nadie" : area.members.length}
+                    </span>
                   </td>
                 </tr>
 
-                {/* PANEL DE INTEGRANTES */}
-                {abierta === area.id && (
-                  <tr className="areas-members-row">
-                    <td className="areas-members-panel" colSpan={6}>
-                      <h3 className="areas-members-title">
-                        Integrantes de {area.name}
-                      </h3>
-
-                      {area.members.length === 0 && (
-                        <p className="areas-members-empty">
-                          Nadie está asignado a esta área.
-                        </p>
-                      )}
-
-                      <ul className="areas-members-list">
-                        {area.members.map((persona) => (
-                          <li
-                            className={`areas-member ${persona.isAreaLeader ? "leader" : ""}`}
-                            key={persona.id}
+                {openId === area.id && draft !== null && (
+                  <tr className="areas-expanded">
+                    <td colSpan={3}>
+                      <div className="areas-open">
+                        <div className="areas-open-head">
+                          <span className="areas-eyebrow">
+                            {area.path.join(" › ").toUpperCase()} ·{" "}
+                            {plural(area.members.length, "INTEGRANTE", "INTEGRANTES")}
+                          </span>
+                          <button
+                            className="areas-close"
+                            type="button"
+                            aria-label="Contraer"
+                            onClick={closeArea}
                           >
-                            <span className="areas-member-name">
-                              {persona.fullName}
-                            </span>
+                            ✕
+                          </button>
+                        </div>
 
-                            <span className="areas-member-email">
-                              {persona.email}
-                            </span>
+                        <div className="areas-grid">
+                          <section className="areas-sec">
+                            <h3>Área</h3>
 
-                            <span className="areas-member-role">
-                              {ROLES_EN_ESPANOL[persona.role] ?? persona.role}
-                            </span>
+                            <div className="areas-fields is-one">
+                              <label className="areas-field is-wide">
+                                <span className="areas-label">Nombre</span>
+                                <input
+                                  type="text"
+                                  maxLength={200}
+                                  value={draft.name}
+                                  onChange={(event) =>
+                                    setDraft({ ...draft, name: event.target.value })
+                                  }
+                                />
+                              </label>
 
-                            {persona.isAreaLeader && (
-                              <span className="areas-member-badge">
-                                Responsable
-                              </span>
+                              <label className="areas-field is-wide">
+                                <span className="areas-label">
+                                  Descripción
+                                  <Help text="Qué hace el área, en una o dos líneas. Se lee al asignarle trabajo." />
+                                </span>
+                                <textarea
+                                  rows={2}
+                                  value={draft.description}
+                                  onChange={(event) =>
+                                    setDraft({ ...draft, description: event.target.value })
+                                  }
+                                />
+                              </label>
+
+                              <label className="areas-field is-wide">
+                                <span className="areas-label">
+                                  Depende de
+                                  <Help text="Quien es responsable del área superior ve también el trabajo de esta. No se ofrecen esta área ni las que dependen de ella." />
+                                </span>
+                                <select
+                                  value={draft.parentAreaId}
+                                  onChange={(event) =>
+                                    setDraft({ ...draft, parentAreaId: event.target.value })
+                                  }
+                                >
+                                  <option value="">Ninguna: queda fuera del organigrama</option>
+                                  {parentOptions(descendants(area))}
+                                </select>
+                              </label>
+                            </div>
+
+                            {area.children.length > 0 && (
+                              <p className="areas-note">
+                                De ella dependen{" "}
+                                {area.children.map((child) => child.name).join(", ")}.
+                              </p>
+                            )}
+                          </section>
+
+                          <section className="areas-sec">
+                            <h3>
+                              Integrantes <span className="areas-sub">{draft.members.length}</span>
+                            </h3>
+
+                            {draft.members.length > 0 ? (
+                              <ul className="areas-members">
+                                {draft.members.map((member) => (
+                                  <MemberRow
+                                    key={member.id}
+                                    area={area}
+                                    member={member}
+                                    removing={mode === `rm:${member.id}`}
+                                    onLead={(lead) =>
+                                      setDraft({
+                                        ...draft,
+                                        members: draft.members.map((other) =>
+                                          other.id === member.id ? { ...other, lead } : other,
+                                        ),
+                                      })
+                                    }
+                                    onAskRemove={() => {
+                                      if (area.members.some((person) => person.id === member.id)) {
+                                        setMode(`rm:${member.id}`);
+                                      } else {
+                                        setDraft({
+                                          ...draft,
+                                          members: draft.members.filter(
+                                            (other) => other.id !== member.id,
+                                          ),
+                                        });
+                                      }
+                                    }}
+                                    onCancelRemove={() => setMode(null)}
+                                    onRemove={() => {
+                                      setDraft({
+                                        ...draft,
+                                        members: draft.members.filter(
+                                          (other) => other.id !== member.id,
+                                        ),
+                                      });
+                                      setMode(null);
+                                    }}
+                                  />
+                                ))}
+                              </ul>
+                            ) : (
+                              <p className="areas-note">Nadie está en esta área todavía.</p>
                             )}
 
-                            <span className="areas-member-actions">
-                              <button
-                                className="areas-action"
-                                type="button"
-                                onClick={() =>
-                                  handleResponsable(
-                                    area,
-                                    persona,
-                                    !persona.isAreaLeader,
+                            <div className="areas-add">
+                              <select
+                                aria-label="Agregar a una persona"
+                                value={adding}
+                                onChange={(event) => setAdding(event.target.value)}
+                              >
+                                <option value="">Agregar a una persona…</option>
+                                {people
+                                  .filter(
+                                    (person) =>
+                                      !draft.members.some((member) => member.id === person.id),
                                   )
-                                }
-                              >
-                                {persona.isAreaLeader
-                                  ? "Quitar como responsable"
-                                  : "Hacer responsable"}
-                              </button>
+                                  .map((person) => (
+                                    <option key={person.id} value={person.id}>
+                                      {person.fullName} · {ROLE_NAMES[person.role] ?? person.role}
+                                    </option>
+                                  ))}
+                              </select>
 
                               <button
-                                className="areas-action areas-action-danger"
+                                className="areas-btn"
                                 type="button"
-                                onClick={() =>
-                                  handleQuitarMiembro(area, persona)
-                                }
+                                disabled={adding === ""}
+                                onClick={() => {
+                                  const person = people.find(
+                                    (one) => one.id === Number(adding),
+                                  );
+                                  setDraft({
+                                    ...draft,
+                                    members: [...draft.members, { ...person, lead: false }],
+                                  });
+                                  setAdding("");
+                                }}
                               >
-                                Quitar del área
+                                Agregar
                               </button>
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
+                            </div>
 
-                      {/* AGREGAR INTEGRANTE */}
-                      <form
-                        className="areas-member-form"
-                        onSubmit={(event) => handleAgregarMiembro(event, area)}
-                      >
-                        <label
-                          className="areas-member-form-label"
-                          htmlFor="area-member-user"
-                        >
-                          Agregar a
-                        </label>
+                            <p className="areas-muted areas-hint">
+                              Las personas se dan de alta, y se les cambia el rol, en Empleados.
+                            </p>
+                          </section>
+                        </div>
 
-                        <select
-                          className="areas-member-form-select"
-                          id="area-member-user"
-                          name="userId"
-                          required
-                          value={nuevoMiembro.userId}
-                          onChange={handleNuevoMiembroChange}
-                        >
-                          <option value="">Elige a una persona</option>
+                        <footer className="areas-open-foot">
+                          {mode === "delete" ? (
+                            <>
+                              <p className="areas-confirm">
+                                ¿Eliminar «{area.name}»?
+                                {area.children.length > 0 &&
+                                  ` ${area.children.map((child) => child.name).join(" y ")} ${
+                                    area.children.length === 1 ? "queda" : "quedan"
+                                  } fuera del organigrama, sin área superior.`}
+                              </p>
+                              <span className="areas-right">
+                                <button
+                                  className="areas-btn"
+                                  type="button"
+                                  onClick={() => setMode(null)}
+                                >
+                                  Cancelar
+                                </button>
+                                <button
+                                  className="areas-btn is-danger"
+                                  type="button"
+                                  disabled={saving}
+                                  onClick={() => handleDelete(area)}
+                                >
+                                  Eliminar área
+                                </button>
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="areas-del">
+                                <button
+                                  className="areas-quiet is-danger"
+                                  type="button"
+                                  disabled={draft.members.length > 0}
+                                  onClick={() => setMode("delete")}
+                                >
+                                  Eliminar área
+                                </button>
+                                {draft.members.length > 0 && (
+                                  <span className="areas-muted">
+                                    Para eliminarla, primero quita a{" "}
+                                    {draft.members.length === 1
+                                      ? "su integrante"
+                                      : `sus ${draft.members.length} integrantes`}
+                                    .
+                                  </span>
+                                )}
+                              </span>
 
-                          {/* Quienes ya están en el área no se ofrecen: para cambiarles el
-                              cargo están los botones de arriba. */}
-                          {personas
-                            .filter(
-                              (persona) =>
-                                !area.members.some(
-                                  (miembro) => miembro.id === persona.id,
-                                ),
-                            )
-                            .map((persona) => (
-                              <option key={persona.id} value={persona.id}>
-                                {persona.fullName} — {persona.email}
-                              </option>
-                            ))}
-                        </select>
-
-                        <input
-                          className="areas-member-form-check"
-                          id="area-member-leader"
-                          name="isAreaLeader"
-                          type="checkbox"
-                          checked={nuevoMiembro.isAreaLeader}
-                          onChange={handleNuevoMiembroChange}
-                        />
-
-                        <label
-                          className="areas-member-form-label"
-                          htmlFor="area-member-leader"
-                        >
-                          Como responsable
-                        </label>
-
-                        <button
-                          className="areas-member-form-submit"
-                          type="submit"
-                        >
-                          Agregar
-                        </button>
-                      </form>
+                              <span className="areas-right">
+                                <span className="areas-dirty">
+                                  {changes > 0 &&
+                                    `${changes} ${changes === 1 ? "cambio" : "cambios"} sin guardar`}
+                                </span>
+                                {changes > 0 && (
+                                  <button
+                                    className="areas-btn"
+                                    type="button"
+                                    onClick={() => setDraft(draftOf(area))}
+                                  >
+                                    Descartar
+                                  </button>
+                                )}
+                                <button
+                                  className="areas-btn is-primary"
+                                  type="button"
+                                  disabled={changes === 0 || saving || draft.name.trim() === ""}
+                                  onClick={() => handleSave(area)}
+                                >
+                                  {saving ? "Guardando…" : "Guardar cambios"}
+                                </button>
+                              </span>
+                            </>
+                          )}
+                        </footer>
+                      </div>
                     </td>
                   </tr>
                 )}
               </Fragment>
-            ),
-          )}
-        </tbody>
-      </table>
+            ))}
+          </tbody>
+        </table>
 
-      {cargando && <p className="areas-loading">Cargando...</p>}
+        {loading && <p className="areas-empty">Cargando…</p>}
 
-      {!cargando && areas.length === 0 && (
-        <p className="areas-empty">Todavía no hay áreas registradas.</p>
+        {!loading && rows.length === 0 && creating === null && (
+          <p className="areas-empty">
+            {areas.length === 0
+              ? "Todavía no hay áreas registradas."
+              : "Ningún área ni persona coincide con la búsqueda."}
+          </p>
+        )}
+      </div>
+
+      {unplaced.length > 0 && term === "" && (
+        <p className="areas-unplaced">
+          <span className="areas-eyebrow">Sin área</span>{" "}
+          {unplaced.map((person) => person.fullName).join(", ")}.
+          <Help text="Sin área, una persona no recibe etapas ni ve el trabajo de ninguna. Finanzas es la excepción: consulta todas sin pertenecer a una." />
+        </p>
       )}
     </section>
   );

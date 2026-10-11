@@ -12,11 +12,13 @@ import * as api from "../../api/client.js";
 import { activationLink } from "../../config.js";
 import "./users.css";
 
-// Cuántas personas se muestran por página.
+/** Cuántas personas se muestran por página. */
 const PAGE = 25;
 
-// Los roles llegan del servidor en inglés; aquí se traducen para mostrarlos. Si aparece uno
-// que no está en la lista, se muestra tal cual.
+/**
+ * Los roles llegan del servidor en inglés; aquí se traducen para mostrarlos. Si aparece uno
+ * que no está en la lista, se muestra tal cual.
+ */
 const ROLES_EN_ESPANOL = {
   admin: "Coordinación",
   area_lead: "Responsable de área",
@@ -24,7 +26,7 @@ const ROLES_EN_ESPANOL = {
   finance: "Finanzas",
 };
 
-// El formulario vacío: sirve para empezar y para limpiarlo después de crear a alguien.
+/** El formulario vacío: sirve para empezar y para limpiarlo después de crear a alguien. */
 const FORMULARIO_VACIO = {
   fullName: "",
   email: "",
@@ -35,38 +37,31 @@ const FORMULARIO_VACIO = {
   isAreaLeader: false,
 };
 
-// `admin` es quien está usando la pantalla, no una de las personas de la lista.
+/** `admin` es quien está usando la pantalla, no una de las personas de la lista. */
 function Users({ admin }) {
-  // La lista
   const [usuarios, setUsuarios] = useState([]);
   const [total, setTotal] = useState(0);
   const [offset, setOffset] = useState(0);
   const [cargando, setCargando] = useState(true);
 
-  // Sube de uno en uno para volver a pedir la lista después de crear o dar de baja.
   const [recarga, setRecarga] = useState(0);
 
-  // Los filtros de arriba de la tabla
   const [filtroRol, setFiltroRol] = useState("");
   const [filtroArea, setFiltroArea] = useState("");
   const [verBajas, setVerBajas] = useState(false);
 
-  // Los catálogos que llenan los <select>
   const [roles, setRoles] = useState([]);
   const [areas, setAreas] = useState([]);
   const [contratos, setContratos] = useState([]);
 
-  // El formulario de alta
   const [form, setForm] = useState(FORMULARIO_VACIO);
   const [invitacion, setInvitacion] = useState(null);
-  // Qué se acaba de copiar al portapapeles ("enlace" o "token"), para avisarlo un momento.
   const [copiado, setCopiado] = useState(null);
   const [guardando, setGuardando] = useState(false);
 
   const [error, setError] = useState(null);
   const [errorForm, setErrorForm] = useState(null);
 
-  // Los catálogos se piden una sola vez, al abrir la pestaña.
   useEffect(() => {
     api
       .listRoles()
@@ -84,10 +79,7 @@ function Users({ admin }) {
       .catch((err) => setError(err.message));
   }, []);
 
-  // La lista se vuelve a pedir cada vez que cambia un filtro, la página o `recarga`.
   useEffect(() => {
-    // Si el usuario cambia de filtro antes de que llegue la respuesta anterior, esta
-    // bandera evita que la vieja pise a la nueva.
     let cancelado = false;
 
     api
@@ -116,7 +108,6 @@ function Users({ admin }) {
     };
   }, [offset, filtroRol, filtroArea, verBajas, recarga]);
 
-  // Un solo manejador para todo el formulario: cada input tiene su `name`.
   function handleChange(event) {
     const { name, type, value, checked } = event.target;
     setForm({ ...form, [name]: type === "checkbox" ? checked : value });
@@ -133,7 +124,6 @@ function Users({ admin }) {
         email: form.email.trim(),
         roleId: Number(form.roleId),
         contractTypeId: Number(form.contractTypeId),
-        // Un <select> sin elegir vale ""; el servidor espera null.
         primaryAreaId: form.primaryAreaId ? Number(form.primaryAreaId) : null,
         birthday: form.birthday || null,
         isAreaLeader: form.primaryAreaId ? form.isAreaLeader : false,
@@ -205,7 +195,6 @@ function Users({ admin }) {
         </p>
       </header>
 
-      {/* INVITACIÓN RECIÉN CREADA */}
       {invitacion && (
         <aside className="invite-card">
           <h2 className="invite-title">Invitación para {invitacion.nombre}</h2>
@@ -267,7 +256,6 @@ function Users({ admin }) {
         </aside>
       )}
 
-      {/* FORMULARIO DE ALTA */}
       <form className="user-form" onSubmit={handleCrear}>
         <h2 className="user-form-title">Dar de alta a una persona</h2>
 
@@ -418,7 +406,6 @@ function Users({ admin }) {
         </button>
       </form>
 
-      {/* FILTROS */}
       <div className="users-filters">
         <div className="users-filter">
           <label className="users-filter-label" htmlFor="filter-role">
@@ -490,7 +477,6 @@ function Users({ admin }) {
         {error}
       </p>
 
-      {/* TABLA */}
       <table className="users-table">
         <thead>
           <tr>
@@ -528,7 +514,6 @@ function Users({ admin }) {
                   Reinvitar
                 </button>
 
-                {/* Darte de baja a ti mismo cierra tu propia sesión, así que no se puede. */}
                 <button
                   className="users-action users-action-danger"
                   type="button"
@@ -549,7 +534,6 @@ function Users({ admin }) {
         <p className="users-empty">No hay personas que coincidan con estos filtros.</p>
       )}
 
-      {/* PÁGINAS */}
       <nav className="users-pagination">
         <button
           className="users-page-prev"

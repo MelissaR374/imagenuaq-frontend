@@ -3,6 +3,7 @@ import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
+import commentPolicy from './eslint-rules/comment-policy.js'
 import consistentImportCase from './eslint-rules/consistent-import-case.js'
 
 export default defineConfig([
@@ -19,11 +20,15 @@ export default defineConfig([
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
     plugins: {
-      local: { rules: { 'consistent-import-case': consistentImportCase } },
+      local: {
+        rules: {
+          'comment-policy': commentPolicy,
+          'consistent-import-case': consistentImportCase,
+        },
+      },
     },
     rules: {
-      // Windows resolves imports case-insensitively; Vite's HMR graph and the Linux build in
-      // Dockerfile do not. See the rule for the full explanation.
+      'local/comment-policy': 'error',
       'local/consistent-import-case': 'error',
     },
   },

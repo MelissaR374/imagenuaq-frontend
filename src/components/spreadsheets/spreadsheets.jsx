@@ -1,825 +1,903 @@
-// Cuentas Microsoft conectadas y libros de Excel registrados: la primera mitad de la migración
-// (RF-MIG-01). Aquí se conecta la cuenta, se guarda el registro de aplicación de Azure y se dan
-// de alta los libros.
+// The registered Excel workbooks (RF-MIG-01): what people come here to do.
 //
-// Lo que se hace *con* un libro --- mapearlo, importarlo, ver sus corridas --- **no** está aquí:
-// vive en «Configuración de formatos de solicitud» (`importConfig.jsx` y `importPipeline.jsx`),
-// que es la división que el propio menú ya describía. Son dos trabajos de dos momentos: dar de
-// alta el libro pasa una vez, y el mapeo se ajusta cada vez que la hoja cambia.
+// The books come first and the Microsoft connection is one line: the Azure app registration and
+// the account are touched once, and they used to take the whole screen on every visit. Only on the
+// first run, when nothing is connected yet, does that line become two real steps.
+//
+// What is done *with* a book --- mapping it, importing it, looking at its runs --- is not here: it
+// lives in "Importar de Excel". They are two jobs from two moments: registering a book happens
+// once, and the mapping is adjusted every time the sheet changes.
+//
+// Books are read with one person's delegated access, so a revoked account stops every book read
+// with it until somebody reconnects: that is why a disconnected account is said in amber on the
+// book's row, and why disconnecting one warns how many books depend on it.
 import { Fragment, useEffect, useState } from "react";
 
 import * as api from "../../api/client.js";
+import { shortDate, columnLetter } from "../shared/format.js";
+import Help from "../shared/help.jsx";
 import { MICROSOFT_PARAM } from "../../config.js";
 import "./spreadsheets.css";
 
-// Lo que dejó el servidor en la URL al volver de Microsoft, o null si no venimos de ahí.
-function resultadoEnLaUrl() {
+/**
+ * Why connecting failed, in words. The server sends Microsoft's code, which tells nobody anything;
+ * what matters is whether it can be tried again or somebody has to talk to whoever administers it.
+ */
+const REASONS = {
+  access_denied: "No se otorgó el permiso en la pantalla de Microsoft.",
+  invalid_grant: "El permiso venció antes de terminar. Vuelve a intentarlo.",
+  invalid_client: "El registro de aplicación de Azure no es válido: revísalo aquí abajo.",
+  not_configured: "Todavía no hay un registro de aplicación de Azure guardado.",
+  state_mismatch: "La vuelta de Microsoft no correspondía a esta sesión. Vuelve a intentarlo.",
+};
+
+/** What the server left in the URL on the way back from Microsoft, or null if we did not come from there. */
+function resultInTheUrl() {
   const params = new URLSearchParams(window.location.search);
-  const resultado = params.get(MICROSOFT_PARAM);
-  if (!resultado) return null;
+  const result = params.get(MICROSOFT_PARAM);
+  if (!result) return null;
 
-  return {
-    ok: resultado === "connected",
-    reason: params.get("reason"),
-    description: params.get("description"),
-  };
+  return { ok: result === "connected", reason: params.get("reason") };
 }
 
-// La letra de columna de Excel para un índice base cero: 0 → A, 25 → Z, 26 → AA.
-function letraDeColumna(indice) {
-  let letra = "";
-  let n = indice;
-  while (n >= 0) {
-    letra = String.fromCharCode(65 + (n % 26)) + letra;
-    n = Math.floor(n / 26) - 1;
+const NO_FORM = { accountId: "", url: "", tableName: "", name: "" };
+
+/**
+ * The Azure app registration form. The secret always starts empty: the server never returns it, and
+ * empty means "keep the one already stored".
+ */
+const NO_APP = { tenantId: "common", clientId: "", clientSecret: "" };
+
+/** How the last import went, in one sentence. */
+function lastImport(book) {
+  if (book.markedRows > 0 && book.lastImport === null) {
+    return `${book.markedRows} filas marcadas como ya atendidas`;
   }
-  return letra;
+  if (book.lastImport === null) {
+    return "Nunca se ha importado";
+  }
+
+  const parts = [shortDate(book.lastImport.finishedAt)];
+  parts.push(
+    `${book.lastImport.created} ${book.lastImport.created === 1 ? "nueva" : "nuevas"}`,
+  );
+  if (book.lastImport.failed > 0) {
+    parts.push(`${book.lastImport.failed} con error`);
+  }
+  return parts.join(" · ");
 }
 
-// El formulario de registro vacío: sirve para empezar y para limpiarlo al terminar.
-const FORMULARIO_VACIO = { accountId: "", url: "", tableName: "", name: "" };
+/**
+ * The book as Excel shows it: column letters, row numbers and the tinted header row.
+ *
+ * The rows come by position, not by column name: Graph returns an array per row and the header is
+ * row 1, so a cell is found by its index.
+ */
+function SheetPreview({ preview, loading }) {
+  if (loading) {
+    return <p className="books-note">Leyendo el libro…</p>;
+  }
+  if (preview === null) {
+    return null;
+  }
 
-// El formulario del registro de aplicación de Azure. El secreto siempre empieza vacío:
-// el servidor nunca lo devuelve, y vacío significa "conservar el que ya está".
-const APP_VACIA = { tenantId: "common", clientId: "", clientSecret: "" };
+  return (
+    <div className="books-sheet-wrap">
+      <table className="books-sheet">
+        <thead>
+          <tr>
+            <th className="books-sheet-corner" />
+            {preview.headers.map((_, index) => (
+              <th key={index}>{columnLetter(index)}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          <tr className="books-sheet-headers">
+            <th>1</th>
+            {preview.headers.map((header, index) => (
+              <td key={index}>{header}</td>
+            ))}
+          </tr>
+          {preview.rows.map((row, index) => (
+            <tr key={index}>
+              <th>{index + 2}</th>
+              {preview.headers.map((_, column) => (
+                <td key={column}>{String(row[column] ?? "")}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
 
-function Spreadsheets() {
-  const [cuentas, setCuentas] = useState([]);
-  const [libros, setLibros] = useState([]);
-  const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState(null);
-
-  // Sube de uno en uno para volver a pedir las listas después de cada cambio.
-  const [recarga, setRecarga] = useState(0);
-
-  // El aviso de "cuenta conectada" o el error con el que Microsoft nos regresó.
-  const [aviso, setAviso] = useState(resultadoEnLaUrl);
-
-  // El formulario de registro: primero el enlace, luego lo que el servidor encontró.
-  const [form, setForm] = useState(FORMULARIO_VACIO);
-  const [libro, setLibro] = useState(null);
-  const [buscando, setBuscando] = useState(false);
-  const [guardando, setGuardando] = useState(false);
-  const [errorForm, setErrorForm] = useState(null);
-
-  // Los encabezados desplegados y unas filas de muestra: { id, kind, name, headers, rows } o null.
-  const [vista, setVista] = useState(null);
-  const [cargandoVista, setCargandoVista] = useState(false);
-
-
-  // El registro de aplicación de Azure: lo que hay y el formulario para cambiarlo.
+function Spreadsheets({ onGo = null }) {
+  const [accounts, setCuentas] = useState([]);
+  const [books, setLibros] = useState([]);
   const [app, setApp] = useState(null);
-  const [formApp, setFormApp] = useState(APP_VACIA);
-  const [editandoApp, setEditandoApp] = useState(false);
-  const [guardandoApp, setGuardandoApp] = useState(false);
-  const [errorApp, setErrorApp] = useState(null);
+  const [loading, setCargando] = useState(true);
+  const [error, setError] = useState(null);
+  const [reloads, setRecarga] = useState(0);
+  const [notice, setAviso] = useState(resultInTheUrl);
 
-  // Limpia la URL una vez leído el resultado, para que recargar no lo repita.
+  const [showConnection, setVerConexion] = useState(false);
+  const [editingApp, setEditandoApp] = useState(false);
+  const [appForm, setFormApp] = useState(NO_APP);
+  const [appError, setErrorApp] = useState(null);
+  const [savingApp, setGuardandoApp] = useState(false);
+  const [confirming, setConfirmando] = useState(null);
+
+  const [registering, setRegistrando] = useState(false);
+  const [form, setForm] = useState(NO_FORM);
+  const [found, setEncontrado] = useState(null);
+  const [searching, setBuscando] = useState(false);
+  const [saving, setGuardando] = useState(false);
+  const [formError, setErrorForm] = useState(null);
+
+  const [opened, setAbierto] = useState(null);
+  const [preview, setVista] = useState(null);
+  const [loadingPreview, setCargandoVista] = useState(false);
+
   useEffect(() => {
-    if (!aviso) return;
-    const limpia = window.location.pathname + window.location.hash;
-    window.history.replaceState(null, "", limpia);
-  }, [aviso]);
+    if (!notice) return;
+    const clean = window.location.pathname + window.location.hash;
+    window.history.replaceState(null, "", clean);
+  }, [notice]);
 
   useEffect(() => {
-    let cancelado = false;
+    let cancelled = false;
 
-    Promise.all([
-      api.getMicrosoftApp(),
-      api.listMicrosoftAccounts(),
-      api.listSpreadsheets(),
-    ])
+    Promise.all([api.getMicrosoftApp(), api.listMicrosoftAccounts(), api.listSpreadsheets()])
       .then(([datosApp, datosCuentas, datosLibros]) => {
-        if (cancelado) return;
+        if (cancelled) return;
         setApp(datosApp.app);
         setCuentas(datosCuentas.accounts);
         setLibros(datosLibros.sheets);
         setError(null);
       })
-      .catch((err) => {
-        if (!cancelado) setError(err.message);
+      .catch((failure) => {
+        if (!cancelled) setError(failure.message);
       })
       .finally(() => {
-        if (!cancelado) setCargando(false);
+        if (!cancelled) setCargando(false);
       });
 
     return () => {
-      cancelado = true;
+      cancelled = true;
     };
-  }, [recarga]);
+  }, [reloads]);
 
-  // --- Registro de aplicación ---
-
-  function handleEditarApp() {
-    setErrorApp(null);
-    setFormApp({
-      tenantId: app?.tenantId ?? "common",
-      clientId: app?.clientId ?? "",
-      clientSecret: "",
-    });
-    setEditandoApp(true);
+  function reload() {
+    setRecarga((actual) => actual + 1);
   }
 
-  function handleAppChange(event) {
-    const { name, value } = event.target;
-    setFormApp({ ...formApp, [name]: value });
+  async function connect() {
+    setError(null);
+    try {
+      const { url } = await api.connectMicrosoft();
+      window.location.href = url;
+    } catch (failure) {
+      setError(failure.message);
+    }
   }
 
-  async function handleGuardarApp(event) {
+  async function disconnect(account) {
+    setError(null);
+    try {
+      await api.revokeMicrosoftAccount(account.id);
+      setConfirmando(null);
+      reload();
+    } catch (failure) {
+      setError(failure.message);
+    }
+  }
+
+  async function saveApp(event) {
     event.preventDefault();
     setErrorApp(null);
     setGuardandoApp(true);
-
     try {
-      const datos = await api.setMicrosoftApp({
-        tenantId: formApp.tenantId.trim() || "common",
-        clientId: formApp.clientId.trim(),
-        // Vacío = conservar el secreto guardado; el servidor pide uno la primera vez.
-        clientSecret: formApp.clientSecret.trim() || undefined,
+      const data = await api.setMicrosoftApp({
+        tenantId: appForm.tenantId.trim() || "common",
+        clientId: appForm.clientId.trim(),
+        clientSecret: appForm.clientSecret.trim() || undefined,
       });
-      setApp(datos.app);
+      setApp(data.app);
       setEditandoApp(false);
-      setFormApp(APP_VACIA);
-    } catch (err) {
-      setErrorApp(err.message);
+      setFormApp(NO_APP);
+    } catch (failure) {
+      setErrorApp(failure.message);
     } finally {
       setGuardandoApp(false);
     }
   }
 
-  async function handleOlvidarApp() {
-    const seguro = window.confirm(
-      "¿Olvidar el registro guardado? Si el servidor tiene uno en .env se usará ése; si no, nadie podrá conectar cuentas hasta guardar otro.",
-    );
-    if (!seguro) return;
-
+  async function forgetApp() {
     setErrorApp(null);
-
     try {
-      const datos = await api.clearMicrosoftApp();
-      setApp(datos.app);
-    } catch (err) {
-      setErrorApp(err.message);
+      const data = await api.clearMicrosoftApp();
+      setApp(data.app);
+      setConfirmando(null);
+    } catch (failure) {
+      setErrorApp(failure.message);
     }
   }
 
-  // --- Cuentas ---
-
-  async function handleConectar() {
-    setError(null);
-
-    try {
-      const { url } = await api.connectMicrosoft();
-      // Nos vamos a Microsoft; el servidor nos trae de vuelta a esta pestaña.
-      window.location.href = url;
-    } catch (err) {
-      setError(err.message);
-    }
-  }
-
-  async function handleDesconectar(cuenta) {
-    const seguro = window.confirm(
-      `¿Desconectar la cuenta ${cuenta.email}? Los libros registrados con ella dejarán de poder leerse hasta que se vuelva a conectar.`,
-    );
-    if (!seguro) return;
-
-    setError(null);
-
-    try {
-      await api.revokeMicrosoftAccount(cuenta.id);
-      setRecarga(recarga + 1);
-    } catch (err) {
-      setError(err.message);
-    }
-  }
-
-  // --- Registro de un libro ---
-
-  function handleChange(event) {
-    const { name, value } = event.target;
-    setForm({ ...form, [name]: value });
-  }
-
-  async function handleBuscar(event) {
+  async function findBook(event) {
     event.preventDefault();
     setErrorForm(null);
-    setLibro(null);
+    setEncontrado(null);
     setBuscando(true);
-
     try {
-      const encontrado = await api.resolveSpreadsheet(
-        form.accountId,
-        form.url.trim(),
-      );
-      setLibro(encontrado);
-      // La primera tabla como sugerencia, o la primera hoja si no hay tablas.
-      const primera = encontrado.tables[0] ?? encontrado.worksheets[0];
+      const book = await api.resolveSpreadsheet(form.accountId, form.url.trim());
+      setEncontrado(book);
+      const first = book.tables[0] ?? book.worksheets[0];
       setForm({
         ...form,
-        name: form.name || encontrado.name,
-        tableName: primera ? primera.name : "",
+        name: form.name || book.name,
+        tableName: first ? first.name : "",
       });
-    } catch (err) {
-      setErrorForm(err.message);
+    } catch (failure) {
+      setErrorForm(failure.message);
     } finally {
       setBuscando(false);
     }
   }
 
-  async function handleRegistrar(event) {
+  async function registerBook(event) {
     event.preventDefault();
     setErrorForm(null);
     setGuardando(true);
-
     try {
       await api.registerSpreadsheet({
         accountId: Number(form.accountId),
         name: form.name.trim(),
-        driveId: libro.driveId,
-        itemId: libro.itemId,
+        driveId: found.driveId,
+        itemId: found.itemId,
         tableName: form.tableName || null,
-        webUrl: libro.webUrl,
+        webUrl: found.webUrl,
       });
-      setForm(FORMULARIO_VACIO);
-      setLibro(null);
-      setRecarga(recarga + 1);
-    } catch (err) {
-      setErrorForm(err.message);
+      setForm(NO_FORM);
+      setEncontrado(null);
+      setRegistrando(false);
+      reload();
+    } catch (failure) {
+      setErrorForm(failure.message);
     } finally {
       setGuardando(false);
     }
   }
 
-  // --- Libros registrados ---
-
-  async function handleVer(hoja) {
-    setError(null);
-
-    if (vista?.id === hoja.id) {
+  async function openBook(book) {
+    if (opened === book.id) {
+      setAbierto(null);
       setVista(null);
       return;
     }
 
+    setAbierto(book.id);
+    setVista(null);
+    setError(null);
     setCargandoVista(true);
     try {
-      const datos = await api.previewSpreadsheet(hoja.id);
-      setVista({
-        id: hoja.id,
-        kind: datos.kind,
-        name: datos.name,
-        headers: datos.headers,
-        rows: datos.rows,
-      });
-    } catch (err) {
-      setError(err.message);
+      const data = await api.previewSpreadsheet(book.id);
+      setVista({ id: book.id, ...data });
+    } catch (failure) {
+      setError(failure.message);
     } finally {
       setCargandoVista(false);
     }
   }
 
-  async function handleEliminar(hoja) {
-    const seguro = window.confirm(
-      `¿Quitar el libro ${hoja.name} del registro?`,
-    );
-    if (!seguro) return;
-
+  async function removeBook(book) {
     setError(null);
-
     try {
-      await api.deleteSpreadsheet(hoja.id);
-      if (vista?.id === hoja.id) setVista(null);
-      setRecarga(recarga + 1);
-    } catch (err) {
-      setError(err.message);
+      await api.deleteSpreadsheet(book.id);
+      setAbierto(null);
+      setVista(null);
+      setConfirmando(null);
+      reload();
+    } catch (failure) {
+      setError(failure.message);
     }
   }
 
-  if (cargando) return <p className="spreadsheets-loading">Cargando...</p>;
+  if (loading) {
+    return <p className="books-note">Cargando…</p>;
+  }
+
+  const live = accounts.filter((account) => account.revokedAt === null);
+  const revoked = accounts.filter((account) => account.revokedAt !== null);
+  const firstRun = app.source === null || live.length === 0;
 
   return (
-    <section className="spreadsheets-panel">
-      <header className="spreadsheets-header">
-        <h1 className="spreadsheets-title">Formatos de solicitud</h1>
-        <p className="spreadsheets-count">
-          {libros.length} libro{libros.length === 1 ? "" : "s"} registrado
-          {libros.length === 1 ? "" : "s"}
+    <section className="books">
+      {notice ? (
+        <p className={notice.ok ? "books-status" : "books-status is-bad"}>
+          {notice.ok
+            ? "Cuenta de Microsoft conectada."
+            : (REASONS[notice.reason] ??
+              "No se pudo conectar la cuenta. Vuelve a intentarlo.")}
+          <button className="books-quiet" type="button" onClick={() => setAviso(null)}>
+            Entendido
+          </button>
         </p>
-      </header>
+      ) : null}
 
-      {aviso && (
-        <p
-          className={
-            aviso.ok ? "spreadsheets-notice" : "spreadsheets-notice-error"
-          }
-        >
+      {error !== null ? <p className="books-error">{error}</p> : null}
+
+      {firstRun ? (
+        <div className="books-first">
+          <ol>
+            <li className={app.source === null ? "is-now" : "is-done"}>
+              <span className="books-step">Paso 1</span>
+              <strong>Registro de aplicación de Azure</strong>
+              <p className="books-note">
+                Es lo que autoriza a este sistema a pedirle archivos a Microsoft en nombre de one
+                persona. Lo da de alta quien administra el inquilino de la universidad.
+              </p>
+              <button
+                className="books-btn"
+                type="button"
+                onClick={() => {
+                  setVerConexion(true);
+                  setEditandoApp(true);
+                  setFormApp({
+                    tenantId: app.tenantId ?? "common",
+                    clientId: app.clientId ?? "",
+                    clientSecret: "",
+                  });
+                }}
+              >
+                {app.source === null ? "Guardar el registro" : "Cambiar el registro"}
+              </button>
+            </li>
+            <li className={app.source === null ? "" : "is-now"}>
+              <span className="books-step">Paso 2</span>
+              <strong>Una cuenta Microsoft</strong>
+              <p className="books-note">
+                Los books se leen con el acceso de one persona, no con el del sistema.
+              </p>
+              <button
+                className="books-btn is-primary"
+                type="button"
+                onClick={connect}
+                disabled={app.source === null}
+              >
+                Conectar one account
+              </button>
+            </li>
+          </ol>
+        </div>
+      ) : (
+        <div className="books-strip">
           <span>
-            {aviso.ok
-              ? "Cuenta de Microsoft conectada."
-              : `No se pudo conectar la cuenta (${aviso.reason ?? "error"}${
-                  aviso.description ? `: ${aviso.description}` : ""
-                }).`}
+            Conectado a Microsoft con {live.length}{" "}
+            {live.length === 1 ? "cuenta" : "cuentas"}
+            {revoked.length === 0 ? "" : ` · ${revoked.length} desconectada`}
+            {revoked.length > 1 ? "s" : ""}
           </span>
           <button
-            className="spreadsheets-notice-close"
+            className="books-quiet"
             type="button"
-            onClick={() => setAviso(null)}
+            onClick={() => setVerConexion(!showConnection)}
           >
-            Cerrar
+            {showConnection ? "Ocultar la conexión" : "Administrar conexión"}
           </button>
-        </p>
+        </div>
       )}
 
-      {error && <p className="spreadsheets-error">{error}</p>}
+      {showConnection ? (
+        <div className="books-connection">
+          <section>
+            <h3>Cuentas</h3>
+            <ul className="books-accounts">
+              {accounts.map((account) => (
+                <li
+                  className={account.revokedAt === null ? "books-account" : "books-account is-off"}
+                  key={account.id}
+                >
+                  <span className="books-account-who">
+                    {account.email}
+                    {account.revokedAt === null ? null : (
+                      <span className="books-off">desconectada</span>
+                    )}
+                  </span>
+                  <span className="books-note">
+                    La conectó {account.userFullName} el {shortDate(account.connectedAt)}
+                    {account.lastUsedAt === null
+                      ? ""
+                      : ` · se usó el ${shortDate(account.lastUsedAt)}`}{" "}
+                    · {account.sheetCount}{" "}
+                    {account.sheetCount === 1 ? "libro depende" : "libros dependen"} de ella
+                  </span>
 
-      {/* Registro de aplicación de Azure */}
-      <section className="spreadsheets-app">
-        <header className="spreadsheets-section-header">
-          <h2 className="spreadsheets-subtitle">
-            Registro de aplicación de Azure
-          </h2>
-          {!editandoApp && (
-            <button
-              className="spreadsheets-app-edit"
-              type="button"
-              onClick={handleEditarApp}
-            >
-              {app?.source ? "Cambiar" : "Configurar"}
-            </button>
-          )}
-        </header>
-
-        {app && !editandoApp && (
-          <dl className="spreadsheets-app-summary">
-            <div className="spreadsheets-app-summary-row">
-              <dt>Estado</dt>
-              <dd>
-                {app.source === "database"
-                  ? "Guardado desde esta pantalla"
-                  : app.source === "env"
-                    ? "Tomado del archivo .env del servidor"
-                    : "Sin configurar: nadie puede conectar cuentas todavía"}
-              </dd>
-            </div>
-            <div className="spreadsheets-app-summary-row">
-              <dt>Tenant</dt>
-              <dd>{app.tenantId ?? "—"}</dd>
-            </div>
-            <div className="spreadsheets-app-summary-row">
-              <dt>Client ID</dt>
-              <dd>{app.clientId ?? "—"}</dd>
-            </div>
-            <div className="spreadsheets-app-summary-row">
-              <dt>Secreto</dt>
-              <dd>{app.hasSecret ? "Guardado" : "Falta"}</dd>
-            </div>
-            <div className="spreadsheets-app-summary-row">
-              <dt>URI de redirección</dt>
-              <dd>
-                <code>{app.redirectUri}</code>
-              </dd>
-            </div>
-            {app.updatedAt && (
-              <div className="spreadsheets-app-summary-row">
-                <dt>Última modificación</dt>
-                <dd>
-                  {new Date(app.updatedAt).toLocaleString()}
-                  {app.updatedByName ? ` por ${app.updatedByName}` : ""}
-                </dd>
-              </div>
-            )}
-          </dl>
-        )}
-
-        {app?.source === "database" && !editandoApp && (
-          <button
-            className="spreadsheets-app-clear"
-            type="button"
-            onClick={handleOlvidarApp}
-          >
-            Olvidar registro guardado
-          </button>
-        )}
-
-        {editandoApp && (
-          <form className="spreadsheets-app-form" onSubmit={handleGuardarApp}>
-            <p className="spreadsheets-app-help">
-              En el portal de Entra (Aplicaciones → Registros de aplicaciones)
-              registra la aplicación con una URI de redirección de tipo Web
-              igual a <code>{app?.redirectUri}</code>, crea un secreto de
-              cliente y agrega los permisos delegados de Graph{" "}
-              <code>offline_access</code>, <code>User.Read</code> y{" "}
-              <code>Files.Read.All</code>. Copia aquí sus datos.
-            </p>
-
-            <div className="spreadsheets-form-grid">
-              <label className="spreadsheets-field">
-                Tenant
-                <input
-                  type="text"
-                  name="tenantId"
-                  value={formApp.tenantId}
-                  onChange={handleAppChange}
-                  placeholder="common"
-                  maxLength={64}
-                />
-              </label>
-
-              <label className="spreadsheets-field">
-                Application (client) ID
-                <input
-                  type="text"
-                  name="clientId"
-                  value={formApp.clientId}
-                  onChange={handleAppChange}
-                  maxLength={64}
-                  required
-                />
-              </label>
-
-              <label className="spreadsheets-field spreadsheets-field--full">
-                Secreto de cliente
-                <input
-                  type="password"
-                  name="clientSecret"
-                  value={formApp.clientSecret}
-                  onChange={handleAppChange}
-                  placeholder={app?.hasSecret ? "Vacío conserva el actual" : ""}
-                  autoComplete="new-password"
-                />
-              </label>
-            </div>
-
-            <div className="spreadsheets-form-actions">
-              <button
-                className="spreadsheets-app-save"
-                type="submit"
-                disabled={guardandoApp}
-              >
-                {guardandoApp ? "Guardando..." : "Guardar"}
-              </button>
-              <button
-                className="spreadsheets-cancel"
-                type="button"
-                onClick={() => setEditandoApp(false)}
-              >
-                Cancelar
-              </button>
-            </div>
-          </form>
-        )}
-
-        {errorApp && <p className="spreadsheets-form-error">{errorApp}</p>}
-      </section>
-
-      {/* Cuentas conectadas */}
-      <section className="spreadsheets-accounts">
-        <header className="spreadsheets-section-header">
-          <h2 className="spreadsheets-subtitle">Cuentas Microsoft</h2>
-          <button
-            className="spreadsheets-connect"
-            type="button"
-            onClick={handleConectar}
-          >
-            Conectar cuenta Microsoft
-          </button>
-        </header>
-
-        {cuentas.length === 0 ? (
-          <p className="spreadsheets-empty">
-            No hay cuentas conectadas. Conecta una para poder registrar libros.
-          </p>
-        ) : (
-          <div className="spreadsheets-table-wrap">
-            <table className="spreadsheets-table">
-              <thead>
-                <tr>
-                  <th>Cuenta</th>
-                  <th>Nombre</th>
-                  <th>Conectada por</th>
-                  <th>Desde</th>
-                  <th>Último uso</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {cuentas.map((cuenta) => (
-                  <tr key={cuenta.id} className="spreadsheets-account">
-                    <td className="spreadsheets-cell-strong">{cuenta.email}</td>
-                    <td>{cuenta.displayName}</td>
-                    <td>{cuenta.userFullName}</td>
-                    <td>{new Date(cuenta.connectedAt).toLocaleDateString()}</td>
-                    <td>
-                      {cuenta.lastUsedAt
-                        ? new Date(cuenta.lastUsedAt).toLocaleDateString()
-                        : "—"}
-                    </td>
-                    <td className="spreadsheets-cell-actions">
+                  {account.revokedAt === null ? (
+                    confirming === `cuenta-${account.id}` ? (
+                      <span className="books-action-row">
+                        <span className="books-confirm">
+                          {account.sheetCount === 0
+                            ? "Ningún libro se lee con ella."
+                            : `${account.sheetCount} ${
+                                account.sheetCount === 1 ? "book deja" : "books dejan"
+                              } de poder leerse hasta que alguien la reconecte.`}
+                        </span>
+                        <button
+                          className="books-btn"
+                          type="button"
+                          onClick={() => disconnect(account)}
+                        >
+                          Desconectar
+                        </button>
+                        <button
+                          className="books-quiet"
+                          type="button"
+                          onClick={() => setConfirmando(null)}
+                        >
+                          Dejarla
+                        </button>
+                      </span>
+                    ) : (
                       <button
-                        className="spreadsheets-action spreadsheets-action-danger"
+                        className="books-quiet"
                         type="button"
-                        onClick={() => handleDesconectar(cuenta)}
+                        onClick={() => setConfirmando(`cuenta-${account.id}`)}
                       >
                         Desconectar
                       </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+                    )
+                  ) : (
+                    <button className="books-quiet" type="button" onClick={connect}>
+                      Reconectar
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+            <button className="books-btn" type="button" onClick={connect}>
+              Conectar otra account
+            </button>
+          </section>
 
-      {/* Registro de un libro nuevo */}
-      <section className="spreadsheets-register">
-        <h2 className="spreadsheets-subtitle">Registrar libro</h2>
-        <p>
-          Registrar una hoja de cálculo conectada a un formulario para poder ser
-          utilizada dentro del sistema
-        </p>
+          <section>
+            <h3>
+              Registro de aplicación de Azure
+              <Help text="Es lo que autoriza a este sistema a pedirle archivos a Microsoft en nombre de una persona. Se da de alta una vez, en el portal de Azure de la universidad." />
+            </h3>
 
-        {cuentas.length === 0 ? (
-          <p className="spreadsheets-empty">
-            Conecta una cuenta Microsoft para poder registrar libros.
-          </p>
-        ) : (
-          <form
-            className="spreadsheets-form"
-            onSubmit={libro ? handleRegistrar : handleBuscar}
-          >
-            <div className="spreadsheets-form-grid">
-              <label className="spreadsheets-field">
-                Cuenta
-                <select
-                  name="accountId"
-                  value={form.accountId}
-                  onChange={handleChange}
-                  required
-                  disabled={Boolean(libro)}
-                >
-                  <option value="">Elige una cuenta</option>
-                  {cuentas.map((cuenta) => (
-                    <option key={cuenta.id} value={cuenta.id}>
-                      {cuenta.email}
-                    </option>
-                  ))}
-                </select>
-              </label>
+            {appError !== null ? <p className="books-error">{appError}</p> : null}
 
-              <label className="spreadsheets-field">
-                Enlace al libro
-                <input
-                  type="url"
-                  name="url"
-                  value={form.url}
-                  onChange={handleChange}
-                  placeholder="https://uaq-my.sharepoint.com/..."
-                  required
-                  disabled={Boolean(libro)}
-                />
-              </label>
-            </div>
+            {editingApp ? (
+              <form className="books-grid" onSubmit={saveApp}>
+                <label className="books-field">
+                  <span className="books-label">Inquilino</span>
+                  <input
+                    value={appForm.tenantId}
+                    onChange={(event) =>
+                      setFormApp({ ...appForm, tenantId: event.target.value })
+                    }
+                    placeholder="Ej: common"
+                  />
+                </label>
+                <label className="books-field">
+                  <span className="books-label">Id de la aplicación</span>
+                  <input
+                    value={appForm.clientId}
+                    onChange={(event) =>
+                      setFormApp({ ...appForm, clientId: event.target.value })
+                    }
+                    required
+                  />
+                </label>
+                <label className="books-field">
+                  <span className="books-label">
+                    Secreto
+                    <Help text="El servidor nunca lo devuelve. Dejarlo vacío conserva el que ya está guardado." />
+                  </span>
+                  <input
+                    type="password"
+                    value={appForm.clientSecret}
+                    onChange={(event) =>
+                      setFormApp({ ...appForm, clientSecret: event.target.value })
+                    }
+                    placeholder={app.hasSecret ? "Se conserva el guardado" : ""}
+                  />
+                </label>
 
-            {!libro && (
-              <button
-                className="spreadsheets-search"
-                type="submit"
-                disabled={buscando}
-              >
-                {buscando ? "Buscando..." : "Buscar"}
-              </button>
-            )}
-
-            {libro && (
-              <>
-                <p className="spreadsheets-found">
-                  Libro encontrado: <strong>{libro.name}</strong>
-                </p>
-
-                <div className="spreadsheets-form-grid">
-                  <label className="spreadsheets-field">
-                    Tabla u hoja
-                    <select
-                      name="tableName"
-                      value={form.tableName}
-                      onChange={handleChange}
-                    >
-                      {libro.tables.length > 0 && (
-                        <optgroup label="Tablas">
-                          {libro.tables.map((tabla) => (
-                            <option key={`t-${tabla.id}`} value={tabla.name}>
-                              {tabla.name}
-                            </option>
-                          ))}
-                        </optgroup>
-                      )}
-                      <optgroup label="Hojas">
-                        {libro.worksheets.map((hoja) => (
-                          <option key={`w-${hoja.id}`} value={hoja.name}>
-                            {hoja.name}
-                          </option>
-                        ))}
-                      </optgroup>
-                    </select>
-                  </label>
-
-                  <label className="spreadsheets-field">
-                    Nombre
-                    <input
-                      type="text"
-                      name="name"
-                      value={form.name}
-                      onChange={handleChange}
-                      maxLength={300}
-                      required
-                    />
-                  </label>
+                <div className="books-field books-field-wide">
+                  <span className="books-label">
+                    URI de redirección que hay que registerBook en Azure
+                  </span>
+                  <code className="books-code">{app.redirectUri}</code>
                 </div>
 
-                <div className="spreadsheets-form-actions">
+                <div className="books-action-row books-field-wide">
                   <button
-                    className="spreadsheets-save"
-                    type="submit"
-                    disabled={guardando}
-                  >
-                    {guardando ? "Registrando..." : "Registrar"}
-                  </button>
-                  <button
-                    className="spreadsheets-cancel"
+                    className="books-quiet"
                     type="button"
-                    onClick={() => setLibro(null)}
+                    onClick={() => setEditandoApp(false)}
                   >
-                    Cambiar enlace
+                    Cancelar
+                  </button>
+                  <button className="books-btn is-primary" type="submit" disabled={savingApp}>
+                    {savingApp ? "Guardando…" : "Guardar el registro"}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <>
+                <p className="books-note">
+                  {app.source === null
+                    ? "Todavía no hay ninguno: sin él nadie puede conectar una cuenta."
+                    : app.source === "env"
+                      ? `Viene del archivo de entorno del servidor, no de esta pantalla. Id ${app.clientId}.`
+                      : `Guardado${
+                          app.updatedByName === null ? "" : ` por ${app.updatedByName}`
+                        }${
+                          app.updatedAt === null ? "" : ` el ${shortDate(app.updatedAt)}`
+                        }. Id ${app.clientId}.`}
+                </p>
+                <div className="books-action-row">
+                  {app.source === "database" ? (
+                    confirming === "app" ? (
+                      <>
+                        <span className="books-confirm">
+                          Si el servidor tiene uno en su archivo de entorno se usará ése; si no,
+                          nadie podrá conectar cuentas hasta guardar otro.
+                        </span>
+                        <button className="books-btn" type="button" onClick={forgetApp}>
+                          Olvidarlo
+                        </button>
+                        <button
+                          className="books-quiet"
+                          type="button"
+                          onClick={() => setConfirmando(null)}
+                        >
+                          Conservarlo
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        className="books-quiet"
+                        type="button"
+                        onClick={() => setConfirmando("app")}
+                      >
+                        Olvidar el registro guardado
+                      </button>
+                    )
+                  ) : null}
+                  <button
+                    className="books-btn"
+                    type="button"
+                    onClick={() => {
+                      setFormApp({
+                        tenantId: app.tenantId ?? "common",
+                        clientId: app.clientId ?? "",
+                        clientSecret: "",
+                      });
+                      setEditandoApp(true);
+                    }}
+                  >
+                    {app.source === null ? "Guardar el registro" : "Cambiar"}
                   </button>
                 </div>
               </>
             )}
+          </section>
+        </div>
+      ) : null}
 
-            {errorForm && (
-              <p className="spreadsheets-form-error">{errorForm}</p>
-            )}
-          </form>
-        )}
-      </section>
+      <div className="books-bar">
+        <p className="books-count">
+          {books.length} {books.length === 1 ? "libro registrado" : "libros registrados"}
+        </p>
+        <button
+          className="books-btn is-primary"
+          type="button"
+          onClick={() => setRegistrando(true)}
+          disabled={live.length === 0}
+        >
+          Registrar book
+        </button>
+      </div>
 
-      {/* Libros registrados */}
-      <section className="spreadsheets-list">
-        <h2 className="spreadsheets-subtitle">Libros registrados</h2>
+      <div className="books-table-wrap">
+        <table className="books-table">
+          <thead>
+            <tr>
+              <th>Libro</th>
+              <th>Se lee con</th>
+              <th>Formato</th>
+              <th>Última importación</th>
+            </tr>
+          </thead>
+          <tbody>
+            {registering ? (
+              <tr className="books-expanded">
+                <td colSpan={4}>
+                  <form className="books-register" onSubmit={found === null ? findBook : registerBook}>
+                    <header className="books-register-head">
+                      <span className="books-eyebrow">Registrar libro</span>
+                      <button
+                        className="books-close"
+                        type="button"
+                        onClick={() => {
+                          setRegistrando(false);
+                          setEncontrado(null);
+                          setForm(NO_FORM);
+                        }}
+                        aria-label="Cerrar"
+                      >
+                        ✕
+                      </button>
+                    </header>
 
-        {libros.length === 0 ? (
-          <p className="spreadsheets-empty">
-            Todavía no hay libros registrados.
-          </p>
-        ) : (
-          <div className="spreadsheets-table-wrap">
-            <table className="spreadsheets-table spreadsheets-table--books">
-              <thead>
-                <tr>
-                  <th>Nombre</th>
-                  <th>Tabla</th>
-                  <th>Cuenta</th>
-                  <th>Registró</th>
-                  <th>Formato</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {libros.map((hoja) => (
-                  <Fragment key={hoja.id}>
-                    <tr className="spreadsheets-sheet">
-                      <td className="spreadsheets-cell-strong">
-                        {hoja.webUrl ? (
-                          <a
-                            href={hoja.webUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            {hoja.name}
-                          </a>
-                        ) : (
-                          hoja.name
-                        )}
-                      </td>
-                      <td>
-                        <span className="spreadsheets-tag">
-                          {hoja.tableName ?? "(primera)"}
+                    <ol className="books-steps">
+                      <li className={form.accountId === "" ? "is-now" : "is-done"}>Cuenta</li>
+                      <li
+                        className={
+                          form.accountId === ""
+                            ? ""
+                            : found === null
+                              ? "is-now"
+                              : "is-done"
+                        }
+                      >
+                        Enlace
+                      </li>
+                      <li className={found === null ? "" : "is-now"}>Tabla y nombre</li>
+                    </ol>
+
+                    <div className="books-grid">
+                      <label className="books-field">
+                        <span className="books-label">
+                          Se leerá con la cuenta
+                          <Help text="El libro se lee con el acceso de esa persona. Si su cuenta se desconecta, el libro deja de poder leerse hasta que alguien la reconecte." />
                         </span>
-                      </td>
-                      <td>
-                        {hoja.accountEmail}
-                        {hoja.accountRevoked && (
-                          <span className="spreadsheets-revoked">
-                            {" "}
-                            (desconectada)
+                        <select
+                          value={form.accountId}
+                          onChange={(event) => setForm({ ...form, accountId: event.target.value })}
+                          required
+                        >
+                          <option value="">Elige una cuenta</option>
+                          {live.map((account) => (
+                            <option value={account.id} key={account.id}>
+                              {account.email}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <label className="books-field books-field-wide">
+                        <span className="books-label">
+                          Enlace del book
+                          <Help text="El enlace que da OneDrive o SharePoint al compartir o abrir el archivo. Otro tipo de enlace no se puede resolver." />
+                        </span>
+                        <input
+                          value={form.url}
+                          onChange={(event) => setForm({ ...form, url: event.target.value })}
+                          placeholder="Ej: https://uaq-my.sharepoint.com/:x:/g/personal/…"
+                          required
+                        />
+                      </label>
+                    </div>
+
+                    {found === null ? (
+                      <div className="books-action-row">
+                        <button className="books-btn is-primary" type="submit" disabled={searching}>
+                          {searching ? "Buscando…" : "Buscar el libro"}
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="books-note">
+                          Libro found: {found.name} · {found.tables.length}{" "}
+                          {found.tables.length === 1 ? "tabla" : "tablas"},{" "}
+                          {found.worksheets.length}{" "}
+                          {found.worksheets.length === 1 ? "hoja" : "hojas"}
+                        </p>
+
+                        <div className="books-grid">
+                          <label className="books-field">
+                            <span className="books-label">
+                              Tabla u worksheet
+                              <Help text="Una tabla es mejor: sus columnas tienen nombre propio y no se mueven al insertar filas. Una hoja se lee por el texto de su primer renglón." />
+                            </span>
+                            <select
+                              value={form.tableName}
+                              onChange={(event) =>
+                                setForm({ ...form, tableName: event.target.value })
+                              }
+                            >
+                              {found.tables.map((table) => (
+                                <option value={table.name} key={`t-${table.name}`}>
+                                  Tabla · {table.name}
+                                </option>
+                              ))}
+                              {found.worksheets.map((worksheet) => (
+                                <option value={worksheet.name} key={`h-${worksheet.name}`}>
+                                  Hoja · {worksheet.name}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+
+                          <label className="books-field">
+                            <span className="books-label">Cómo se va a llamar aquí</span>
+                            <input
+                              value={form.name}
+                              onChange={(event) => setForm({ ...form, name: event.target.value })}
+                              required
+                            />
+                          </label>
+                        </div>
+
+                        <div className="books-action-row">
+                          <span className="books-note">
+                            Registrarlo no importa nada: eso se hace en «Importar de Excel».
                           </span>
-                        )}
-                      </td>
-                      <td>{hoja.registeredByName ?? "—"}</td>
-                      <td>
-                        <span
-                          className={
-                            hoja.mapped
-                              ? "spreadsheets-badge spreadsheets-badge--ok"
-                              : "spreadsheets-badge spreadsheets-badge--pending"
-                          }
-                        >
-                          {hoja.mapped ? "Mapeado" : "Sin mapear"}
-                        </span>
-                      </td>
-                      <td className="spreadsheets-cell-actions">
-                        <button
-                          className="spreadsheets-action"
-                          type="button"
-                          onClick={() => handleVer(hoja)}
-                          disabled={cargandoVista}
-                        >
-                          {vista?.id === hoja.id ? "Ocultar" : "Ver encabezados"}
-                        </button>
-                        <button
-                          className="spreadsheets-action spreadsheets-action-danger"
-                          type="button"
-                          onClick={() => handleEliminar(hoja)}
-                        >
-                          Eliminar
-                        </button>
-                      </td>
-                    </tr>
-
-                    {/* Los encabezados como fila 1 de la hoja y debajo las filas de muestra */}
-                    {vista?.id === hoja.id && (
-                      <tr className="spreadsheets-headers-row">
-                        <td colSpan={6}>
-                          <div className="sheet-preview">
-                            <div className="sheet-preview-head">
-                              <span className="sheet-preview-label">
-                                {vista.kind === "table" ? "Tabla" : "Hoja"}
-                              </span>
-                              <span className="sheet-preview-name">
-                                {vista.name}
-                              </span>
-                              <span className="sheet-preview-count">
-                                {vista.headers.length} columna
-                                {vista.headers.length === 1 ? "" : "s"} ·{" "}
-                                {vista.rows.length} fila
-                                {vista.rows.length === 1 ? "" : "s"} de muestra
-                              </span>
-                            </div>
-                            <div className="sheet-preview-scroll">
-                              <table className="sheet-preview-grid">
-                                <thead>
-                                  <tr>
-                                    <th className="sheet-preview-corner"></th>
-                                    {vista.headers.map((_, i) => (
-                                      <th key={i} className="sheet-preview-col">
-                                        {letraDeColumna(i)}
-                                      </th>
-                                    ))}
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  <tr>
-                                    <th className="sheet-preview-row">1</th>
-                                    {vista.headers.map((encabezado, i) => (
-                                      <td
-                                        key={i}
-                                        className="sheet-preview-cell sheet-preview-cell--header"
-                                      >
-                                        {String(encabezado) || "(vacío)"}
-                                      </td>
-                                    ))}
-                                  </tr>
-                                  {vista.rows.map((fila, r) => (
-                                    <tr key={r}>
-                                      <th className="sheet-preview-row">
-                                        {r + 2}
-                                      </th>
-                                      {/* Se recorren los encabezados para que cada fila tenga las mismas celdas */}
-                                      {vista.headers.map((_, c) => (
-                                        <td
-                                          key={c}
-                                          className="sheet-preview-cell"
-                                        >
-                                          {fila[c] == null
-                                            ? ""
-                                            : String(fila[c])}
-                                        </td>
-                                      ))}
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
+                          <button
+                            className="books-btn"
+                            type="button"
+                            onClick={() => setEncontrado(null)}
+                          >
+                            Buscar otro
+                          </button>
+                          <button
+                            className="books-btn is-primary"
+                            type="submit"
+                            disabled={saving}
+                          >
+                            {saving ? "Registrando…" : "Registrar libro"}
+                          </button>
+                        </div>
+                      </>
                     )}
-                  </Fragment>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+
+                    {formError !== null ? <p className="books-error">{formError}</p> : null}
+                  </form>
+                </td>
+              </tr>
+            ) : null}
+
+            {books.map((book) => (
+              <Fragment key={book.id}>
+                <tr
+                  className={
+                    book.accountRevoked ? "books-row is-stale" : "books-row"
+                  }
+                  onClick={() => openBook(book)}
+                >
+                  <td className="books-cell-main">
+                    <span className="books-kind">
+                      {book.tableName === null ? "Hoja" : "Tabla"}
+                      {book.tableName === null ? "" : ` · ${book.tableName}`}
+                    </span>
+                    <span className="books-row-name">{book.name}</span>
+                  </td>
+                  <td>
+                    {book.accountEmail}
+                    {book.accountRevoked ? <span className="books-off">desconectada</span> : null}
+                  </td>
+                  <td>
+                    {book.mapped ? (
+                      `${book.schemaName} v${book.schemaVersion}`
+                    ) : (
+                      <span className="books-off">Sin mapear</span>
+                    )}
+                  </td>
+                  <td>{lastImport(book)}</td>
+                </tr>
+
+                {opened === book.id ? (
+                  <tr className="books-expanded">
+                    <td colSpan={4}>
+                      <div className="books-open">
+                        <SheetPreview preview={preview} loading={loadingPreview} />
+
+                        <div className="books-facts">
+                          <div className="books-fact">
+                            <span className="books-label">Formato</span>
+                            {book.mapped
+                              ? `${book.schemaName} v${book.schemaVersion}`
+                              : "Sin mapear"}
+                          </div>
+                          <div className="books-fact">
+                            <span className="books-label">Última importación</span>
+                            {lastImport(book)}
+                          </div>
+                          <div className="books-fact">
+                            <span className="books-label">Se lee con</span>
+                            {book.accountEmail}
+                            {book.accountRevoked ? " (desconectada)" : ""}
+                          </div>
+                          <div className="books-fact">
+                            <span className="books-label">Lo registró</span>
+                            {book.registeredByName ?? "alguien que ya no está"} el{" "}
+                            {shortDate(book.createdAt)}
+                          </div>
+                          {book.webUrl === null ? null : (
+                            <a
+                              className="books-quiet"
+                              href={book.webUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              Abrir el book ↗
+                            </a>
+                          )}
+                        </div>
+
+                        <footer className="books-open-foot">
+                          {confirming === `libro-${book.id}` ? (
+                            <span className="books-action-row">
+                              <span className="books-confirm">
+                                Las solicitudes que ya se importaron se quedan: solo deja de
+                                leerse el book.
+                              </span>
+                              <button
+                                className="books-btn"
+                                type="button"
+                                onClick={() => removeBook(book)}
+                              >
+                                Quitarlo
+                              </button>
+                              <button
+                                className="books-quiet"
+                                type="button"
+                                onClick={() => setConfirmando(null)}
+                              >
+                                Dejarlo
+                              </button>
+                            </span>
+                          ) : (
+                            <button
+                              className="books-quiet is-danger"
+                              type="button"
+                              onClick={() => setConfirmando(`libro-${book.id}`)}
+                            >
+                              Quitar del registro
+                            </button>
+                          )}
+
+                          {book.accountRevoked ? (
+                            <button className="books-btn is-primary" type="button" onClick={connect}>
+                              Reconectar la account
+                            </button>
+                          ) : (
+                            <button
+                              className="books-btn is-primary"
+                              type="button"
+                              onClick={() => (onGo === null ? null : onGo("Importar de Excel"))}
+                              disabled={onGo === null}
+                            >
+                              {book.mapped ? "Importar filas nuevas" : "Mapear e importar"}
+                            </button>
+                          )}
+                        </footer>
+                      </div>
+                    </td>
+                  </tr>
+                ) : null}
+              </Fragment>
+            ))}
+
+            {books.length === 0 ? (
+              <tr>
+                <td colSpan={4}>
+                  <p className="books-empty">
+                    {live.length === 0
+                      ? "Los libros se registran una vez que hay una cuenta conectada."
+                      : "Ningún libro registrado todavía."}
+                  </p>
+                </td>
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
+      </div>
     </section>
   );
 }

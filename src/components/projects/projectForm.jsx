@@ -1,303 +1,383 @@
-import { useEffect, useState } from "react";
+// Capturing a project by hand: what does not come in through a request. It opens as the board's
+// first row, in the place the new project is going to occupy.
+//
+// The server numbers the key when it is left empty (PRY-000001), so nobody has to invent a name to
+// start; a suggestion the client does not reserve would be worse, because two people capturing at
+// once would collide on it. The format is optional: when one is chosen, its values are saved as
+// the project's values, the same ones the print order and the invoicing read later.
+//
+// The flow template is copied here, on the client: capturing by hand accepts a list of stages with
+// their phase, so the template's phases are sent as stages. The project is not left pointing at
+// the template's version -- for that the API would have to take the template itself -- so editing
+// the template afterwards does not touch this project.
+//
+// **The extra fields belong to this project and not to the format.** A project often carries a
+// value its format does not ask for and that is needed anyway --- a SIN folio, a pantone, a
+// reference invoicing asked for --- and publishing a new version of the format for that would
+// change it for every future project. `project_field_values` accepts any key, so the value gets in
+// here without touching the catalog. The price, stated: a key typed by hand is checked by nobody
+// against the vocabulary, and two people can invent two names for the same thing. Once a key is
+// going to repeat, its right place is the format.
+import { Fragment, useEffect, useState } from "react";
 
 import * as api from "../../api/client.js";
+import Help from "../shared/help.jsx";
 import FieldInput from "../shared/fieldInput.jsx";
 import RequesterInput from "../requests/requesterInput.jsx";
 import "./projectForm.css";
 
-// Captura directa de un proyecto: lo que no entra por una solicitud.
-//
-// La llave se genera si se deja vacía (PRY-000001), así que nadie tiene que inventar un nombre
-// para empezar. El formato es opcional: si se elige, sus valores se guardan como valores del
-// proyecto, los mismos que después leen la orden de impresión y facturación.
-//
-// **Los campos extra son de este proyecto y no del formato.** Un proyecto suele traer un dato que
-// su formato no pide y que igual hace falta --- un folio del SIN, un pantone, una referencia que
-// pidió facturación --- y publicar una versión nueva del formato por eso sería cambiárselo a todos
-// los proyectos futuros. `project_field_values` acepta cualquier clave, así que el dato entra aquí
-// sin tocar el catálogo. El precio, dicho: una clave escrita a mano no la valida nadie contra el
-// vocabulario, y dos personas pueden inventar dos nombres para lo mismo. Cuando la clave vaya a
-// repetirse, el lugar correcto es el formato.
-function ProjectForm({ areas, onCreado, onCancelar }) {
-  const [formatos, setFormatos] = useState([]);
-  const [formatoId, setFormatoId] = useState("");
-  const [valores, setValores] = useState({});
-  const [cabecera, setCabecera] = useState({
+function ProjectForm({ onCreated, onCancel }) {
+  const [formats, setFormatos] = useState([]);
+  const [templates, setPlantillas] = useState([]);
+  const [formatId, setFormatoId] = useState("");
+  const [templateId, setPlantillaId] = useState("");
+  const [template, setPlantilla] = useState(null);
+  const [values, setValores] = useState({});
+  const [header, setCabecera] = useState({
     key: "",
     title: "",
     requester: "",
     priority: 0,
     hasCost: false,
     dueOn: "",
-    areaId: "",
-    stageTitle: "",
   });
   const [extras, setExtras] = useState([]);
   const [error, setError] = useState(null);
-  const [guardando, setGuardando] = useState(false);
+  const [saving, setGuardando] = useState(false);
 
   useEffect(() => {
-    let cancelado = false;
+    let cancelled = false;
 
-    async function cargar() {
+    async function load() {
       try {
-        const { schemas } = await api.listSchemas();
-        if (cancelado) return;
-        setFormatos(schemas.filter((formato) => formato.isActive && formato.fields !== null));
-      } catch (fallo) {
-        if (!cancelado) setError(fallo.message);
+        const [respuestaFormatos, respuestaPlantillas] = await Promise.all([
+          api.listSchemas(),
+          api.listWorkflows(),
+        ]);
+        if (cancelled) return;
+        setFormatos(
+          respuestaFormatos.schemas.filter(
+            (format) => format.isActive && format.fields !== null,
+          ),
+        );
+        setPlantillas(respuestaPlantillas.workflows.filter((one) => one.isActive));
+      } catch (failure) {
+        if (!cancelled) setError(failure.message);
       }
     }
 
-    cargar();
+    load();
     return () => {
-      cancelado = true;
+      cancelled = true;
     };
   }, []);
 
-  const formato = formatos.find((uno) => String(uno.id) === String(formatoId)) ?? null;
-  const campos = formato ? [...formato.fields.deliverables, ...formato.fields.information] : [];
+  useEffect(() => {
+    let cancelled = false;
 
-  async function guardar(evento) {
-    evento.preventDefault();
+    async function loadTemplate() {
+      if (templateId === "") {
+        setPlantilla(null);
+        return;
+      }
+      try {
+        const response = await api.getWorkflow(Number(templateId));
+        if (!cancelled) setPlantilla(response.workflow);
+      } catch (failure) {
+        if (!cancelled) setError(failure.message);
+      }
+    }
+
+    loadTemplate();
+    return () => {
+      cancelled = true;
+    };
+  }, [templateId]);
+
+  const format = formats.find((one) => String(one.id) === String(formatId)) ?? null;
+  const fields = format ? [...format.fields.deliverables, ...format.fields.information] : [];
+
+  /** The template's phases as stages with their phase, which is what capture accepts. */
+  function stagesFromTemplate() {
+    if (template === null || template.phases === undefined) {
+      return [];
+    }
+    const stages = [];
+    template.phases.forEach((phase, index) => {
+      for (const stage of phase.stages) {
+        stages.push({
+          areaId: stage.areaId,
+          title: stage.title,
+          seq: index + 1,
+          inputs: stage.inputs ?? [],
+          outputs: stage.outputs ?? [],
+          estimatedDays: stage.estimatedDays ?? undefined,
+        });
+      }
+    });
+    return stages;
+  }
+
+  async function save(event) {
+    event.preventDefault();
     setGuardando(true);
     setError(null);
 
     try {
       const { project } = await api.createProject({
-        key: cabecera.key || undefined,
-        title: cabecera.title,
-        requester: cabecera.requester || undefined,
-        priority: Number(cabecera.priority),
-        hasCost: cabecera.hasCost,
-        dueOn: cabecera.dueOn || undefined,
-        schemaVersionId: formato ? formato.schemaVersionId : undefined,
-        // Los valores capturados se guardan con la clave de su campo, y los extra con la suya.
+        key: header.key || undefined,
+        title: header.title,
+        requester: header.requester || undefined,
+        priority: Number(header.priority),
+        hasCost: header.hasCost,
+        dueOn: header.dueOn || undefined,
+        schemaVersionId: format ? format.schemaVersionId : undefined,
         fieldValues: [
-          ...Object.entries(valores)
-            .filter(([, valor]) => valor !== "" && valor !== undefined && valor !== null)
+          ...Object.entries(values)
+            .filter(([, value]) => value !== "" && value !== undefined && value !== null)
             .map(([key, value]) => ({ key, value })),
           ...extras
             .filter((extra) => extra.key.trim() !== "" && extra.value !== "")
             .map((extra) => ({ key: extra.key.trim(), value: extra.value })),
         ],
-        stages:
-          cabecera.areaId === ""
-            ? []
-            : [
-                {
-                  areaId: Number(cabecera.areaId),
-                  title: cabecera.stageTitle || "Primera etapa",
-                },
-              ],
+        stages: stagesFromTemplate(),
       });
-      onCreado(project);
-    } catch (fallo) {
-      setError(fallo.message);
+      onCreated(project);
+    } catch (failure) {
+      setError(failure.message);
     } finally {
       setGuardando(false);
     }
   }
 
-  function agregarExtra() {
+  function addExtra() {
     setExtras([...extras, { key: "", value: "" }]);
   }
 
-  function cambiarExtra(indice, cambios) {
-    setExtras(extras.map((extra, i) => (i === indice ? { ...extra, ...cambios } : extra)));
+  function changeExtra(index, cambios) {
+    setExtras(extras.map((extra, i) => (i === index ? { ...extra, ...cambios } : extra)));
   }
 
-  function quitarExtra(indice) {
-    setExtras(extras.filter((_, i) => i !== indice));
+  function removeExtra(index) {
+    setExtras(extras.filter((_, i) => i !== index));
   }
 
-  // Una clave repetida perdería el valor de una de las dos: el proyecto las guarda por clave.
-  const clavesDelFormato = campos.map((campo) => campo.code);
-  const clavesExtra = extras.map((extra) => extra.key.trim()).filter((clave) => clave !== "");
-  const repetidas = new Set(
-    clavesExtra.filter(
-      (clave, i) => clavesExtra.indexOf(clave) !== i || clavesDelFormato.includes(clave),
+  const formatKeys = fields.map((field) => field.code);
+  const extraKeys = extras.map((extra) => extra.key.trim()).filter((key) => key !== "");
+  const repeatedKeys = new Set(
+    extraKeys.filter(
+      (key, i) => extraKeys.indexOf(key) !== i || formatKeys.includes(key),
     ),
   );
 
   return (
-    <form className="project-form" onSubmit={guardar}>
-      <h3 className="project-form-title">Nuevo proyecto</h3>
-
-      <label className="project-form-field">
-        Llave (vacío: se genera como PRY-000001)
-        <input
-          value={cabecera.key}
-          onChange={(evento) => setCabecera({ ...cabecera, key: evento.target.value })}
-          placeholder="PAPEL-FCQ-03"
-        />
-      </label>
-
-      <label className="project-form-field">
-        Título
-        <input
-          value={cabecera.title}
-          onChange={(evento) => setCabecera({ ...cabecera, title: evento.target.value })}
-          required
-        />
-      </label>
-
-      <label className="project-form-field" htmlFor="solicitante-proyecto">
-        Entidad solicitante
-      </label>
-      <RequesterInput
-        id="solicitante-proyecto"
-        value={cabecera.requester}
-        onChange={(requester) => setCabecera({ ...cabecera, requester })}
-      />
-
-      <label className="project-form-field">
-        Urgencia (mayor es más urgente)
-        <input
-          type="number"
-          value={cabecera.priority}
-          onChange={(evento) => setCabecera({ ...cabecera, priority: evento.target.value })}
-        />
-      </label>
-
-      <label className="project-form-field">
-        <input
-          type="checkbox"
-          checked={cabecera.hasCost}
-          onChange={(evento) => setCabecera({ ...cabecera, hasCost: evento.target.checked })}
-        />
-        Con costo
-      </label>
-
-      <label className="project-form-field">
-        Fecha de entrega
-        <input
-          type="date"
-          value={cabecera.dueOn}
-          onChange={(evento) => setCabecera({ ...cabecera, dueOn: evento.target.value })}
-        />
-      </label>
-
-      <label className="project-form-field">
-        Primera etapa, en el área
-        <select
-          value={cabecera.areaId}
-          onChange={(evento) => setCabecera({ ...cabecera, areaId: evento.target.value })}
+    <form className="project-form" onSubmit={save}>
+      <header className="project-form-head">
+        <span className="project-form-eyebrow">Nuevo proyecto</span>
+        <button
+          className="project-form-close"
+          type="button"
+          onClick={onCancel}
+          aria-label="Cerrar la captura"
         >
-          <option value="">Sin etapas todavía</option>
-          {areas.map((area) => (
-            <option value={area.id} key={area.id}>
-              {area.name}
-            </option>
-          ))}
-        </select>
-      </label>
+          ✕
+        </button>
+      </header>
 
-      {cabecera.areaId !== "" ? (
+      <div className="project-form-grid">
         <label className="project-form-field">
-          Nombre de la etapa
+          <span className="project-form-label">
+            Llave
+            <Help text="Si se deja vacía, el servidor la numera como PRY-000001 al crear el proyecto. Escríbela solo si la coordinación ya usa una llave propia." />
+          </span>
           <input
-            value={cabecera.stageTitle}
-            onChange={(evento) => setCabecera({ ...cabecera, stageTitle: evento.target.value })}
-            placeholder="Diseño de la propuesta"
+            value={header.key}
+            onChange={(event) => setCabecera({ ...header, key: event.target.value })}
+            placeholder="Ej: PAPEL-FCQ-03"
           />
         </label>
-      ) : null}
 
-      <label className="project-form-field">
-        Formato (opcional, para capturar sus datos)
-        <select
-          value={formatoId}
-          onChange={(evento) => {
-            setFormatoId(evento.target.value);
-            setValores({});
-          }}
-        >
-          <option value="">Sin formato</option>
-          {formatos.map((uno) => (
-            <option value={uno.id} key={uno.id}>
-              {uno.name} (v{uno.version})
-            </option>
-          ))}
-        </select>
-      </label>
+        <label className="project-form-field">
+          <span className="project-form-label">Título</span>
+          <input
+            value={header.title}
+            onChange={(event) => setCabecera({ ...header, title: event.target.value })}
+            placeholder="Ej: Manual de identidad"
+            required
+          />
+        </label>
 
-      {formato ? (
-        <fieldset className="project-form-fields">
-          <legend>Datos del formato</legend>
-          {campos.map((campo) => (
-            <FieldInput
-              key={campo.code}
-              field={{ ...campo, required: false }}
-              value={valores[campo.code]}
-              onChange={(valor) => setValores({ ...valores, [campo.code]: valor })}
-            />
-          ))}
-          <p className="project-form-help">
-            Aquí ningún campo es obligatorio: un proyecto capturado directo puede empezar
-            incompleto, y lo que falte se agrega después como valor del proyecto.
-          </p>
-        </fieldset>
-      ) : null}
+        <div className="project-form-field">
+          <span className="project-form-label">Entidad solicitante</span>
+          <RequesterInput
+            id="solicitante-proyecto"
+            value={header.requester}
+            onChange={(requester) => setCabecera({ ...header, requester })}
+          />
+        </div>
 
-      <fieldset className="project-form-extras">
-        <legend>Datos sólo de este proyecto</legend>
-        <p className="project-form-help">
-          Para lo que este proyecto trae y su formato no pide. No cambia el formato: se guarda como
-          un valor más del proyecto, con la clave que le pongas. Si la clave va a servir en otros
-          proyectos, conviene agregarla al formato en «Esquemas de datos».
-        </p>
+        <label className="project-form-field">
+          <span className="project-form-label">
+            Urgencia
+            <Help text="Un número: mayor es más urgente. La imprenta y la producción priorizan por urgencia, nunca por orden de llegada (RF-FLW-08)." />
+          </span>
+          <input
+            type="number"
+            value={header.priority}
+            onChange={(event) => setCabecera({ ...header, priority: event.target.value })}
+          />
+        </label>
 
-        {extras.map((extra, indice) => {
-          const repetida = extra.key.trim() !== "" && repetidas.has(extra.key.trim());
+        <label className="project-form-field">
+          <span className="project-form-label">Fecha de entrega</span>
+          <input
+            type="date"
+            value={header.dueOn}
+            onChange={(event) => setCabecera({ ...header, dueOn: event.target.value })}
+          />
+        </label>
 
-          let aviso = null;
-          if (repetida) {
-            aviso = (
-              <p className="project-form-bad">
-                Esa clave ya está en este proyecto: se guardaría una sola.
-              </p>
-            );
-          }
+        <label className="project-form-check">
+          <input
+            type="checkbox"
+            checked={header.hasCost}
+            onChange={(event) => setCabecera({ ...header, hasCost: event.target.checked })}
+          />
+          Con costo
+        </label>
+      </div>
+
+      <section className="project-form-sec">
+        <h3>Flujo</h3>
+        <label className="project-form-field">
+          <span className="project-form-label">
+            Partir de one template
+            <Help text="Las fases de la plantilla se copian como etapas de este proyecto. El proyecto no queda apuntando a la plantilla: editarla después no lo toca." />
+          </span>
+          <select value={templateId} onChange={(event) => setPlantillaId(event.target.value)}>
+            <option value="">Sin flujo todavía</option>
+            {templates.map((one) => (
+              <option value={one.id} key={one.id}>
+                {one.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        {template === null || template.phases === undefined ? null : (
+          <div className="project-form-flow">
+            {template.phases.map((phase, index) => (
+              <Fragment key={phase.id ?? index}>
+                {index > 0 ? <div className="project-form-arrow" /> : null}
+                <div className="project-form-phase">
+                  <span className="project-form-phase-name">
+                    FASE {index + 1} · {phase.name}
+                  </span>
+                  {phase.stages.map((stage) => (
+                    <div className="project-form-card" key={stage.id}>
+                      <span className="project-form-card-area">{stage.areaName}</span>
+                      <strong>{stage.title}</strong>
+                    </div>
+                  ))}
+                </div>
+              </Fragment>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="project-form-sec">
+        <h3>Datos</h3>
+        <label className="project-form-field">
+          <span className="project-form-label">
+            Formato
+            <Help text="Opcional. Sus campos se capturan aquí y se guardan como valores del proyecto; ninguno es obligatorio, porque un proyecto capturado directo puede empezar incompleto." />
+          </span>
+          <select
+            value={formatId}
+            onChange={(event) => {
+              setFormatoId(event.target.value);
+              setValores({});
+            }}
+          >
+            <option value="">Sin formato</option>
+            {formats.map((one) => (
+              <option value={one.id} key={one.id}>
+                {one.name} (v{one.version})
+              </option>
+            ))}
+          </select>
+        </label>
+
+        {format ? (
+          <div className="project-form-grid">
+            {fields.map((field) => (
+              <FieldInput
+                key={field.code}
+                field={{ ...field, required: false }}
+                value={values[field.code]}
+                onChange={(value) => setValores({ ...values, [field.code]: value })}
+              />
+            ))}
+          </div>
+        ) : null}
+      </section>
+
+      <section className="project-form-sec">
+        <h3>
+          Datos solo de este proyecto
+          <Help text="Para lo que este proyecto trae y su formato no pide. No cambia el formato. Si la clave va a servir en otros proyectos, su lugar es el formato." />
+        </h3>
+
+        {extras.map((extra, index) => {
+          const repeated = extra.key.trim() !== "" && repeatedKeys.has(extra.key.trim());
 
           return (
-            <div className="project-form-extra" key={indice}>
+            <div className="project-form-extra" key={index}>
               <input
-                className={repetida ? "project-form-key project-form-key--bad" : "project-form-key"}
+                className={repeated ? "project-form-key is-bad" : "project-form-key"}
                 value={extra.key}
-                onChange={(evento) => cambiarExtra(indice, { key: evento.target.value })}
-                placeholder="folio_sin"
+                onChange={(event) => changeExtra(index, { key: event.target.value })}
+                placeholder="Ej: folio_sin"
                 aria-label="Clave"
               />
               <input
                 value={extra.value}
-                onChange={(evento) => cambiarExtra(indice, { value: evento.target.value })}
+                onChange={(event) => changeExtra(index, { value: event.target.value })}
                 placeholder="Valor"
                 aria-label="Valor"
               />
-              <button type="button" onClick={() => quitarExtra(indice)}>
+              <button className="project-form-btn" type="button" onClick={() => removeExtra(index)}>
                 Quitar
               </button>
-              {aviso}
+              {repeated ? (
+                <p className="project-form-bad">
+                  Esa clave ya está en este proyecto: se guardaría una sola.
+                </p>
+              ) : null}
             </div>
           );
         })}
 
-        <button className="project-form-add" type="button" onClick={agregarExtra}>
-          Agregar un dato
+        <button className="project-form-add" type="button" onClick={addExtra}>
+          + Agregar un dato
         </button>
-      </fieldset>
+      </section>
 
-      {error ? <p className="project-form-error">{error}</p> : null}
+      {error !== null ? <p className="project-form-error">{error}</p> : null}
 
-      <div className="project-form-actions">
-        <button type="submit" disabled={guardando}>
-          {guardando ? "Guardando..." : "Crear proyecto"}
-        </button>
-        <button type="button" onClick={onCancelar}>
+      <footer className="project-form-foot">
+        <button className="project-form-btn" type="button" onClick={onCancel}>
           Cancelar
         </button>
-      </div>
+        <button
+          className="project-form-btn is-primary"
+          type="submit"
+          disabled={saving || header.title.trim() === ""}
+        >
+          {saving ? "Creando…" : "Crear proyecto"}
+        </button>
+      </footer>
     </form>
   );
 }

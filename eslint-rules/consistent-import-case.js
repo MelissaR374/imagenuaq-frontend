@@ -1,6 +1,3 @@
-import fs from 'node:fs'
-import path from 'node:path'
-
 // Windows resolves `./Sidebar.css` to a file named `sidebar.css` without complaint, so a
 // case-mismatched relative import runs fine in dev and breaks in two places that are hard
 // to connect back to it:
@@ -13,40 +10,46 @@ import path from 'node:path'
 //
 // No off-the-shelf rule covers this without pulling in a resolver plugin, and the check we
 // need is small: compare every relative specifier against the real directory listing.
+import fs from 'node:fs'
+import path from 'node:path'
 
-// readdirSync per import would be wasteful on a repeat lint; the process is short-lived and
-// the tree does not change under it, so cache the listings for its lifetime.
+/** Directory listings, cached for the lint process: the tree does not change under it. */
 const dirCache = new Map()
 
+/** A directory's entries, or null when it cannot be read (left to the bundler to report). */
 function readDir(dir) {
   if (!dirCache.has(dir)) {
-    let entries = null
+    let entries
     try {
       entries = fs.readdirSync(dir)
     } catch {
-      // Missing or unreadable directory: not a casing problem, leave it to the bundler.
+      entries = null
     }
     dirCache.set(dir, entries)
   }
   return dirCache.get(dir)
 }
 
-// Vite lets an import omit the extension or point at a directory holding an index file, so
-// one specifier segment can legitimately match several real filenames.
+/**
+ * Vite lets an import omit the extension or point at a directory holding an index file, so
+ * one specifier segment can legitimately match several real filenames.
+ */
 const EXTENSIONS = ['', '.js', '.jsx', '.mjs', '.cjs', '.json', '.css']
 
-// A directory import (`./components/sidebar`) needs no special case: the directory name is
-// itself an entry, so the exact-match check below already covers it.
+/**
+ * A directory import (`./components/sidebar`) needs no special case: the directory name is
+ * itself an entry, so the exact-match check below already covers it.
+ */
 function candidatesFor(segment, isLast) {
   if (!isLast) return [segment]
   return EXTENSIONS.map((ext) => segment + ext)
 }
 
-// Returns the correctly-cased specifier when it differs from the one written, null when the
-// import is fine or cannot be checked.
+/**
+ * Returns the correctly-cased specifier when it differs from the one written, null when the
+ * import is fine or cannot be checked.
+ */
 function findCaseMismatch(specifier, fromDir) {
-  // `./styles.css?inline` and `./worker.js?worker` are Vite specifiers; only the path is a
-  // filename.
   const [filePath] = specifier.split(/[?#]/)
   const segments = filePath.split('/')
 
@@ -73,13 +76,10 @@ function findCaseMismatch(specifier, fromDir) {
       continue
     }
 
-    // Nothing matched exactly. If something matches ignoring case, the import only works
-    // because the filesystem is case-insensitive.
     const lowered = candidates.map((candidate) => candidate.toLowerCase())
     const match = entries.find((entry) => lowered.includes(entry.toLowerCase()))
-    if (!match) return null // Genuinely unresolved; no-undef territory, not ours to report.
+    if (!match) return null
 
-    // Report the real name, minus whatever extension the author chose to leave off.
     const extension = isLast && !match.toLowerCase().endsWith(segment.toLowerCase())
       ? match.slice(segment.length)
       : ''
@@ -110,7 +110,6 @@ export default {
     const fromDir = path.dirname(context.filename)
 
     function check(node) {
-      // `export { x }` has no source, and a dynamic import()'s argument may be an expression.
       if (!node.source || node.source.type !== 'Literal') return
       const specifier = node.source.value
       if (typeof specifier !== 'string' || !specifier.startsWith('.')) return

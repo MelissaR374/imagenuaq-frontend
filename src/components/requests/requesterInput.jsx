@@ -1,11 +1,11 @@
+// El solicitante es una cadena, no un registro: no hay padrón de entidades. Para que no se
+// vuelva cuatro formas de escribir la misma facultad, el campo sugiere las que ya están en
+// uso, de más usada a menos (GET /api/requesters).
 import { useEffect, useState } from "react";
 
 import * as api from "../../api/client.js";
 import "./requesterInput.css";
 
-// El solicitante es una cadena, no un registro: no hay padrón de entidades. Para que no se
-// vuelva cuatro formas de escribir la misma facultad, el campo sugiere las que ya están en
-// uso, de más usada a menos (GET /api/requesters).
 function RequesterInput({ value, onChange, id = "solicitante" }) {
   const [sugerencias, setSugerencias] = useState([]);
 
@@ -17,7 +17,6 @@ function RequesterInput({ value, onChange, id = "solicitante" }) {
         const { requesters } = await api.listRequesters(value ?? "");
         if (!cancelado) setSugerencias(requesters);
       } catch {
-        // Si el autocompletado falla, el campo sigue sirviendo: es texto libre.
         if (!cancelado) setSugerencias([]);
       }
     }

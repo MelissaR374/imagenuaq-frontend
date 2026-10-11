@@ -1,12 +1,16 @@
+// Ventana emergente del diseñador. Quien la abre decide el título, la descripción y el error
+// que se muestra; `type` solo cambia la clase de la ventana.
 import {
     MdClose,
 } from "react-icons/md";
 
 import "./FlowModal.css";
 
-//ventana emergente
 function FlowModal({
     type,
+    titulo,
+    descripcion,
+    error,
     onClose,
     onSubmit,
     children,
@@ -28,30 +32,21 @@ function FlowModal({
                 }
             >
 
-                {/* =================================================
-                   HEADER
-                   ================================================= */}
-
                 <div className="modal-header">
 
                     <div>
 
                         <h2>
-                            {isPhase
-                                ? "Agregar fase"
-                                : "Agregar área"
-                            }
+                            {titulo}
                         </h2>
 
-                        <p>
-                            {isPhase
-                                ? "Escribe el nombre de la nueva fase."
-                                : "Define qué hará esta área dentro del flujo."
-                            }
-                        </p>
+                        {descripcion && (
+                            <p>
+                                {descripcion}
+                            </p>
+                        )}
 
                     </div>
-
 
                     <button
                         type="button"
@@ -64,12 +59,13 @@ function FlowModal({
 
                 </div>
 
-
-                {/* =================================================
-                   CONTENIDO
-                   ================================================= */}
-
                 <form onSubmit={onSubmit}>
+
+                    {error && (
+                        <p className="flow-modal-error">
+                            {error}
+                        </p>
+                    )}
 
                     {children}
 
@@ -80,6 +76,5 @@ function FlowModal({
         </div>
     );
 }
-
 
 export default FlowModal;

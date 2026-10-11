@@ -1,309 +1,260 @@
+// The request formats (RF-SOL-01). A format is the identity; what it asks for lives in its
+// versions, and a published version is not edited: "editing" is publishing the next one, so what
+// was captured with the previous one keeps reading as it was captured.
+//
+// The list is light on purpose: no buttons per row, because a format opens and everything that can
+// be done to it lives inside, next to what it will change. The versions are said in one quiet line
+// under the name: they matter when updating and when looking back, not when choosing.
+//
+// What each format is used by -- how many requests were captured with it and how many Excel
+// workbooks are mapped to it -- comes from the server, because it is what makes the warning about
+// publishing concrete: earlier requests keep being read with their version, and a workbook stays
+// on its own until somebody remaps it.
 import { useEffect, useState } from "react";
 
 import * as api from "../../api/client.js";
-import SchemaEditor from "./schemaEditor.jsx";
+import { shortDate } from "../shared/format.js";
+import SchemaFormat from "./schemaFormat.jsx";
 import "./schemas.css";
 
-// Los formatos de solicitud (RF-SOL-01). Un formato es la identidad; lo que pide vive en sus
-// versiones, y una versión publicada no se edita: "editar" es publicar la siguiente, para que
-// lo capturado con la anterior siga leyéndose como se capturó.
-//
-// Clonar es lo que hace de un formato una plantilla: el nuevo empieza con los campos del
-// último del otro. Los cinco formatos sembrados están precisamente para eso.
+const TABS = [
+  {
+    key: "activos",
+    label: "Activos",
+    rule: "Los que se pueden elegir al capturar una solicitud.",
+  },
+  {
+    key: "inactivos",
+    label: "Inactivos",
+    rule:
+      "Ya no se ofrecen al capturar. Nada se borra: lo capturado con ellos se sigue leyendo.",
+  },
+];
+
+/** How many fields a format asks for, of what kind, and how many are required. */
+function fieldTally(format) {
+  if (format.fields === null || format.fields === undefined) {
+    return "Sin versión publicada";
+  }
+  const deliverables = format.fields.deliverables;
+  const information = format.fields.information;
+  const total = deliverables.length + information.length;
+  const required = [...deliverables, ...information].filter((campo) => campo.required).length;
+
+  return `${total} ${total === 1 ? "campo" : "campos"} · ${required} ${
+    required === 1 ? "obligatorio" : "obligatorios"
+  } · ${deliverables.length} de entrega`;
+}
+
+/** What it is used by: what makes the warning about publishing a version concrete. */
+function usage(format) {
+  const parts = [];
+  if (format.requestCount > 0) {
+    parts.push(
+      `${format.requestCount} ${format.requestCount === 1 ? "solicitud" : "solicitudes"}`,
+    );
+  }
+  if (format.sheetCount > 0) {
+    parts.push(
+      `${format.sheetCount} ${format.sheetCount === 1 ? "libro de Excel" : "libros de Excel"}`,
+    );
+  }
+  if (parts.length === 0) {
+    return "Sin uso todavía";
+  }
+  return parts.join(" · ");
+}
+
+function FormatRow({ format, onOpen }) {
+  return (
+    <tr className="schemas-row" onClick={() => onOpen(format)}>
+      <td className="schemas-cell-main">
+        <span className="schemas-code">{format.code}</span>
+        <span className="schemas-row-name">{format.name}</span>
+        <span className="schemas-version-line">
+          {format.version === null ? "Sin versión" : `Versión ${format.version}`}
+          {format.publishedAt === null ? "" : ` · ${shortDate(format.publishedAt)}`}
+          {format.publishedByName === null ? "" : ` · ${format.publishedByName}`}
+        </span>
+      </td>
+      <td>{fieldTally(format)}</td>
+      <td>{usage(format)}</td>
+    </tr>
+  );
+}
+
 function Schemas() {
-  const [formatos, setFormatos] = useState([]);
-  const [tipos, setTipos] = useState([]);
-  const [vocabulario, setVocabulario] = useState([]);
-  const [cargando, setCargando] = useState(true);
+  const [formats, setFormatos] = useState([]);
+  const [types, setTipos] = useState([]);
+  const [vocabulary, setVocabulario] = useState([]);
+  const [tab, setPestana] = useState("activos");
+  const [search, setBusqueda] = useState("");
+  const [opened, setAbierto] = useState(null);
+  const [creating, setNuevo] = useState(false);
+  const [loading, setCargando] = useState(true);
   const [error, setError] = useState(null);
-  const [aviso, setAviso] = useState(null);
-
-  // Qué está abierto: null, { modo: "nuevo" }, { modo: "version", formato } o
-  // { modo: "clon", formato }.
-  const [panel, setPanel] = useState(null);
-  const [guardando, setGuardando] = useState(false);
-  const [errorPanel, setErrorPanel] = useState(null);
-
-  const [nuevo, setNuevo] = useState({ code: "", name: "" });
-  const [versiones, setVersiones] = useState({ formatoId: null, lista: [] });
 
   useEffect(() => {
-    let cancelado = false;
+    let cancelled = false;
 
-    async function cargar() {
+    async function load() {
       try {
         const [formatosRes, tiposRes, clavesRes] = await Promise.all([
           api.listSchemas(),
           api.listDataTypes(),
           api.listFieldKeys(),
         ]);
-        if (cancelado) return;
+        if (cancelled) return;
         setFormatos(formatosRes.schemas);
         setTipos(tiposRes.dataTypes);
         setVocabulario(clavesRes.fieldKeys);
-      } catch (fallo) {
-        if (!cancelado) setError(fallo.message);
+      } catch (failure) {
+        if (!cancelled) setError(failure.message);
       } finally {
-        if (!cancelado) setCargando(false);
+        if (!cancelled) setCargando(false);
       }
     }
 
-    cargar();
+    load();
     return () => {
-      cancelado = true;
+      cancelled = true;
     };
   }, []);
 
-  async function recargar() {
-    const [{ schemas }, { fieldKeys }] = await Promise.all([
-      api.listSchemas(),
-      api.listFieldKeys(),
-    ]);
-    setFormatos(schemas);
-    setVocabulario(fieldKeys);
-  }
-
-  function abrir(modo, formato = null) {
-    setPanel({ modo, formato });
-    setErrorPanel(null);
-    setNuevo({ code: "", name: formato ? `${formato.name} (copia)` : "" });
-  }
-
-  async function crear(campos) {
-    setGuardando(true);
-    setErrorPanel(null);
+  async function reload() {
     try {
-      await api.createSchema({ code: nuevo.code, name: nuevo.name, fields: campos });
-      await recargar();
-      setPanel(null);
-      setAviso("Formato creado.");
-    } catch (fallo) {
-      setErrorPanel(fallo.message);
-    } finally {
-      setGuardando(false);
+      const [{ schemas }, { fieldKeys }] = await Promise.all([
+        api.listSchemas(),
+        api.listFieldKeys(),
+      ]);
+      setFormatos(schemas);
+      setVocabulario(fieldKeys);
+      return schemas;
+    } catch (failure) {
+      setError(failure.message);
+      return formats;
     }
   }
 
-  async function publicarVersion(campos) {
-    setGuardando(true);
-    setErrorPanel(null);
-    try {
-      await api.createSchemaVersion(panel.formato.id, campos);
-      await recargar();
-      setPanel(null);
-      setAviso(
-        "Formato actualizado. Se publicó una versión nueva y la anterior quedó intacta, así que " +
-          "lo capturado con ella se sigue leyendo igual.",
-      );
-    } catch (fallo) {
-      setErrorPanel(fallo.message);
-    } finally {
-      setGuardando(false);
-    }
-  }
-
-  async function clonar(evento) {
-    evento.preventDefault();
-    setGuardando(true);
-    setErrorPanel(null);
-    try {
-      await api.cloneSchema(panel.formato.id, nuevo.code, nuevo.name);
-      await recargar();
-      setPanel(null);
-      setAviso("Formato clonado con los campos del original.");
-    } catch (fallo) {
-      setErrorPanel(fallo.message);
-    } finally {
-      setGuardando(false);
-    }
-  }
-
-  async function cambiarActivo(formato) {
-    setError(null);
-    try {
-      if (formato.isActive) await api.deleteSchema(formato.id);
-      else await api.updateSchema(formato.id, { isActive: true });
-      await recargar();
-    } catch (fallo) {
-      setError(fallo.message);
-    }
-  }
-
-  async function verVersiones(formato) {
-    if (versiones.formatoId === formato.id) {
-      setVersiones({ formatoId: null, lista: [] });
+  /** On publishing or cloning, the open format stays open, holding what was just saved. */
+  async function onFormatChanged(id) {
+    const list = await reload();
+    if (id === undefined || id === null) {
       return;
     }
-    try {
-      const { versions } = await api.listSchemaVersions(formato.id);
-      setVersiones({ formatoId: formato.id, lista: versions });
-    } catch (fallo) {
-      setError(fallo.message);
+    const found = list.find((one) => one.id === id);
+    if (found !== undefined) {
+      setAbierto(found);
+      setNuevo(false);
     }
   }
 
-  if (cargando) return <p className="schemas-loading">Cargando formatos...</p>;
+  if (creating || opened !== null) {
+    return (
+      <SchemaFormat
+        format={creating ? null : opened}
+        formats={formats}
+        types={types}
+        vocabulary={vocabulary}
+        onChanged={onFormatChanged}
+        onClose={() => {
+          setAbierto(null);
+          setNuevo(false);
+          reload();
+        }}
+        key={creating ? "nuevo" : opened.id}
+      />
+    );
+  }
+
+  const activeTab = TABS.find((one) => one.key === tab) ?? TABS[0];
+  const text = search.trim().toLowerCase();
+  const visible = formats.filter((format) => {
+    if (format.isActive !== (tab === "activos")) {
+      return false;
+    }
+    if (text === "") {
+      return true;
+    }
+    return (
+      format.name.toLowerCase().includes(text) || format.code.toLowerCase().includes(text)
+    );
+  });
 
   return (
     <section className="schemas">
-      <header className="schemas-header">
-        <h2 className="schemas-title">Esquemas de datos</h2>
-        <button type="button" onClick={() => abrir("nuevo")}>
-          Nuevo formato
+      {error !== null ? <p className="schemas-error">{error}</p> : null}
+
+      <div className="schemas-bar">
+        <div className="schemas-tabs">
+          {TABS.map((one) => {
+            const count = formats.filter(
+              (format) => format.isActive === (one.key === "activos"),
+            ).length;
+            return (
+              <button
+                className={one.key === tab ? "schemas-tab is-active" : "schemas-tab"}
+                type="button"
+                onClick={() => setPestana(one.key)}
+                key={one.key}
+              >
+                {one.label}
+                <span className="schemas-tab-count">{count}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <button
+          className="schemas-btn schemas-btn-primary"
+          type="button"
+          onClick={() => setNuevo(true)}
+        >
+          Nuevo format
         </button>
-      </header>
+      </div>
 
-      {error ? <p className="schemas-error">{error}</p> : null}
-      {aviso ? <p className="schemas-notice">{aviso}</p> : null}
+      <p className="schemas-rule">{activeTab.rule}</p>
 
-      <table className="schemas-table">
-        <thead>
-          <tr>
-            <th>Nombre</th>
-            <th>Clave</th>
-            <th>Versión</th>
-            <th>Campos</th>
-            <th>Estado</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {formatos.map((formato) => (
-            <tr className="schemas-row" key={formato.id}>
-              <td>{formato.name}</td>
-              <td className="schemas-cell-code">
-                <code className="schemas-code">{formato.code}</code>
-              </td>
-              <td>{formato.version ?? "—"}</td>
-              <td>
-                {formato.fields
-                  ? `${formato.fields.deliverables.length} entregables, ${formato.fields.information.length} de información`
-                  : "sin versión"}
-              </td>
-              <td>{formato.isActive ? "Activo" : "Inactivo"}</td>
-              <td className="schemas-actions">
-                <button type="button" onClick={() => verVersiones(formato)}>
-                  {versiones.formatoId === formato.id ? "Ocultar versiones" : "Versiones"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => abrir("version", formato)}
-                  disabled={!formato.isActive}
-                >
-                  Actualizar
-                </button>
-                <button type="button" onClick={() => abrir("clon", formato)}>
-                  Clonar
-                </button>
-                <button type="button" onClick={() => cambiarActivo(formato)}>
-                  {formato.isActive ? "Desactivar" : "Reactivar"}
-                </button>
-              </td>
+      <div className="schemas-filters">
+        <div className="schemas-search">
+          <input
+            value={search}
+            onChange={(event) => setBusqueda(event.target.value)}
+            placeholder="Ej: nombre o clave"
+            aria-label="Buscar"
+          />
+        </div>
+      </div>
+
+      <div className="schemas-table-wrap">
+        <table className="schemas-table">
+          <thead>
+            <tr>
+              <th>Formato</th>
+              <th>Qué pide</th>
+              <th>En uso</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-
-      {versiones.formatoId !== null ? (
-        <div className="schemas-versions">
-          <h3>Versiones</h3>
-          <ul>
-            {versiones.lista.map((version) => (
-              <li key={version.id}>
-                v{version.version} — {version.fields.deliverables.length} entregables,{" "}
-                {version.fields.information.length} de información
-                {version.publishedAt
-                  ? ` — publicada el ${new Date(version.publishedAt).toLocaleDateString()}`
-                  : null}
-              </li>
+          </thead>
+          <tbody>
+            {visible.map((format) => (
+              <FormatRow format={format} onOpen={setAbierto} key={format.id} />
             ))}
-          </ul>
-        </div>
-      ) : null}
 
-      {panel?.modo === "nuevo" ? (
-        <div className="schemas-panel">
-          <label className="schemas-field">
-            Clave del formato
-            <input
-              value={nuevo.code}
-              onChange={(evento) => setNuevo({ ...nuevo, code: evento.target.value })}
-              placeholder="papel_institucional"
-            />
-          </label>
-          <label className="schemas-field">
-            Nombre
-            <input
-              value={nuevo.name}
-              onChange={(evento) => setNuevo({ ...nuevo, name: evento.target.value })}
-              placeholder="Papel institucional"
-            />
-          </label>
-
-          <SchemaEditor
-            tipos={tipos}
-            vocabulario={vocabulario}
-            titulo="Campos del formato"
-            onGuardar={crear}
-            onCancelar={() => setPanel(null)}
-            error={errorPanel}
-            guardando={guardando}
-          />
-        </div>
-      ) : null}
-
-      {panel?.modo === "version" ? (
-        <div className="schemas-panel">
-          <p className="schemas-panel-help">
-            Actualizar <strong>{panel.formato.name}</strong>. Los campos se guardan como una
-            versión nueva y la anterior no se toca: lo capturado con ella se sigue leyendo como se
-            capturó.
-          </p>
-          <SchemaEditor
-            tipos={tipos}
-            vocabulario={vocabulario}
-            inicial={panel.formato.fields ?? undefined}
-            titulo={`Campos del formato (quedará como versión ${(panel.formato.version ?? 0) + 1})`}
-            onGuardar={publicarVersion}
-            onCancelar={() => setPanel(null)}
-            error={errorPanel}
-            guardando={guardando}
-          />
-        </div>
-      ) : null}
-
-      {panel?.modo === "clon" ? (
-        <form className="schemas-panel" onSubmit={clonar}>
-          <p className="schemas-panel-help">
-            El formato nuevo empieza con los campos de <strong>{panel.formato.name}</strong>.
-          </p>
-          <label className="schemas-field">
-            Clave del formato nuevo
-            <input
-              value={nuevo.code}
-              onChange={(evento) => setNuevo({ ...nuevo, code: evento.target.value })}
-              required
-            />
-          </label>
-          <label className="schemas-field">
-            Nombre
-            <input
-              value={nuevo.name}
-              onChange={(evento) => setNuevo({ ...nuevo, name: evento.target.value })}
-              required
-            />
-          </label>
-          {errorPanel ? <p className="schemas-error">{errorPanel}</p> : null}
-          <div className="schemas-panel-actions">
-            <button type="submit" disabled={guardando}>
-              {guardando ? "Clonando..." : "Clonar"}
-            </button>
-            <button type="button" onClick={() => setPanel(null)}>
-              Cancelar
-            </button>
-          </div>
-        </form>
-      ) : null}
+            {!loading && visible.length === 0 ? (
+              <tr>
+                <td colSpan={3}>
+                  <p className="schemas-empty">
+                    {text === ""
+                      ? `Nada en «${activeTab.label}».`
+                      : "Ningún formato coincide con lo que buscas."}
+                  </p>
+                </td>
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
+      </div>
     </section>
   );
 }

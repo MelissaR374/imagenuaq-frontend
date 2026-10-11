@@ -1,504 +1,675 @@
+// Roles and permissions (RF-USR-05). The role says what a person can do; their areas say over
+// which records, and the two are independent -- which is why reading and writing are separate
+// permissions and are drawn as separate rows.
+//
+// Every grant is in one grid: permissions by module down the side, roles across the top. A role is
+// then read as a column and a permission as a row, instead of opening one role at a time and
+// comparing from memory.
+//
+// Nothing is written while it is being decided: the grid holds a draft, what changed is marked in
+// amber, and "Guardar cambios" commits it -- one call per role whose grants moved.
 import { Fragment, useEffect, useState } from "react";
 
 import * as api from "../../api/client.js";
+import Help from "../shared/help.jsx";
 import "./roles.css";
 
-// El mismo límite que el servidor: se pone en el input para no mandar algo que va a
-// rechazar.
-const ROL_NOMBRE_MAX = 50;
+const ROLE_NAME_MAX = 50;
+const USERS_MAX = 200;
 
-// El formulario vacío: sirve para empezar y para limpiarlo después de registrar un rol.
-const FORMULARIO_VACIO = { name: "", description: "" };
+/** The four seeded roles read in Spanish; any role added later reads by its own name. */
+const ROLE_NAMES = {
+  admin: "Coordinación",
+  area_lead: "Responsable de área",
+  worker: "Integrante",
+  finance: "Finanzas",
+};
+
+/** The module a permission belongs to, taken from its code: `project.read` is of Proyectos. */
+const GROUP_NAMES = {
+  request: "Solicitudes",
+  project: "Proyectos",
+  workflow: "Flujos",
+  status: "Estatus",
+  task: "Tareas",
+  schema: "Formatos",
+  spreadsheet: "Excel",
+  area: "Áreas y usuarios",
+  finance: "Finanzas",
+  absence: "Ausencias",
+  availability: "Disponibilidad",
+};
+
+const labelOf = (role) => ROLE_NAMES[role.name] ?? role.name;
+const groupOf = (permission) => permission.code.split(".")[0];
+const actionOf = (permission) => permission.code.split(".").pop();
+
+function plural(n, one, many) {
+  return `${n} ${n === 1 ? one : many}`;
+}
+
+/**
+ * Coordinación holds every permission: it is the role the others are configured from, and if it
+ * lost one nobody could give it back. Its column is read-only, which is what the lock says.
+ */
+function isLocked(role) {
+  return role.name === "admin";
+}
+
+function PermissionCell({ role, permission, draft, saved, onToggle }) {
+  const on = draft.includes(permission.code);
+  const was = saved.includes(permission.code);
+  const locked = isLocked(role);
+  const blind =
+    actionOf(permission) === "write" &&
+    on &&
+    !draft.includes(`${groupOf(permission)}.read`);
+
+  return (
+    <td
+      className={`roles-cell ${on !== was ? "is-changed" : ""} ${blind ? "is-blind" : ""} ${
+        locked ? "is-locked" : ""
+      }`}
+      title={
+        locked
+          ? "Coordinación tiene todos los permisos: es el rol desde el que se configuran los demás."
+          : blind
+            ? "Puede editar, pero no ver la lista: le falta el permiso de ver."
+            : undefined
+      }
+    >
+      <input
+        type="checkbox"
+        aria-label={`${labelOf(role)}: ${permission.label}`}
+        checked={on}
+        disabled={locked}
+        onChange={() => onToggle(permission.code)}
+      />
+    </td>
+  );
+}
 
 function Roles() {
   const [roles, setRoles] = useState([]);
-  const [permisos, setPermisos] = useState([]);
-  const [cargando, setCargando] = useState(true);
-
-  // Sube de uno en uno para volver a pedir las listas después de crear, editar o borrar.
-  const [recarga, setRecarga] = useState(0);
-
-  // El formulario de alta
-  const [form, setForm] = useState(FORMULARIO_VACIO);
-  const [guardando, setGuardando] = useState(false);
-  const [errorForm, setErrorForm] = useState(null);
-
-  const [edicion, setEdicion] = useState(null);
-
-  // El rol cuyo panel de permisos está desplegado: null si ninguno.
-  const [abierto, setAbierto] = useState(null);
-
-  // Los códigos marcados en el panel desplegado; se llenan con los que el rol ya tiene.
-  const [seleccion, setSeleccion] = useState([]);
-  const [cargandoPermisos, setCargandoPermisos] = useState(false);
-  const [guardandoPermisos, setGuardandoPermisos] = useState(false);
-
+  const [permissions, setPermissions] = useState([]);
+  const [people, setPeople] = useState([]);
+  const [saved, setSaved] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [reload, setReload] = useState(0);
   const [error, setError] = useState(null);
 
+  const [draft, setDraft] = useState(null);
+  const [openId, setOpenId] = useState(null);
+  const [mode, setMode] = useState(null);
+  const [creating, setCreating] = useState(null);
+  const [saving, setSaving] = useState(false);
+
   useEffect(() => {
-    let cancelado = false;
+    api
+      .listUsers({ limit: USERS_MAX })
+      .then((page) => setPeople(page.users))
+      .catch((err) => setError(err.message));
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
 
     Promise.all([api.listRoles(), api.listPermissions()])
-      .then(([datosRoles, datosPermisos]) => {
-        if (cancelado) return;
-        setRoles(datosRoles.roles);
-        setPermisos(datosPermisos.permissions);
+      .then(async ([roleData, permissionData]) => {
+        const lists = await Promise.all(
+          roleData.roles.map((role) => api.getRolePermissions(role.id)),
+        );
+        if (cancelled) return;
+
+        const byRole = {};
+        roleData.roles.forEach((role, index) => {
+          byRole[role.id] = lists[index].permissions.map((one) => one.code);
+        });
+
+        setRoles(roleData.roles);
+        setPermissions(permissionData.permissions);
+        setSaved(byRole);
+        setDraft({
+          roles: roleData.roles.map((role) => ({ ...role })),
+          grants: { ...byRole },
+        });
         setError(null);
       })
       .catch((err) => {
-        if (!cancelado) setError(err.message);
+        if (!cancelled) setError(err.message);
       })
       .finally(() => {
-        if (!cancelado) setCargando(false);
+        if (!cancelled) setLoading(false);
       });
 
     return () => {
-      cancelado = true;
+      cancelled = true;
     };
-  }, [recarga]);
+  }, [reload]);
 
-  // --- Roles ---
-
-  function handleChange(event) {
-    const { name, value } = event.target;
-    setForm({ ...form, [name]: value });
+  function holdersOf(role) {
+    return people.filter((person) => person.role === role.name);
   }
 
-  async function handleCrear(event) {
-    event.preventDefault();
-    setErrorForm(null);
-    setGuardando(true);
-
-    try {
-      await api.createRole({
-        name: form.name.trim(),
-        description: form.description.trim() || null,
-      });
-      setForm(FORMULARIO_VACIO);
-      setRecarga(recarga + 1);
-    } catch (err) {
-      setErrorForm(err.message);
-    } finally {
-      setGuardando(false);
-    }
-  }
-
-  function handleEditar(rol) {
-    setError(null);
-    setEdicion({
-      id: rol.id,
-      name: rol.name,
-      description: rol.description ?? "",
+  function toggle(role, code) {
+    const list = draft.grants[role.id] ?? [];
+    setDraft({
+      ...draft,
+      grants: {
+        ...draft.grants,
+        [role.id]: list.includes(code)
+          ? list.filter((one) => one !== code)
+          : [...list, code],
+      },
     });
   }
 
-  function handleEdicionChange(event) {
-    const { name, value } = event.target;
-    setEdicion({ ...edicion, [name]: value });
-  }
+  /** What is still unsaved: the count the footer shows and the people it will affect. */
+  function countChanges() {
+    if (draft === null) return { changes: 0, affected: 0 };
+    let changes = 0;
+    const touched = [];
 
-  async function handleGuardar(event) {
-    event.preventDefault();
-    setError(null);
+    for (const role of draft.roles) {
+      const original = roles.find((one) => one.id === role.id);
+      if (!original) {
+        changes += 1;
+        continue;
+      }
+      if (original.name !== role.name) changes += 1;
+      if ((original.description ?? "") !== (role.description ?? "")) changes += 1;
 
-    try {
-      await api.updateRole(edicion.id, {
-        name: edicion.name.trim(),
-        description: edicion.description.trim() || null,
-      });
-      setEdicion(null);
-      setRecarga(recarga + 1);
-    } catch (err) {
-      setError(err.message);
-    }
-  }
-
-  async function handleBorrar(rol) {
-    const seguro = window.confirm(`¿Eliminar el rol ${rol.name}?`);
-    if (!seguro) return;
-
-    setError(null);
-
-    try {
-      await api.deleteRole(rol.id);
-      setRecarga(recarga + 1);
-    } catch (err) {
-      setError(err.message);
-    }
-  }
-
-  // --- Permisos de un rol ---
-
-  async function handleDesplegar(rol) {
-    setError(null);
-
-    if (abierto === rol.id) {
-      setAbierto(null);
-      setSeleccion([]);
-      return;
+      const before = saved[role.id] ?? [];
+      const now = draft.grants[role.id] ?? [];
+      const moved = permissions.filter(
+        (one) => before.includes(one.code) !== now.includes(one.code),
+      ).length;
+      if (moved > 0) {
+        changes += moved;
+        touched.push(original);
+      }
     }
 
-    setAbierto(rol.id);
-    setSeleccion([]);
-    setCargandoPermisos(true);
+    for (const role of roles) {
+      if (!draft.roles.some((one) => one.id === role.id)) changes += 1;
+    }
+
+    const affected = touched.reduce((sum, role) => sum + holdersOf(role).length, 0);
+    return { changes, affected };
+  }
+
+  /**
+   * Commits the draft, role by role: what was renamed, what was deleted, and the grants of every
+   * role whose column moved. A new role is created first, so its grants have an id to go to.
+   */
+  async function handleSave() {
+    setError(null);
+    setSaving(true);
 
     try {
-      const data = await api.getRolePermissions(rol.id);
-      setSeleccion(data.permissions.map((permiso) => permiso.code));
+      for (const role of roles) {
+        if (!draft.roles.some((one) => one.id === role.id)) {
+          await api.deleteRole(role.id);
+        }
+      }
+
+      for (const role of draft.roles) {
+        const original = roles.find((one) => one.id === role.id);
+
+        if (!original) {
+          const made = await api.createRole({
+            name: role.name.trim(),
+            description: role.description?.trim() || null,
+          });
+          await api.setRolePermissions(made.role.id, draft.grants[role.id] ?? []);
+          continue;
+        }
+
+        if (
+          original.name !== role.name.trim() ||
+          (original.description ?? "") !== (role.description ?? "").trim()
+        ) {
+          await api.updateRole(role.id, {
+            name: role.name.trim(),
+            description: role.description?.trim() || null,
+          });
+        }
+
+        const before = saved[role.id] ?? [];
+        const now = draft.grants[role.id] ?? [];
+        const moved = permissions.some(
+          (one) => before.includes(one.code) !== now.includes(one.code),
+        );
+        if (moved) await api.setRolePermissions(role.id, now);
+      }
+
+      setOpenId(null);
+      setMode(null);
     } catch (err) {
       setError(err.message);
     } finally {
-      setCargandoPermisos(false);
+      setSaving(false);
+      setReload(reload + 1);
     }
   }
 
-  function handleMarcar(event) {
-    const { value, checked } = event.target;
-    if (checked) setSeleccion([...seleccion, value]);
-    else setSeleccion(seleccion.filter((codigo) => codigo !== value));
+  function addRole() {
+    const name = creating.name.trim();
+    if (name === "") return;
+
+    const id = `new:${Date.now()}`;
+    setDraft({
+      ...draft,
+      roles: [...draft.roles, { id, name, description: creating.description.trim() || null }],
+      grants: { ...draft.grants, [id]: [...(draft.grants[creating.from] ?? [])] },
+    });
+    setCreating(null);
+    setOpenId(id);
   }
 
-  async function handleGuardarPermisos(event, rol) {
-    event.preventDefault();
-    setError(null);
-    setGuardandoPermisos(true);
-
-    try {
-      await api.setRolePermissions(rol.id, seleccion);
-      setAbierto(null);
-      setSeleccion([]);
-      setRecarga(recarga + 1);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setGuardandoPermisos(false);
-    }
+  if (draft === null) {
+    return (
+      <section className="roles">
+        {error !== null ? (
+          <p className="roles-error" role="alert">
+            {error}
+          </p>
+        ) : (
+          <p className="roles-empty">{loading ? "Cargando…" : "No se pudieron leer los roles."}</p>
+        )}
+      </section>
+    );
   }
+
+  const { changes, affected } = countChanges();
+  const open = draft.roles.find((role) => role.id === openId) ?? null;
+  const groups = [...new Set(permissions.map(groupOf))];
+  const withoutGrants = draft.roles.filter(
+    (role) => (draft.grants[role.id] ?? []).length === 0 && holdersOf(role).length > 0,
+  );
 
   return (
-    <section className="roles-panel">
-      <header className="roles-header">
-        <h1 className="roles-title">Roles</h1>
-
-        <p className="roles-count">
-          {roles.length} {roles.length === 1 ? "rol" : "roles"}
+    <section className="roles">
+      {error !== null && (
+        <p className="roles-error" role="alert">
+          {error}
         </p>
-      </header>
-
-      {/* FORMULARIO DE ALTA */}
-      <form className="role-form" onSubmit={handleCrear}>
-        <h2 className="role-form-title">Registrar un rol</h2>
-
-        <div className="role-form-field">
-          <label className="role-form-label" htmlFor="role-name">
-            Nombre
-          </label>
-
-          <input
-            className="role-form-input"
-            id="role-name"
-            name="name"
-            type="text"
-            required
-            maxLength={ROL_NOMBRE_MAX}
-            value={form.name}
-            onChange={handleChange}
-          />
-        </div>
-
-        <div className="role-form-field">
-          <label className="role-form-label" htmlFor="role-description">
-            Descripción (opcional)
-          </label>
-
-          <textarea
-            className="role-form-textarea"
-            id="role-description"
-            name="description"
-            rows={3}
-            value={form.description}
-            onChange={handleChange}
-          />
-        </div>
-
-        <p className="role-form-error" role="alert">
-          {errorForm}
-        </p>
-
-        <button className="role-form-submit" type="submit" disabled={guardando}>
-          {guardando ? "Registrando..." : "Registrar rol"}
-        </button>
-      </form>
-
-      <p className="roles-error" role="alert">
-        {error}
-      </p>
-
-      {/* TABLA */}
-      <table className="roles-table">
-        <thead>
-          <tr>
-            <th>Nombre</th>
-            <th>Descripción</th>
-            <th>Permisos</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {roles.map((rol) =>
-            edicion && edicion.id === rol.id ? (
-              // La fila en edición: los mismos campos que el formulario de alta.
-              <tr className="roles-row editing" key={rol.id}>
-                <td className="roles-cell-name">
-                  <input
-                    className="roles-edit-input"
-                    name="name"
-                    type="text"
-                    required
-                    maxLength={ROL_NOMBRE_MAX}
-                    form={`role-edit-${rol.id}`}
-                    value={edicion.name}
-                    onChange={handleEdicionChange}
-                  />
-
-                  {/* El servidor compara el nombre del rol con el que trae la sesión, así
-                      que renombrarlo deja fuera a quienes lo tienen hasta que vuelvan a
-                      entrar. */}
-                  <p className="roles-edit-hint">
-                    Al renombrar un rol, quienes lo tienen deben volver a iniciar
-                    sesión.
-                  </p>
-                </td>
-
-                <td className="roles-cell-description">
-                  <input
-                    className="roles-edit-input"
-                    name="description"
-                    type="text"
-                    form={`role-edit-${rol.id}`}
-                    value={edicion.description}
-                    onChange={handleEdicionChange}
-                  />
-                </td>
-
-                <td className="roles-cell-permissions">—</td>
-
-                <td className="roles-cell-actions">
-                  {/* El <form> vive aquí y los inputs de las otras celdas lo referencian con
-                      `form=`: un <form> no puede envolver varios <td>. */}
-                  <form id={`role-edit-${rol.id}`} onSubmit={handleGuardar}>
-                    <button className="roles-action" type="submit">
-                      Guardar
-                    </button>
-
-                    <button
-                      className="roles-action"
-                      type="button"
-                      onClick={() => setEdicion(null)}
-                    >
-                      Cancelar
-                    </button>
-                  </form>
-                </td>
-              </tr>
-            ) : (
-              <Fragment key={rol.id}>
-                <tr
-                  className={`roles-row ${abierto === rol.id ? "open" : ""}`}
-                >
-                  <td className="roles-cell-name">{rol.name}</td>
-
-                  <td className="roles-cell-description">
-                    {rol.description ?? "—"}
-                  </td>
-
-                  <td className="roles-cell-permissions">
-                    <button
-                      className="roles-permissions-toggle"
-                      type="button"
-                      aria-expanded={abierto === rol.id}
-                      onClick={() => handleDesplegar(rol)}
-                    >
-                      {abierto === rol.id ? "Ocultar ▴" : "Ver permisos ▾"}
-                    </button>
-                  </td>
-
-                  {/* El rol admin no se edita ni se borra: es el que administra este
-                      catálogo, y el servidor también lo rechaza. */}
-                  <td className="roles-cell-actions">
-                    <button
-                      className="roles-action"
-                      type="button"
-                      disabled={edicion !== null || rol.name === "admin"}
-                      title={
-                        rol.name === "admin"
-                          ? "El rol admin no se puede editar."
-                          : undefined
-                      }
-                      onClick={() => handleEditar(rol)}
-                    >
-                      Editar
-                    </button>
-
-                    {/* El servidor rechaza borrar un rol que alguien todavía tiene y dice
-                        cuántas personas son; ese mensaje se muestra tal cual arriba. */}
-                    <button
-                      className="roles-action roles-action-danger"
-                      type="button"
-                      disabled={edicion !== null || rol.name === "admin"}
-                      title={
-                        rol.name === "admin"
-                          ? "El rol admin no se puede eliminar."
-                          : undefined
-                      }
-                      onClick={() => handleBorrar(rol)}
-                    >
-                      Eliminar
-                    </button>
-                  </td>
-                </tr>
-
-                {/* PANEL DE PERMISOS DEL ROL */}
-                {abierto === rol.id && (
-                  <tr className="roles-grants-row">
-                    <td className="roles-grants-panel" colSpan={4}>
-                      <h3 className="roles-grants-title">
-                        Permisos de {rol.name}
-                      </h3>
-
-                      {cargandoPermisos && (
-                        <p className="roles-grants-loading">Cargando...</p>
-                      )}
-
-                      {/* Quitarle permisos al rol admin es quitárselos a quien administra
-                          los permisos: si se pierde area.manage, por ejemplo, ya nadie puede
-                          devolverlo desde la aplicación. */}
-                      {rol.name === "admin" && (
-                        <p className="roles-grants-hint">
-                          Este es el rol que administra el sistema. Si le quitas un
-                          permiso, nadie podrá devolvérselo desde aquí.
-                        </p>
-                      )}
-
-                      <form
-                        className="roles-grants-form"
-                        onSubmit={(event) => handleGuardarPermisos(event, rol)}
-                      >
-                        <ul className="roles-grants-list">
-                          {permisos.map((permiso) => (
-                            <li className="roles-grant" key={permiso.id}>
-                              <label
-                                className="roles-grant-label"
-                                htmlFor={`grant-${rol.id}-${permiso.id}`}
-                              >
-                                <input
-                                  className="roles-grant-check"
-                                  id={`grant-${rol.id}-${permiso.id}`}
-                                  type="checkbox"
-                                  value={permiso.code}
-                                  checked={seleccion.includes(permiso.code)}
-                                  disabled={cargandoPermisos}
-                                  onChange={handleMarcar}
-                                />
-
-                                <span className="roles-grant-name">
-                                  {permiso.label}
-                                </span>
-
-                                <code className="roles-grant-code">
-                                  {permiso.code}
-                                </code>
-                              </label>
-                            </li>
-                          ))}
-                        </ul>
-
-                        {permisos.length === 0 && (
-                          <p className="roles-grants-empty">
-                            No hay permisos en el catálogo.
-                          </p>
-                        )}
-
-                        <div className="roles-grants-actions">
-                          <button
-                            className="roles-grants-submit"
-                            type="submit"
-                            disabled={cargandoPermisos || guardandoPermisos}
-                          >
-                            {guardandoPermisos
-                              ? "Guardando..."
-                              : "Guardar permisos"}
-                          </button>
-
-                          <button
-                            className="roles-grants-cancel"
-                            type="button"
-                            onClick={() => handleDesplegar(rol)}
-                          >
-                            Cancelar
-                          </button>
-                        </div>
-                      </form>
-                    </td>
-                  </tr>
-                )}
-              </Fragment>
-            ),
-          )}
-        </tbody>
-      </table>
-
-      {cargando && <p className="roles-loading">Cargando...</p>}
-
-      {!cargando && roles.length === 0 && (
-        <p className="roles-empty">Todavía no hay roles registrados.</p>
       )}
 
-      {/* CATÁLOGO DE PERMISOS: solo lectura. Los códigos los define el sistema, porque cada
-          uno es lo que una ruta del servidor compara para dejar pasar o no; aquí se listan
-          para saber qué significa cada casilla del panel de arriba. */}
-      <section className="permissions-panel">
-        <header className="permissions-header">
-          <h2 className="permissions-title">Catálogo de permisos</h2>
+      <p className="roles-rule">
+        El rol dice qué puede hacer una persona; sus áreas dicen sobre qué registros. Un permiso
+        cambia en cuanto se guarda, sin volver a iniciar sesión.
+      </p>
 
-          <p className="permissions-count">
-            {permisos.length} {permisos.length === 1 ? "permiso" : "permisos"}
-          </p>
-        </header>
+      {withoutGrants.length > 0 && (
+        <p className="roles-rule is-warning">
+          {withoutGrants.map(labelOf).join(" y ")} no{" "}
+          {withoutGrants.length === 1 ? "tiene" : "tienen"} ningún permiso:{" "}
+          {plural(
+            withoutGrants.reduce((sum, role) => sum + holdersOf(role).length, 0),
+            "persona no puede",
+            "personas no pueden",
+          )}{" "}
+          abrir nada fuera de su perfil.
+        </p>
+      )}
 
-        <table className="permissions-table">
+      {creating !== null && (
+        <section className="roles-panel">
+          <div className="roles-panel-head">
+            <span className="roles-eyebrow">ROL NUEVO</span>
+            <button
+              className="roles-close"
+              type="button"
+              aria-label="Cancelar"
+              onClick={() => setCreating(null)}
+            >
+              ✕
+            </button>
+          </div>
+
+          <div className="roles-fields">
+            <label className="roles-field">
+              <span className="roles-label">
+                Nombre
+                <Help text="Como se guarda y como se lee en Empleados y en esta tabla." />
+              </span>
+              <input
+                type="text"
+                maxLength={ROLE_NAME_MAX}
+                placeholder="Ej: practicante"
+                value={creating.name}
+                onChange={(event) => setCreating({ ...creating, name: event.target.value })}
+              />
+            </label>
+
+            <label className="roles-field is-wide">
+              <span className="roles-label">Descripción</span>
+              <input
+                type="text"
+                placeholder="Ej: Apoya en las etapas de su área, sin dar visto bueno."
+                value={creating.description}
+                onChange={(event) => setCreating({ ...creating, description: event.target.value })}
+              />
+            </label>
+
+            <label className="roles-field">
+              <span className="roles-label">
+                Permisos
+                <Help text="Después se ajustan en la tabla, columna por columna." />
+              </span>
+              <select
+                value={creating.from}
+                onChange={(event) => setCreating({ ...creating, from: event.target.value })}
+              >
+                <option value="">Empezar sin permisos</option>
+                {draft.roles
+                  .filter((role) => !isLocked(role))
+                  .map((role) => (
+                    <option key={role.id} value={role.id}>
+                      Copiar los de {labelOf(role)}
+                    </option>
+                  ))}
+              </select>
+            </label>
+          </div>
+
+          <footer className="roles-panel-foot">
+            <span />
+            <span className="roles-right">
+              <button className="roles-btn" type="button" onClick={() => setCreating(null)}>
+                Cancelar
+              </button>
+              <button
+                className="roles-btn"
+                type="button"
+                disabled={creating.name.trim() === ""}
+                onClick={addRole}
+              >
+                Agregar a la tabla
+              </button>
+            </span>
+          </footer>
+        </section>
+      )}
+
+      {open !== null && (
+        <section className="roles-panel">
+          <div className="roles-panel-head">
+            <span className="roles-eyebrow">
+              ROL · {plural(holdersOf(open).length, "PERSONA", "PERSONAS")}
+            </span>
+            <button
+              className="roles-close"
+              type="button"
+              aria-label="Cerrar"
+              onClick={() => {
+                setOpenId(null);
+                setMode(null);
+              }}
+            >
+              ✕
+            </button>
+          </div>
+
+          {isLocked(open) ? (
+            <>
+              <h3 className="roles-panel-title">{labelOf(open)}</h3>
+              <p className="roles-note">
+                {open.description ?? "El rol que administra el sistema."} No se renombra ni se
+                elimina, y conserva todos los permisos: es el rol desde el que se configuran los
+                demás, y sin él nadie podría devolverlos.
+              </p>
+            </>
+          ) : (
+            <div className="roles-fields">
+              <label className="roles-field">
+                <span className="roles-label">
+                  Nombre
+                  <Help text="Al renombrarlo, quienes lo tienen deben volver a iniciar sesión: su sesión guarda el nombre anterior." />
+                </span>
+                <input
+                  type="text"
+                  maxLength={ROLE_NAME_MAX}
+                  value={open.name}
+                  onChange={(event) =>
+                    setDraft({
+                      ...draft,
+                      roles: draft.roles.map((role) =>
+                        role.id === open.id ? { ...role, name: event.target.value } : role,
+                      ),
+                    })
+                  }
+                />
+              </label>
+
+              <label className="roles-field is-wide">
+                <span className="roles-label">Descripción</span>
+                <input
+                  type="text"
+                  value={open.description ?? ""}
+                  onChange={(event) =>
+                    setDraft({
+                      ...draft,
+                      roles: draft.roles.map((role) =>
+                        role.id === open.id ? { ...role, description: event.target.value } : role,
+                      ),
+                    })
+                  }
+                />
+              </label>
+            </div>
+          )}
+
+          <div className="roles-holders">
+            <span className="roles-eyebrow">Lo tienen</span>
+            {holdersOf(open).length > 0 ? (
+              holdersOf(open).map((person) => (
+                <span className="roles-chip" key={person.id}>
+                  {person.fullName}
+                </span>
+              ))
+            ) : (
+              <span className="roles-muted">Nadie todavía.</span>
+            )}
+            <span className="roles-muted">El rol de cada persona se cambia en Empleados.</span>
+          </div>
+
+          <footer className="roles-panel-foot">
+            {isLocked(open) ? (
+              <span />
+            ) : mode === "delete" ? (
+              <p className="roles-confirm">
+                ¿Eliminar el rol {labelOf(open)}? Sus permisos se van con él.
+              </p>
+            ) : (
+              <span className="roles-del">
+                <button
+                  className="roles-quiet is-danger"
+                  type="button"
+                  disabled={holdersOf(open).length > 0}
+                  onClick={() => setMode("delete")}
+                >
+                  Eliminar rol
+                </button>
+                {holdersOf(open).length > 0 && (
+                  <span className="roles-muted">
+                    Lo{" "}
+                    {holdersOf(open).length === 1
+                      ? "tiene 1 persona"
+                      : `tienen ${holdersOf(open).length} personas`}
+                    : cámbiales el rol en Empleados antes de eliminarlo.
+                  </span>
+                )}
+              </span>
+            )}
+
+            <span className="roles-right">
+              {mode === "delete" ? (
+                <>
+                  <button className="roles-btn" type="button" onClick={() => setMode(null)}>
+                    Cancelar
+                  </button>
+                  <button
+                    className="roles-btn is-danger"
+                    type="button"
+                    onClick={() => {
+                      const grants = { ...draft.grants };
+                      delete grants[open.id];
+                      setDraft({
+                        ...draft,
+                        roles: draft.roles.filter((role) => role.id !== open.id),
+                        grants,
+                      });
+                      setOpenId(null);
+                      setMode(null);
+                    }}
+                  >
+                    Eliminar rol
+                  </button>
+                </>
+              ) : (
+                <button
+                  className="roles-btn"
+                  type="button"
+                  onClick={() => {
+                    setOpenId(null);
+                    setMode(null);
+                  }}
+                >
+                  Listo
+                </button>
+              )}
+            </span>
+          </footer>
+        </section>
+      )}
+
+      <div className="roles-wrap" role="region" aria-label="Permisos por rol" tabIndex={0}>
+        <table className="roles-grid">
           <thead>
             <tr>
-              <th>Código</th>
-              <th>Etiqueta</th>
-              <th>Descripción</th>
+              <th className="roles-perm-head">Permiso</th>
+
+              {draft.roles.map((role) => (
+                <th
+                  className={`roles-role-head ${openId === role.id ? "is-open" : ""}`}
+                  key={role.id}
+                >
+                  <button
+                    type="button"
+                    aria-expanded={openId === role.id}
+                    onClick={() => {
+                      setOpenId(openId === role.id ? null : role.id);
+                      setMode(null);
+                      setCreating(null);
+                    }}
+                  >
+                    <strong>{labelOf(role)}</strong>
+                    <span>
+                      {roles.some((one) => one.id === role.id)
+                        ? plural(holdersOf(role).length, "persona", "personas")
+                        : "Nuevo"}
+                    </span>
+                  </button>
+                </th>
+              ))}
+
+              <th className="roles-add-head">
+                <button
+                  type="button"
+                  disabled={creating !== null}
+                  onClick={() => {
+                    setOpenId(null);
+                    setCreating({ name: "", description: "", from: "" });
+                  }}
+                >
+                  + Rol nuevo
+                </button>
+              </th>
             </tr>
           </thead>
 
           <tbody>
-            {permisos.map((permiso) => (
-              <tr className="permissions-row" key={permiso.id}>
-                <td className="permissions-cell-code">
-                  <code>{permiso.code}</code>
-                </td>
+            {groups.map((group) => (
+              <Fragment key={group}>
+                <tr className="roles-group">
+                  <th colSpan={draft.roles.length + 2}>{GROUP_NAMES[group] ?? group}</th>
+                </tr>
 
-                <td className="permissions-cell-label">{permiso.label}</td>
+                {permissions
+                  .filter((permission) => groupOf(permission) === group)
+                  .map((permission) => (
+                    <tr key={permission.id}>
+                      <th className="roles-perm">
+                        <span className="roles-perm-name">
+                          {permission.label}
+                          {permission.description !== null && (
+                            <Help text={permission.description} />
+                          )}
+                        </span>
+                      </th>
 
-                <td className="permissions-cell-description">
-                  {permiso.description ?? "—"}
-                </td>
-              </tr>
+                      {draft.roles.map((role) => (
+                        <PermissionCell
+                          key={role.id}
+                          role={role}
+                          permission={permission}
+                          draft={draft.grants[role.id] ?? []}
+                          saved={saved[role.id] ?? []}
+                          onToggle={(code) => toggle(role, code)}
+                        />
+                      ))}
+
+                      <td className="roles-add-cell" />
+                    </tr>
+                  ))}
+              </Fragment>
             ))}
           </tbody>
         </table>
+      </div>
 
-        {!cargando && permisos.length === 0 && (
-          <p className="permissions-empty">
-            Todavía no hay permisos en el catálogo.
-          </p>
-        )}
-      </section>
+      <footer className="roles-foot">
+        <span className="roles-impact">
+          {changes === 0
+            ? "Sin cambios."
+            : affected > 0
+              ? `Al guardar cambia lo que pueden hacer ${plural(
+                  affected,
+                  "persona",
+                  "personas",
+                )}, desde su siguiente acción.`
+              : "Al guardar, el catálogo de roles queda así."}
+        </span>
+
+        <span className="roles-right">
+          <span className="roles-dirty">
+            {changes > 0 && `${changes} ${changes === 1 ? "cambio" : "cambios"} sin guardar`}
+          </span>
+          {changes > 0 && (
+            <button
+              className="roles-btn"
+              type="button"
+              onClick={() => {
+                setDraft({ roles: roles.map((role) => ({ ...role })), grants: { ...saved } });
+                setOpenId(null);
+                setMode(null);
+              }}
+            >
+              Descartar
+            </button>
+          )}
+          <button
+            className="roles-btn is-primary"
+            type="button"
+            disabled={changes === 0 || saving}
+            onClick={handleSave}
+          >
+            {saving ? "Guardando…" : "Guardar cambios"}
+          </button>
+        </span>
+      </footer>
     </section>
   );
 }

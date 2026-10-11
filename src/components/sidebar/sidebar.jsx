@@ -25,6 +25,7 @@ import {
   MdMenu,
   MdContacts,
   MdAdminPanelSettings,
+  MdLabel,
   MdSwapHoriz,
   MdSchema,
 } from "react-icons/md";
@@ -33,7 +34,6 @@ const menuSections = [
   {
     title: null,
     items: [
-      //VISTAS GENERALES
       {
         label: "Organigrama",
         icon: MdContacts,
@@ -56,7 +56,6 @@ const menuSections = [
       },
       
 
-      //VISTAS TRABAJADOR Y FINANZAS
       {
         label: "Mis tareas",
         icon:MdCheckBox,
@@ -73,7 +72,6 @@ const menuSections = [
         roles: ["trabajador", "finanzas"]
       },
 
-      //VISTA TRABAJADOR
       {
         label: "Mis archivos",
         icon: MdAttachFile,
@@ -83,7 +81,6 @@ const menuSections = [
     ],
   },
   
-  //SECCIONES ADMIN
   {
     title: "ADMINISTRAR",
     items: [
@@ -96,7 +93,6 @@ const menuSections = [
         label: "Bandeja de solicitudes",
         icon: MdInbox,
         roles: ["admin"],
-        //badge: 12,
       },
       {
         label: "Proyectos",
@@ -109,7 +105,6 @@ const menuSections = [
         roles: ["admin"],
       },
       {
-        //ALTA Y BAJA DE CUENTAS, SOLO ADMIN
         label: "Empleados",
         icon: MdBadge,
         roles: ["admin"],
@@ -136,26 +131,27 @@ const menuSections = [
         roles: ["admin"],
       },
       {
-        //ROLES Y SUS PERMISOS, SOLO ADMIN
         label: "Roles y permisos",
         icon: MdAdminPanelSettings,
         roles: ["admin"],
       },
       {
-        //CUENTAS MICROSOFT Y LIBROS DE EXCEL REGISTRADOS, SOLO ADMIN
+        label: "Catálogo de estatus",
+        icon: MdLabel,
+        roles: ["admin"],
+      },
+      {
         label: "Formatos de solicitud",
         icon: MdDescription,
         roles: ["admin"],
       },
       {
-        //LOS ESQUEMAS: QUÉ DATOS LLEVA UN PROYECTO Y DE QUÉ TIPO SON
-        label: "Esquemas de datos",
+        label: "Libros de Excel",
         icon: MdSchema,
         roles: ["admin"],
       },
       {
-        //MAPEO DE LAS COLUMNAS DE LOS LIBROS A LOS ESQUEMAS, Y LA IMPORTACIÓN
-        label: "Configuración de formatos de solicitud",
+        label: "Importar de Excel",
         icon: MdSwapHoriz,
         roles: ["admin"],
       },
@@ -178,7 +174,6 @@ const menuSections = [
     ],
   },
 
-  //SECCIÓN FINANZAS
   {
     title: "COBRO",
     items: [
@@ -197,7 +192,6 @@ const menuSections = [
   },
 
 
-  //SECCIÓN LÍDER
   {
     title: "LÍDER",
     items: [
@@ -242,26 +236,18 @@ const menuSections = [
         label: "Capacidad y turnos",
         icon: MdAssignmentInd,
         roles: ["lider"],
-        //badge: 12,
       },
     ],
   },
 ];
 
-// `foto` es el object URL de la foto de perfil, o null para mostrar las iniciales.
+/** `foto` es el object URL de la foto de perfil, o null para mostrar las iniciales. */
 function Sidebar({ usuario, foto = null, role = "admin", activeItem = "Proyectos", onNavigate, onLogout}) {
   
-  //CREAMOS EL ESTADO, al inicio es false
-  /* isClosed = false -> menú abierto 
-    Al presionar el botón será:
-    isClosed = true -> menú cerrado
-    */
   const [isClosed, setIsClosed] = useState(false);
 
   return (
-    /*operador ternario  condición ? expresion si es verdadera : expresion si es falsa  */
     <aside className={`sidebar ${isClosed ? "closed" : ""}`}>
-      {/* LOGO */}
       <div className="sidebar-brand">
         <div className="brand-icon">
           <span></span>
@@ -275,9 +261,7 @@ function Sidebar({ usuario, foto = null, role = "admin", activeItem = "Proyectos
       </div>
       
 
-      {/* MENÚ */}
       <nav className="sidebar-menu">
-        {/* section = sección actual, sectionIndex = índice de las secciones (0,1,2,3,4,...)*/}
         {menuSections.map((section, sectionIndex) => {
           const visibleItems = section.items.filter((item) =>
             item.roles.includes(role),
@@ -317,7 +301,6 @@ function Sidebar({ usuario, foto = null, role = "admin", activeItem = "Proyectos
         })}
       </nav>
 
-      {/* USUARIO: hacer clic abre "Mi perfil" */}
       <div className={`sidebar-user ${activeItem === "Mi perfil" ? "active" : ""}`}>
         <button
           className="user-profile"
