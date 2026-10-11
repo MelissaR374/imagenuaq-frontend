@@ -18,7 +18,7 @@ import Projects from "./components/projects/projects.jsx";
 import Profile from "./components/profile/profile.jsx";
 import Notifications from "./components/notifications/notifications.jsx";
 import FlowDesigner from "./components/FlowDesigner/FlowDesigner.jsx";
-import StatusCatalog from "./components/projects/statusCatalog.jsx";
+import StatusCatalog from "./components/statusCatalog/statusCatalog.jsx";
 
 import * as api from "./api/client.js";
 import { MICROSOFT_PARAM } from "./config.js";

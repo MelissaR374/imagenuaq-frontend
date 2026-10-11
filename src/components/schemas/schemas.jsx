@@ -42,7 +42,7 @@ function fieldTally(format) {
   const required = [...deliverables, ...information].filter((campo) => campo.required).length;
 
   return `${total} ${total === 1 ? "campo" : "campos"} · ${required} ${
-    required === 1 ? "obligatorio" : "required"
+    required === 1 ? "obligatorio" : "obligatorios"
   } · ${deliverables.length} de entrega`;
 }
 

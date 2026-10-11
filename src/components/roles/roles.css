@@ -1,695 +1,586 @@
-@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap");
+/* Roles y permisos. Layout ported from the "Lienzo" prototype: one grid with the permissions down
+   the side and the roles across, the open role above it, and the save bar fixed to the bottom. */
 
-.roles-panel {
-  min-height: 100vh;
-  padding: 28px 32px 40px;
-  background: var(--background);
-  box-sizing: border-box;
-  font-family: "Poppins", sans-serif;
-  color: var(--text);
-  transition:
-    background-color 0.3s ease,
-    color 0.3s ease;
-}
-
-.roles-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 20px;
-}
-
-.roles-title {
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--text);
-  margin: 0 5px 0;
-  transition: color 0.3s ease;
-}
-
-.roles-count {
-  margin: 0;
-  font-size: 13px;
-  color: var(--text-muted);
-}
-
-/* =========================================================
-   TARJETA DEL FORMULARIO
-   ========================================================= */
-
-.role-form {
-  position: relative;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  column-gap: 12px;
-  row-gap: 13px;
-  padding: 20px 24px 24px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
-  box-sizing: border-box;
-  font-family: "Poppins", sans-serif;
-
-  transition:
-    background-color 0.3s ease,
-    border-color 0.3s ease;
-}
-
-/* TÍTULO: "Registrar un rol" */
-.role-form-title {
-  grid-column: 1 / -1;
-  margin: 0 0 1px;
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.role-form-field {
+.roles {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  min-width: 0;
+
+  min-height: 100%;
+  padding-bottom: 0;
 }
 
-/* Nombre */
-.role-form-field:nth-of-type(1) {
-  grid-column: 1;
-  grid-row: 2;
-}
+.roles-rule {
+  margin: 0 0 10px;
 
-/* Descripción: a la derecha, ocupa dos filas para que el textarea tenga alto */
-.role-form-field:nth-of-type(2) {
-  grid-column: 2;
-  grid-row: 2 / span 2;
-}
-
-.role-form-label {
-  font-size: 14px;
-  font-weight: 600;
   color: var(--text-secondary);
+
+  font-size: var(--size-small);
 }
 
-.role-form-input,
-.role-form-textarea {
-  width: 100%;
-  padding: 0 11px;
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  background: var(--surface-secondary);
+/* A role with people and no permissions is a person who cannot open anything: said in amber. */
+.roles-rule.is-warning {
+  padding-left: 9px;
+
+  border-left: 3px solid var(--warning);
+
   color: var(--text);
-  font-family: inherit;
-  font-size: 11px;
-  outline: none;
-  box-sizing: border-box;
-
-  transition:
-    background-color 0.3s ease,
-    color 0.3s ease,
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
-}
-
-.role-form-input {
-  height: 36px;
-}
-
-.role-form-textarea {
-  flex: 1;
-  min-height: 85px;
-  padding: 9px 11px;
-  line-height: 1.5;
-  resize: vertical;
-}
-
-.role-form-input::placeholder,
-.role-form-textarea::placeholder {
-  color: var(--text-muted);
-}
-
-.role-form-input:focus,
-.role-form-textarea:focus {
-  border-color: #3b73b9;
-  box-shadow: 0 0 0 2px rgba(59, 115, 185, 0.08);
-}
-
-.role-form-error {
-  grid-column: 1 / -1;
-  margin: 0;
-  font-size: 10px;
-  color: #d9534f;
-}
-
-.role-form-error:empty {
-  display: none;
-}
-
-/* Debajo del nombre, en la columna izquierda, a la altura del final del textarea */
-.role-form-submit {
-  grid-column: 1;
-  grid-row: 3;
-  justify-self: start;
-  align-self: end;
-  height: 32px;
-  min-width: 140px;
-  padding: 0 16px;
-  border: none;
-  border-radius: 5px;
-  background: #2864a8;
-  color: #ffffff;
-  font-family: inherit;
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  transition:
-    background 0.15s ease,
-    transform 0.1s ease;
-}
-
-.role-form-submit:hover {
-  background: #205895;
-}
-
-.role-form-submit:active {
-  transform: translateY(1px);
-}
-
-.role-form-submit:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
 }
 
 .roles-error {
-  margin: 10px 0;
-  font-size: 11px;
-  color: #d9534f;
-  font-family: "Poppins", sans-serif;
-}
-
-.roles-error:empty {
-  display: none;
-}
-
-/* =========================================================
-   TABLA DE ROLES
-   ========================================================= */
-
-.roles-table,
-.permissions-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
-  font-family: "Poppins", sans-serif;
-
-  transition:
-    background-color 0.3s ease,
-    border-color 0.3s ease;
-}
-
-.roles-table {
-  margin-top: 34px;
-}
-
-/* Encabezados */
-
-.roles-table thead,
-.permissions-table thead {
-  background: var(--surface);
-}
-
-.roles-table th,
-.permissions-table th {
-  height: 32px;
-  padding: 0 18px;
-  border-bottom: 1px solid var(--border-light);
-  text-align: center;
-  font-size: 14px;
-  font-weight: 700;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-}
-
-/* Nombre y descripción van a la izquierda: los textos largos no se leen centrados */
-.roles-table th:nth-child(1),
-.roles-table th:nth-child(2) {
-  text-align: left;
-}
-
-/* Celdas */
-
-.roles-table td,
-.permissions-table td {
-  height: 40px;
-  padding: 0 18px;
-  border-bottom: 1px solid var(--border-light);
-  font-size: 12px;
-  color: var(--text-secondary);
-  text-align: center;
-}
-
-.roles-table tbody tr:last-child td,
-.permissions-table tbody tr:last-child td {
-  border-bottom: none;
-}
-
-.roles-cell-name {
-  font-weight: 600;
-  color: var(--text) !important;
-  text-align: left !important;
-  white-space: nowrap;
-}
-
-.roles-cell-description {
-  max-width: 320px;
-  color: var(--text) !important;
-  text-align: left !important;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.roles-cell-permissions {
-  white-space: nowrap;
-}
-
-.roles-cell-actions {
-  text-align: right;
-  white-space: nowrap;
-}
-
-/* La fila desplegada se funde con su panel */
-.roles-row.open td {
-  background: var(--surface-secondary);
-  border-bottom-color: transparent;
-}
-
-.roles-row.editing td {
-  background: var(--surface-secondary);
-  vertical-align: top;
-  padding-top: 8px;
-  padding-bottom: 8px;
-}
-
-.roles-edit-input {
-  width: 100%;
-  height: 30px;
-  padding: 0 9px;
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  background: var(--surface);
-  color: var(--text);
-  font-family: inherit;
-  font-size: 11px;
-  outline: none;
-  box-sizing: border-box;
-
-  transition:
-    background-color 0.3s ease,
-    color 0.3s ease,
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
-}
-
-.roles-edit-input:focus {
-  border-color: #3b73b9;
-  box-shadow: 0 0 0 2px rgba(59, 115, 185, 0.08);
-}
-
-/* La advertencia al renombrar: mismo tono que las ayudas de los formularios */
-.roles-edit-hint {
-  margin: 5px 1px 0;
-  font-size: 10px;
-  line-height: 1.3;
-  font-weight: 400;
-  white-space: normal;
-  color: var(--text-muted);
-}
-
-.roles-cell-actions form {
-  display: inline;
-}
-
-.roles-action {
-  padding: 0;
-  border: none;
-  background: transparent;
-  font-family: inherit;
-  font-size: 10px;
-  font-weight: 600;
-  color: #3270b5;
-  cursor: pointer;
-}
-
-.roles-action:hover {
-  text-decoration: underline;
-}
-
-.roles-action + .roles-action {
-  margin-left: 12px;
-}
-
-.roles-action-danger {
-  color: #e45c5c;
-}
-
-.roles-action:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.roles-action:disabled:hover {
-  text-decoration: none;
-}
-
-.roles-permissions-toggle {
-  min-width: 46px;
-  height: 24px;
-  padding: 0 10px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--surface);
-  color: var(--text-secondary);
-  font-family: inherit;
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-
-  transition:
-    background-color 0.15s ease,
-    border-color 0.15s ease,
-    color 0.15s ease;
-}
-
-.roles-permissions-toggle:hover,
-.roles-permissions-toggle[aria-expanded="true"] {
-  border-color: #3b73b9;
-  color: #3270b5;
-}
-
-/* =========================================================
-   PANEL DE PERMISOS DEL ROL
-   ========================================================= */
-
-.roles-grants-row td {
-  height: auto;
-  padding: 0;
-}
-
-.roles-grants-panel {
-  padding: 14px 24px 18px !important;
-  background: var(--surface-secondary);
-  text-align: left !important;
-  border-bottom: 1px solid var(--border-light);
-}
-
-.roles-grants-title {
-  margin: 0 0 10px;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.roles-grants-loading,
-.roles-grants-empty {
   margin: 0 0 12px;
-  font-size: 11px;
-  color: var(--text-muted);
+  padding: 9px 12px;
+
+  border-left: 3px solid var(--danger);
+  border-radius: 0 6px 6px 0;
+
+  background: var(--danger-soft);
+  color: var(--text);
+
+  font-size: var(--size-small);
 }
 
-/* La advertencia del rol admin: se queda en ámbar para que no se lea como un error */
-.roles-grants-hint {
-  margin: 0 0 12px;
-  padding: 8px 12px;
-  border: 1px solid rgba(214, 153, 30, 0.45);
-  border-radius: 6px;
-  background: rgba(214, 153, 30, 0.1);
-  font-size: 11px;
-  line-height: 1.4;
-  color: #a8701a;
-}
-
-/* Las casillas en columnas: cada permiso es una tarjeta pequeña, como un integrante en
-   el panel de áreas */
-.roles-grants-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 6px;
-  margin: 0 0 14px;
-  padding: 0;
-  list-style: none;
-}
-
-.roles-grant {
-  min-width: 0;
-}
-
-.roles-grant-label {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  height: 100%;
-  padding: 8px 12px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font-size: 11px;
-  cursor: pointer;
-  box-sizing: border-box;
-
-  transition:
-    background-color 0.3s ease,
-    border-color 0.15s ease;
-}
-
-.roles-grant-label:hover {
-  border-color: #3b73b9;
-}
-
-/* La tarjeta marcada se ve como la de un responsable en áreas */
-.roles-grant-label:has(.roles-grant-check:checked) {
-  border-color: #3b73b9;
-}
-
-.roles-grant-check {
-  flex-shrink: 0;
-  width: 13px;
-  height: 13px;
+.roles-empty {
   margin: 0;
-  cursor: pointer;
-}
+  padding: 30px;
 
-.roles-grant-check:disabled {
-  cursor: not-allowed;
-  opacity: 0.55;
-}
-
-.roles-grant-name {
-  font-weight: 600;
-  color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* El código a la derecha, en monoespaciado como el token de invitación */
-.roles-grant-code,
-.permissions-cell-code code {
-  padding: 2px 7px;
-  border-radius: 10px;
-  background: rgba(59, 115, 185, 0.12);
-  color: #3270b5;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 10px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.roles-grant-code {
-  margin-left: auto;
-}
-
-.roles-grants-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
-.roles-grants-submit,
-.roles-grants-cancel {
-  height: 30px;
-  padding: 0 14px;
-  border-radius: 5px;
-  font-family: inherit;
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  transition:
-    background-color 0.15s ease,
-    border-color 0.15s ease,
-    color 0.15s ease,
-    transform 0.1s ease;
-}
-
-.roles-grants-submit:active,
-.roles-grants-cancel:active {
-  transform: translateY(1px);
-}
-
-/* Guardar: botón principal, igual que "Registrar rol" */
-.roles-grants-submit {
-  border: none;
-  background: #2864a8;
-  color: #ffffff;
-}
-
-.roles-grants-submit:hover {
-  background: #205895;
-}
-
-.roles-grants-submit:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-/* Cancelar: secundario, como los de la tarjeta de invitación */
-.roles-grants-cancel {
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text-secondary);
-}
-
-.roles-grants-cancel:hover {
-  border-color: #3b73b9;
-  color: #3270b5;
-}
-
-.roles-loading,
-.roles-empty,
-.permissions-empty {
-  margin: 20px 0;
-  text-align: center;
-  font-size: 11px;
   color: var(--text-muted);
-  font-family: "Poppins", sans-serif;
+
+  font-size: var(--size-small);
+  text-align: center;
 }
 
 /* =========================================================
-   CATÁLOGO DE PERMISOS
-   ========================================================= */
+   THE OPEN ROLE
+========================================================= */
 
-.permissions-panel {
-  margin-top: 40px;
+.roles-panel {
+  margin-bottom: 14px;
+  padding: 14px 16px 0;
+
+  border: 1px solid var(--border);
+  border-radius: 8px;
+
+  background: var(--surface);
 }
 
-.permissions-header {
+.roles-panel-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 20px;
+  gap: 10px;
+
+  margin-bottom: 12px;
 }
 
-.permissions-title {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--text);
-  margin: 0 5px 0;
-  transition: color 0.3s ease;
-}
-
-.permissions-count {
-  margin: 0;
-  font-size: 13px;
+.roles-eyebrow {
   color: var(--text-muted);
-}
 
-/* Todo a la izquierda: son tres columnas de texto */
-.permissions-table th,
-.permissions-table td {
-  text-align: left;
-}
-
-.permissions-cell-code {
-  white-space: nowrap;
-}
-
-.permissions-cell-label {
+  font-size: var(--size-caps);
   font-weight: 600;
-  color: var(--text) !important;
-  white-space: nowrap;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
 }
 
-.permissions-cell-description {
-  color: var(--text) !important;
+.roles-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  width: 26px;
+  height: 26px;
+
+  border: 0;
+  border-radius: 4px;
+
+  background: var(--surface-secondary);
+  color: var(--text-muted);
+
+  font: inherit;
+  font-size: 15px;
+
+  cursor: pointer;
+}
+
+.roles-close:hover {
+  color: var(--text);
+}
+
+.roles-panel-title {
+  margin: 0 0 6px;
+
+  font-size: 15px;
+}
+
+.roles-note {
+  margin: 0;
+
+  max-width: 76ch;
+
+  color: var(--text-secondary);
+
+  font-size: var(--size-small);
+}
+
+.roles-holders {
+  display: flex;
+  align-items: center;
+  gap: 6px 8px;
+  flex-wrap: wrap;
+
+  margin: 12px 0 0;
+
+  font-size: var(--size-small);
+}
+
+.roles-chip {
+  padding: 1px 9px;
+
+  border: 1px solid var(--border-light);
+  border-radius: 999px;
+
+  background: var(--surface-secondary);
+  color: var(--text-secondary);
+
+  font-size: var(--size-small);
+}
+
+.roles-muted {
+  color: var(--text-muted);
+
+  font-size: var(--size-small);
 }
 
 /* =========================================================
-   RESPONSIVE
-   ========================================================= */
+   FIELDS
+========================================================= */
 
-@media (max-width: 900px) {
-  .roles-panel {
-    padding: 22px 20px 30px;
-  }
-
-  .role-form {
-    grid-template-columns: 1fr;
-  }
-
-  .role-form-field:nth-of-type(1),
-  .role-form-field:nth-of-type(2) {
-    grid-column: 1;
-    grid-row: auto;
-  }
-
-  .role-form-submit {
-    grid-column: 1;
-    grid-row: auto;
-  }
-
-  .roles-table,
-  .permissions-table {
-    display: block;
-    overflow-x: auto;
-  }
-
-  .roles-grants-list {
-    grid-template-columns: 1fr;
-  }
+.roles-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
 }
 
-@media (max-width: 600px) {
-  .roles-panel {
-    padding: 18px 14px 25px;
-  }
+.roles-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 
-  .roles-title {
-    font-size: 20px;
-  }
+  min-width: 0;
+}
 
-  .role-form {
-    padding: 17px;
-  }
+.roles-field.is-wide {
+  grid-column: 1 / -1;
+}
 
-  .roles-table th,
-  .roles-table td,
-  .permissions-table th,
-  .permissions-table td {
-    padding: 0 12px;
-  }
+.roles-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 
-  .roles-grants-panel {
-    padding: 12px 14px 16px !important;
-  }
+  color: var(--text-secondary);
 
-  .role-form-submit,
-  .roles-grants-submit,
-  .roles-grants-cancel {
-    width: 100%;
-  }
+  font-size: var(--size-small);
+}
+
+.roles-field input,
+.roles-field select {
+  height: 32px;
+  padding: 0 8px;
+
+  border: 1px solid var(--border);
+  border-radius: 6px;
+
+  background: var(--field);
+  color: var(--text);
+
+  font: inherit;
+  font-size: var(--size-body);
+  font-weight: 500;
+}
+
+.roles-field input:focus-visible,
+.roles-field select:focus-visible {
+  border-color: var(--accent-line);
+
+  outline: none;
+}
+
+.roles-panel-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+
+  margin: 14px -16px 0;
+  padding: 12px 16px;
+
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 8px 8px;
+
+  background: var(--surface);
+}
+
+.roles-confirm {
+  margin: 0;
+
+  color: var(--text);
+
+  font-size: var(--size-small);
+}
+
+.roles-del,
+.roles-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* =========================================================
+   THE GRID
+========================================================= */
+
+.roles-wrap {
+  flex: 1;
+  overflow: auto;
+
+  margin-bottom: 18px;
+
+  border: 1px solid var(--border);
+  border-radius: 8px;
+
+  background: var(--surface);
+}
+
+.roles-grid {
+  min-width: 100%;
+
+  border-collapse: separate;
+  border-spacing: 0;
+
+  font-size: var(--size-body);
+}
+
+.roles-grid th,
+.roles-grid td {
+  border-bottom: 1px solid var(--border-light);
+}
+
+.roles-grid thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+
+  border-bottom: 1px solid var(--border);
+
+  background: var(--surface);
+  vertical-align: bottom;
+}
+
+/* The permission's name stays in view while the roles scroll sideways. */
+.roles-perm-head,
+.roles-perm,
+.roles-group th {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+
+  background: var(--surface);
+}
+
+.roles-grid thead .roles-perm-head {
+  z-index: 3;
+
+  padding: 10px 14px;
+
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.roles-role-head {
+  min-width: 118px;
+  padding: 6px 4px;
+}
+
+.roles-role-head button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+
+  width: 100%;
+  padding: 6px 8px;
+
+  border: 1px solid transparent;
+  border-radius: 6px;
+
+  background: transparent;
+  color: var(--text);
+
+  font: inherit;
+  text-align: center;
+
+  cursor: pointer;
+}
+
+.roles-role-head button:hover {
+  background: var(--surface-secondary);
+}
+
+.roles-role-head.is-open button {
+  border-color: var(--accent-line);
+
+  background: var(--accent-soft);
+}
+
+.roles-role-head strong {
+  font-size: var(--size-body);
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.roles-role-head span {
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
+  font-weight: 400;
+}
+
+.roles-add-head {
+  padding: 6px 10px;
+}
+
+.roles-add-head button {
+  height: 44px;
+  padding: 0 12px;
+
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+
+  background: var(--surface-secondary);
+  color: var(--text-muted);
+
+  font: inherit;
+  font-size: var(--size-small);
+
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.roles-add-head button:hover:not(:disabled) {
+  border-color: var(--text-muted);
+
+  color: var(--text-secondary);
+}
+
+.roles-add-head button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.roles-group th {
+  padding: 14px 14px 6px;
+
+  background: var(--surface-secondary);
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.roles-perm {
+  padding: 8px 14px;
+
+  color: var(--text);
+
+  font-weight: 500;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.roles-perm-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.roles-cell {
+  padding: 6px;
+
+  text-align: center;
+}
+
+.roles-cell input {
+  width: 17px;
+  height: 17px;
+
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.roles-cell.is-locked input {
+  opacity: 0.7;
+  cursor: default;
+}
+
+/* What the draft moved, until it is saved with everything else. */
+.roles-cell.is-changed {
+  border-radius: 4px;
+
+  box-shadow: inset 0 0 0 2px var(--warning);
+}
+
+/* Can write but not read: the grant that looks given and is not usable. */
+.roles-cell.is-blind {
+  background: var(--warning-soft);
+}
+
+.roles-add-cell {
+  min-width: 1px;
+}
+
+.roles-grid tbody tr:not(.roles-group):hover td,
+.roles-grid tbody tr:not(.roles-group):hover .roles-perm {
+  background: var(--surface-secondary);
+}
+
+/* =========================================================
+   THE SAVE BAR
+========================================================= */
+
+.roles-foot {
+  position: sticky;
+  bottom: 0;
+  z-index: 4;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+
+  padding: 12px 0;
+
+  border-top: 1px solid var(--border);
+
+  background: var(--background);
+}
+
+.roles-impact {
+  color: var(--text-secondary);
+
+  font-size: var(--size-small);
+}
+
+.roles-dirty {
+  color: var(--warning);
+
+  font-size: var(--size-small);
+}
+
+/* =========================================================
+   BUTTONS
+========================================================= */
+
+.roles-btn {
+  height: 32px;
+  padding: 0 12px;
+
+  border: 1px solid var(--border);
+  border-radius: 6px;
+
+  background: var(--surface);
+  color: var(--text);
+
+  font: inherit;
+  font-size: var(--size-small);
+
+  cursor: pointer;
+}
+
+.roles-btn:hover:not(:disabled) {
+  border-color: var(--accent-line);
+}
+
+.roles-btn:disabled {
+  color: var(--text-muted);
+  cursor: default;
+}
+
+.roles-btn.is-primary {
+  border-color: var(--accent);
+
+  background: var(--accent);
+  color: #ffffff;
+
+  font-weight: 600;
+}
+
+.roles-btn.is-primary:hover:not(:disabled) {
+  border-color: var(--accent-hover);
+  background: var(--accent-hover);
+}
+
+.roles-btn.is-primary:disabled {
+  border-color: var(--border);
+
+  background: var(--surface-secondary);
+  color: var(--text-muted);
+}
+
+.roles-btn.is-danger {
+  border-color: var(--danger);
+
+  background: var(--danger);
+  color: #ffffff;
+
+  font-weight: 600;
+}
+
+.roles-quiet {
+  padding: 2px 8px;
+
+  border: 1px solid transparent;
+  border-radius: 4px;
+
+  background: transparent;
+  color: var(--accent-line);
+
+  font: inherit;
+  font-size: var(--size-small);
+
+  cursor: pointer;
+}
+
+.roles-quiet:hover:not(:disabled) {
+  background: var(--accent-soft);
+}
+
+.roles-quiet:disabled {
+  color: var(--text-muted);
+  cursor: default;
+}
+
+.roles-quiet.is-danger {
+  color: var(--danger);
+}
+
+.roles-quiet.is-danger:hover:not(:disabled) {
+  border-color: var(--danger);
+
+  background: var(--danger-soft);
+}
+
+.roles-quiet.is-danger:disabled {
+  color: var(--text-muted);
 }

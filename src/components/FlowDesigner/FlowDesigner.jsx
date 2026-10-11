@@ -741,9 +741,9 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
                     />
 
                     <div className="modal-field">
-                        <label htmlFor="etapa-nota-entrada">Qué recibe (nota)</label>
+                        <label htmlFor="stage-note-input">Qué recibe (nota)</label>
                         <textarea
-                            id="etapa-nota-entrada"
+                            id="stage-note-input"
                             rows={3}
                             value={modal.etapa.inputNote}
                             onChange={(event) => cambiarEtapa("inputNote", event.target.value)}
@@ -761,13 +761,13 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
                     />
 
                     <div className="modal-field">
-                        <label htmlFor="etapa-nota-salida">Qué entrega (nota)</label>
+                        <label htmlFor="stage-note-output">Qué entrega (nota)</label>
                         <p className="flow-field-help">
                             Para señalar una entrega que no se captura como dato. Queda como aviso
                             para quien lee el flujo; el sistema no la revisa.
                         </p>
                         <textarea
-                            id="etapa-nota-salida"
+                            id="stage-note-output"
                             rows={3}
                             value={modal.etapa.outputNote}
                             onChange={(event) => cambiarEtapa("outputNote", event.target.value)}

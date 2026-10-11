@@ -23,3 +23,13 @@ export function columnLetter(index) {
   }
   return letter;
 }
+
+/** The initials of a full name, for the small round mark that stands in for a photo. */
+export function initials(fullName) {
+  return fullName
+    .split(" ")
+    .filter((part) => part !== "")
+    .slice(0, 2)
+    .map((part) => part[0].toUpperCase())
+    .join("");
+}
