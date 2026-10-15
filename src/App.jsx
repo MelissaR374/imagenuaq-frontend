@@ -8,6 +8,7 @@ import { MdLightMode, MdDarkMode } from "react-icons/md";
 
 import Login from "./components/login/login.jsx";
 import Sidebar from "./components/sidebar/sidebar.jsx";
+import { canSee } from "./components/sidebar/menu.js";
 import Users from "./components/users/users.jsx";
 import Areas from "./components/areas/areas.jsx";
 import Roles from "./components/roles/roles.jsx";
@@ -167,6 +168,7 @@ function Aplicacion() {
   if (verificando) return <p className="app-booting">Cargando...</p>;
   if (!usuario) return <Login onEntrar={setUsuario} />;
 
+  const rol = ROLES[usuario.role] ?? "trabajador";
   const activa =
     pestana ?? (usuario.role === "admin" ? "Empleados" : "Notificaciones");
 
@@ -179,7 +181,7 @@ function Aplicacion() {
       <Sidebar
         usuario={usuario}
         foto={foto}
-        role={ROLES[usuario.role] ?? "trabajador"}
+        role={rol}
         permisos={permisos}
         activeItem={activa}
         onNavigate={setPestana}
@@ -211,7 +213,7 @@ function Aplicacion() {
           </div>
         </header>
 
-        {activa === "Notificaciones" ? (
+        {!canSee(activa, rol, permisos) ? null : activa === "Notificaciones" ? (
           <Notifications />
         ) : activa === "Mi perfil" ? (
           <Profile
@@ -220,29 +222,29 @@ function Aplicacion() {
             onActualizar={actualizarUsuario}
             onFoto={cambiarFoto}
           />
-        ) : activa === "Empleados" && usuario.role === "admin" ? (
+        ) : activa === "Empleados" ? (
           <Users admin={usuario} />
-        ) : activa === "Áreas y usuarios" && usuario.role === "admin" ? (
+        ) : activa === "Áreas y usuarios" ? (
           <Areas />
-        ) : activa === "Roles y permisos" && usuario.role === "admin" ? (
+        ) : activa === "Roles y permisos" ? (
           <Roles />
-        ) : activa === "Formatos de solicitud" && usuario.role === "admin" ? (
+        ) : activa === "Formatos de solicitud" ? (
           <Schemas />
-        ) : activa === "Libros de Excel" && usuario.role === "admin" ? (
+        ) : activa === "Libros de Excel" ? (
           <Spreadsheets onGo={setPestana} />
-        ) : activa === "Importar de Excel" && usuario.role === "admin" ? (
+        ) : activa === "Importar de Excel" ? (
           <ImportConfig onGo={setPestana} />
-        ) : activa === "Bandeja de solicitudes" && usuario.role === "admin" ? (
+        ) : activa === "Bandeja de solicitudes" ? (
           <Inbox />
-        ) : activa === "Proyectos" && usuario.role === "admin" ? (
+        ) : activa === "Proyectos" ? (
           <Projects user={usuario} />
-        ) : activa === "Catálogo de estatus" && usuario.role === "admin" ? (
+        ) : activa === "Catálogo de estatus" ? (
           <StatusCatalog />
-        ) : activa === "Diseñador de flujos" && usuario.role === "admin" ? (
+        ) : activa === "Diseñador de flujos" ? (
           <FlowDesigner />
-        ) : activa === "Archivos" && permisos.includes("document.browse") ? (
+        ) : activa === "Archivos" ? (
           <Documents />
-        ) : activa === "Retención de archivos" && usuario.role === "admin" ? (
+        ) : activa === "Retención de archivos" ? (
           <Retention />
         ) : null}
       </main>

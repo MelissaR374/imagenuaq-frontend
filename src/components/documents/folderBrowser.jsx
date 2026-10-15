@@ -289,7 +289,7 @@ function FolderBrowser({ root, areas }) {
 
               {issued === null ? null : (
                 <p className="folder-issued">
-                  Copia este enlace para compartir los archivos del proyecto. Solo se mostrara una vez a menos
+                  Copia este enlace para compartir los archivos del proyecto. Solo se mostrara una vez
                   <input readOnly value={issued} onFocus={(event) => event.target.select()} />
                 </p>
               )}
