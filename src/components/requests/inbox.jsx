@@ -437,7 +437,7 @@ function Inbox() {
         </div>
 
         <button className="inbox-btn inbox-btn-primary" type="button" onClick={openCapture}>
-          Nueva request
+          Nueva solicitud
         </button>
       </div>
 
@@ -473,7 +473,7 @@ function Inbox() {
           onChange={(event) => changeFilter("statusId", event.target.value)}
           aria-label="Estatus"
         >
-          <option value="">Todos los statuses</option>
+          <option value="">Todos los estatus</option>
           {statuses.map((uno) => (
             <option value={uno.id} key={uno.id}>
               {uno.label}
@@ -548,8 +548,8 @@ function Inbox() {
                         <RequestDetail
                           request={opened}
                           areas={areas}
-                          onCerrar={close}
-                          onCambio={followTheStep}
+                          onClose={close}
+                          onChanged={followTheStep}
                           key={opened.id}
                         />
                       </td>

@@ -335,7 +335,7 @@ function Spreadsheets({ onGo = null }) {
               <span className="books-step">Paso 1</span>
               <strong>Registro de aplicación de Azure</strong>
               <p className="books-note">
-                Es lo que autoriza a este sistema a pedirle archivos a Microsoft en nombre de one
+                Es lo que autoriza a este sistema a pedirle archivos a Microsoft en nombre de una
                 persona. Lo da de alta quien administra el inquilino de la universidad.
               </p>
               <button
@@ -358,7 +358,7 @@ function Spreadsheets({ onGo = null }) {
               <span className="books-step">Paso 2</span>
               <strong>Una cuenta Microsoft</strong>
               <p className="books-note">
-                Los books se leen con el acceso de one persona, no con el del sistema.
+                Los libros se leen con el acceso de una persona, no con el del sistema.
               </p>
               <button
                 className="books-btn is-primary"
@@ -366,7 +366,7 @@ function Spreadsheets({ onGo = null }) {
                 onClick={connect}
                 disabled={app.source === null}
               >
-                Conectar one account
+                Conectar una cuenta
               </button>
             </li>
           </ol>
@@ -421,7 +421,7 @@ function Spreadsheets({ onGo = null }) {
                           {account.sheetCount === 0
                             ? "Ningún libro se lee con ella."
                             : `${account.sheetCount} ${
-                                account.sheetCount === 1 ? "book deja" : "books dejan"
+                                account.sheetCount === 1 ? "libro deja" : "libros dejan"
                               } de poder leerse hasta que alguien la reconecte.`}
                         </span>
                         <button
@@ -457,7 +457,7 @@ function Spreadsheets({ onGo = null }) {
               ))}
             </ul>
             <button className="books-btn" type="button" onClick={connect}>
-              Conectar otra account
+              Conectar otra cuenta
             </button>
           </section>
 
@@ -508,7 +508,7 @@ function Spreadsheets({ onGo = null }) {
 
                 <div className="books-field books-field-wide">
                   <span className="books-label">
-                    URI de redirección que hay que registerBook en Azure
+                    URI de redirección que hay que registrar en Azure
                   </span>
                   <code className="books-code">{app.redirectUri}</code>
                 </div>
@@ -599,7 +599,7 @@ function Spreadsheets({ onGo = null }) {
           onClick={() => setRegistrando(true)}
           disabled={live.length === 0}
         >
-          Registrar book
+          Registrar libro
         </button>
       </div>
 
@@ -672,7 +672,7 @@ function Spreadsheets({ onGo = null }) {
 
                       <label className="books-field books-field-wide">
                         <span className="books-label">
-                          Enlace del book
+                          Enlace del libro
                           <Help text="El enlace que da OneDrive o SharePoint al compartir o abrir el archivo. Otro tipo de enlace no se puede resolver." />
                         </span>
                         <input
@@ -693,7 +693,7 @@ function Spreadsheets({ onGo = null }) {
                     ) : (
                       <>
                         <p className="books-note">
-                          Libro found: {found.name} · {found.tables.length}{" "}
+                          Libro encontrado: {found.name} · {found.tables.length}{" "}
                           {found.tables.length === 1 ? "tabla" : "tablas"},{" "}
                           {found.worksheets.length}{" "}
                           {found.worksheets.length === 1 ? "hoja" : "hojas"}
@@ -702,7 +702,7 @@ function Spreadsheets({ onGo = null }) {
                         <div className="books-grid">
                           <label className="books-field">
                             <span className="books-label">
-                              Tabla u worksheet
+                              Tabla u hoja
                               <Help text="Una tabla es mejor: sus columnas tienen nombre propio y no se mueven al insertar filas. Una hoja se lee por el texto de su primer renglón." />
                             </span>
                             <select
@@ -825,7 +825,7 @@ function Spreadsheets({ onGo = null }) {
                               target="_blank"
                               rel="noreferrer"
                             >
-                              Abrir el book ↗
+                              Abrir el libro ↗
                             </a>
                           )}
                         </div>
@@ -835,7 +835,7 @@ function Spreadsheets({ onGo = null }) {
                             <span className="books-action-row">
                               <span className="books-confirm">
                                 Las solicitudes que ya se importaron se quedan: solo deja de
-                                leerse el book.
+                                leerse el libro.
                               </span>
                               <button
                                 className="books-btn"
@@ -864,7 +864,7 @@ function Spreadsheets({ onGo = null }) {
 
                           {book.accountRevoked ? (
                             <button className="books-btn is-primary" type="button" onClick={connect}>
-                              Reconectar la account
+                              Reconectar la cuenta
                             </button>
                           ) : (
                             <button

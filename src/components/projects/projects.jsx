@@ -343,8 +343,8 @@ function Projects({ user }) {
         vocabulary={vocabulary}
         user={user}
         place={openIndex === -1 ? null : { position: openIndex + 1, total: projects.length }}
-        onAnterior={openIndex > 0 ? () => moveTo(-1) : null}
-        onSiguiente={
+        onPrevious={openIndex > 0 ? () => moveTo(-1) : null}
+        onNext={
           openIndex !== -1 && openIndex < projects.length - 1 ? () => moveTo(1) : null
         }
         onClose={() => {
@@ -383,7 +383,7 @@ function Projects({ user }) {
               type="button"
               onClick={() => changeScope(true)}
             >
-              Mis projects
+              Mis proyectos
             </button>
             <button
               className={onlyMine ? "projects-scope-btn" : "projects-scope-btn is-on"}

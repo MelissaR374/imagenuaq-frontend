@@ -239,11 +239,11 @@ function ImportRun({ book, step, onChanged, onGo = null }) {
               {count.rowsCreated === 0
                 ? "No hay filas nuevas"
                 : `Hay ${count.rowsCreated} ${
-                    count.rowsCreated === 1 ? "row nueva" : "filas nuevas"
+                    count.rowsCreated === 1 ? "fila nueva" : "filas nuevas"
                   }`}
             </h3>
             <p className="imp-note">
-              El book tiene {count.rowsRead}{" "}
+              El libro tiene {count.rowsRead}{" "}
               {count.rowsRead === 1 ? "fila" : "filas"} en total; {count.rowsSkipped}{" "}
               {count.rowsSkipped === 1 ? "ya se importó" : "ya se importaron"}
               {count.rowsFailed > 0
@@ -279,7 +279,7 @@ function ImportRun({ book, step, onChanged, onGo = null }) {
                 {busy
                   ? "Importando…"
                   : `Importar ${count.rowsCreated} ${
-                      count.rowsCreated === 1 ? "row nueva" : "filas nuevas"
+                      count.rowsCreated === 1 ? "fila nueva" : "filas nuevas"
                     }`}
               </button>
             </div>

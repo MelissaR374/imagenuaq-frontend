@@ -34,11 +34,16 @@ async function request(path, { method = "GET", body, auth = true } = {}) {
   if (body !== undefined) headers["Content-Type"] = "application/json";
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const response = await fetch(`${API_URL}${path}`, {
-    method,
-    headers,
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
+  let response;
+  try {
+    response = await fetch(`${API_URL}${path}`, {
+      method,
+      headers,
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+  } catch {
+    throw new ApiError("No se pudo conectar con el servidor. Intenta de nuevo.", 0);
+  }
 
   if (response.status === 204) return null;
 

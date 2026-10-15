@@ -251,7 +251,7 @@ function ProjectForm({ onCreated, onCancel }) {
         <h3>Flujo</h3>
         <label className="project-form-field">
           <span className="project-form-label">
-            Partir de one template
+            Partir de una plantilla
             <Help text="Las fases de la plantilla se copian como etapas de este proyecto. El proyecto no queda apuntando a la plantilla: editarla después no lo toca." />
           </span>
           <select value={templateId} onChange={(event) => setPlantillaId(event.target.value)}>

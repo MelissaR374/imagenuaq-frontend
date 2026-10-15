@@ -229,13 +229,13 @@ function Aplicacion() {
         ) : activa === "Formatos de solicitud" && usuario.role === "admin" ? (
           <Schemas />
         ) : activa === "Libros de Excel" && usuario.role === "admin" ? (
-          <Spreadsheets onIr={setPestana} />
+          <Spreadsheets onGo={setPestana} />
         ) : activa === "Importar de Excel" && usuario.role === "admin" ? (
-          <ImportConfig onIr={setPestana} />
+          <ImportConfig onGo={setPestana} />
         ) : activa === "Bandeja de solicitudes" && usuario.role === "admin" ? (
           <Inbox />
         ) : activa === "Proyectos" && usuario.role === "admin" ? (
-          <Projects usuario={usuario} />
+          <Projects user={usuario} />
         ) : activa === "Catálogo de estatus" && usuario.role === "admin" ? (
           <StatusCatalog />
         ) : activa === "Diseñador de flujos" && usuario.role === "admin" ? (

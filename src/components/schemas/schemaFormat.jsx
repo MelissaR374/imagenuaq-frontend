@@ -73,9 +73,10 @@ function FieldEditor({
   field, types, published, repeated, suggestions, listId, onChange, onRemove, onClose,
 }) {
   const [keyTouched, setClaveTocada] = useState(field.code !== "");
+  const locked = published !== undefined && keyTouched;
 
   function writeName(name) {
-    if (published !== undefined) {
+    if (locked) {
       return;
     }
     const changes = { name };
@@ -93,7 +94,7 @@ function FieldEditor({
           <input
             value={field.name}
             onChange={(event) => writeName(event.target.value)}
-            readOnly={published !== undefined}
+            readOnly={locked}
             placeholder="Ej: Medidas del impreso"
           />
         </label>
@@ -136,11 +137,9 @@ function FieldEditor({
         <label className="format-field">
           <span className="format-label">
             Tipo de dato
-            {published === undefined ? null : (
-              <Help text={reuseText(published)} />
-            )}
+            {locked ? <Help text={reuseText(published)} /> : null}
           </span>
-          {published === undefined ? (
+          {!locked ? (
             <select
               value={field.type}
               onChange={(event) => onChange({ type: event.target.value })}
@@ -183,18 +182,16 @@ function FieldEditor({
 
       {repeated ? (
         <p className="format-bad">
-          Esa key ya la tiene otro field de este format. Cada field necesita one distinta,
+          Esa clave ya la tiene otro campo de este formato. Cada campo necesita una distinta,
           también entre secciones: el valor se guarda bajo su clave y dos campos la pisarían.
         </p>
       ) : null}
 
-      {published === undefined ? null : (
-        <p className="format-note">{reuseText(published)}</p>
-      )}
+      {locked ? <p className="format-note">{reuseText(published)}</p> : null}
 
       <div className="format-action-row">
         <button className="format-quiet is-danger" type="button" onClick={onRemove}>
-          Quitar el field
+          Quitar el campo
         </button>
         <button className="format-quiet" type="button" onClick={onClose}>
           Listo
@@ -409,7 +406,7 @@ function SchemaFormat({ format, formats, types, vocabulary, onChanged, onClose }
               }
               disabled={busy}
             >
-              Clonar como format draftFormat
+              Clonar como formato nuevo
             </button>
 
             {confirmingDeactivate ? (
@@ -649,7 +646,7 @@ function SchemaFormat({ format, formats, types, vocabulary, onChanged, onClose }
                     type="button"
                     onClick={() => addField(section.key)}
                   >
-                    + Agregar field
+                    + Agregar campo
                   </button>
 
                   <select
@@ -673,7 +670,7 @@ function SchemaFormat({ format, formats, types, vocabulary, onChanged, onClose }
                       .filter((one) => !keys.includes(one.key))
                       .map((one) => (
                         <option value={one.key} key={one.key}>
-                          {one.name} ({one.type})
+                          {one.name} ({types.find((type) => type.code === one.type)?.name ?? one.type})
                         </option>
                       ))}
                   </select>

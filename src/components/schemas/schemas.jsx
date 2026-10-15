@@ -210,7 +210,7 @@ function Schemas() {
           type="button"
           onClick={() => setNuevo(true)}
         >
-          Nuevo format
+          Nuevo formato
         </button>
       </div>
 

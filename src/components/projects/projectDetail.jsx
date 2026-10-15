@@ -248,7 +248,7 @@ function LiveFlow({
             </label>
             {openStages.length > 0 ? (
               <span className="project-card-why">
-                {openStages.length} {openStages.length === 1 ? "etapa sigue" : "etapas siguen"} openStages
+                {openStages.length} {openStages.length === 1 ? "etapa sigue abierta" : "etapas siguen abiertas"}
               </span>
             ) : null}
           </div>
@@ -996,7 +996,7 @@ function ProjectDetail({
 
   let projectFlow = "sin flujo";
   if (phases.length > 0) {
-    projectFlow = `${phases.length} ${phases.length === 1 ? "phase" : "phases"}`;
+    projectFlow = `${phases.length} ${phases.length === 1 ? "fase" : "fases"}`;
   }
 
   let state = "abierto";
@@ -1029,7 +1029,7 @@ function ProjectDetail({
         {place === null ? null : (
           <div className="project-bar-move">
             <span>
-              {place.position} de {place.de}
+              {place.position} de {place.total}
             </span>
             <button
               className="project-quiet"
