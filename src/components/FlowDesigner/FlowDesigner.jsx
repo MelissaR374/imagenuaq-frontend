@@ -22,6 +22,7 @@ import {
 
 import FlowCard from "./FlowCard.jsx";
 import FlowModal from "./FlowModal.jsx";
+import StageModal from "./StageModal.jsx";
 
 import * as api from "../../api/client.js";
 
@@ -114,68 +115,6 @@ function etapaVacia(areas) {
 
 function lienzoNuevo() {
     return [{ clave: nuevaClave(), name: "Fase 1", etapas: [] }];
-}
-
-/**
- * Una lista de claves de datos: se agregan desde el vocabulario (o escribiendo una nueva) y
- * se quitan una por una.
- */
-function ListaDeClaves({ etiqueta, ayuda, claves, vocabulario, onCambiar }) {
-    const [texto, setTexto] = useState("");
-
-    function agregar() {
-        const clave = texto.trim();
-        if (clave && !claves.includes(clave)) onCambiar([...claves, clave]);
-        setTexto("");
-    }
-
-    function nombreDe(clave) {
-        return vocabulario.find((una) => una.key === clave)?.name ?? clave;
-    }
-
-    return (
-        <div className="modal-field flow-key-list">
-            <label>{etiqueta}</label>
-            <p className="flow-field-help">{ayuda}</p>
-
-            {claves.length > 0 && (
-                <ul className="flow-key-chips">
-                    {claves.map((clave) => (
-                        <li key={clave} className="flow-key-chip">
-                            <span>{nombreDe(clave)}</span>
-                            <button
-                                type="button"
-                                className="flow-key-remove"
-                                onClick={() => onCambiar(claves.filter((otra) => otra !== clave))}
-                                aria-label={`Quitar ${clave}`}
-                            >
-                                <MdClose />
-                            </button>
-                        </li>
-                    ))}
-                </ul>
-            )}
-
-            <div className="flow-key-add">
-                <input
-                    type="text"
-                    list="flujo-vocabulario"
-                    value={texto}
-                    onChange={(event) => setTexto(event.target.value)}
-                    onKeyDown={(event) => {
-                        if (event.key === "Enter") {
-                            event.preventDefault();
-                            agregar();
-                        }
-                    }}
-                    placeholder="clave_del_dato"
-                />
-                <button type="button" className="modal-cancel" onClick={agregar}>
-                    Agregar
-                </button>
-            </div>
-        </div>
-    );
 }
 
 function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
@@ -663,157 +602,24 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
                 </button>
             </footer>
 
-            <datalist id="flujo-vocabulario">
-                {vocabulario.map((una) => (
-                    <option key={una.key} value={una.key}>
-                        {una.name} ({una.type})
-                    </option>
-                ))}
-            </datalist>
-
             {modal?.tipo === "etapa" && (
-                <FlowModal
-                    type="area"
-                    titulo={modal.editando ? "Editar etapa" : "Agregar etapa"}
-                    descripcion="Define qué hará esta área dentro del flujo."
+                <StageModal
+                    etapa={modal.etapa}
+                    editando={modal.editando}
+                    areas={areas}
+                    miembros={miembrosDelArea}
+                    vocabulario={vocabulario}
+                    etiquetaPersona={deSolicitud ? "Persona responsable" : "Persona sugerida"}
+                    sinPersona={deSolicitud ? "Sin responsable todavía" : "Sin persona sugerida"}
+                    onCambiar={cambiarEtapa}
                     onClose={cerrarModal}
                     onSubmit={guardarEtapa}
-                >
-                    <div className="modal-field">
-                        <label htmlFor="etapa-area">Área</label>
-                        <select
-                            id="etapa-area"
-                            value={modal.etapa.areaId}
-                            onChange={(event) => cambiarEtapa("areaId", event.target.value)}
-                            required
-                        >
-                            {areas.map((area) => (
-                                <option key={area.id} value={area.id}>{area.name}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div className="modal-field">
-                        <label htmlFor="etapa-titulo">Título</label>
-                        <input
-                            id="etapa-titulo"
-                            type="text"
-                            value={modal.etapa.title}
-                            onChange={(event) => cambiarEtapa("title", event.target.value)}
-                            placeholder="Ej. Revisión de solicitud"
-                            maxLength={300}
-                            required
-                        />
-                    </div>
-
-                    <div className="modal-field">
-                        <label htmlFor="etapa-persona">
-                            {deSolicitud ? "Persona responsable" : "Persona sugerida"}
-                        </label>
-                        <select
-                            id="etapa-persona"
-                            value={modal.etapa.defaultAssigneeId ?? ""}
-                            onChange={(event) => cambiarEtapa("defaultAssigneeId", event.target.value)}
-                        >
-                            <option value="">{deSolicitud ? "Sin responsable todavía" : "Sin persona sugerida"}</option>
-                            {miembrosDelArea.map((miembro) => (
-                                <option key={miembro.id} value={miembro.id}>{miembro.fullName}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <p className="flow-field-help">
-                        Lo que la etapa recibe y entrega se puede anotar de dos formas. Los
-                        <strong> datos</strong> son valores que se capturan en el proyecto, como
-                        el número de orden o el tiraje, y se nombran con una clave (por ejemplo,
-                        numero_orden); elige una de las que ya usan los formatos o escribe una
-                        nueva. Las <strong>notas</strong> describen con tus palabras lo que no es
-                        un dato: una aprobación, un archivo, una muestra física o la evidencia de
-                        entrega.
-                    </p>
-
-                    <ListaDeClaves
-                        etiqueta="Datos que necesita para empezar"
-                        ayuda="Solo informan a quien atiende la etapa; que falte uno no detiene el trabajo."
-                        claves={modal.etapa.inputs}
-                        vocabulario={vocabulario}
-                        onCambiar={(claves) => cambiarEtapa("inputs", claves)}
-                    />
-
-                    <div className="modal-field">
-                        <label htmlFor="stage-note-input">Qué recibe (nota)</label>
-                        <textarea
-                            id="stage-note-input"
-                            rows={3}
-                            value={modal.etapa.inputNote}
-                            onChange={(event) => cambiarEtapa("inputNote", event.target.value)}
-                            placeholder="Ej. La cotización firmada por la entidad"
-                            maxLength={2000}
-                        />
-                    </div>
-
-                    <ListaDeClaves
-                        etiqueta="Datos que debe capturar al terminar"
-                        ayuda="El visto bueno de la etapa no se puede dar mientras alguno siga sin valor en el proyecto."
-                        claves={modal.etapa.outputs}
-                        vocabulario={vocabulario}
-                        onCambiar={(claves) => cambiarEtapa("outputs", claves)}
-                    />
-
-                    <div className="modal-field">
-                        <label htmlFor="stage-note-output">Qué entrega (nota)</label>
-                        <p className="flow-field-help">
-                            Para señalar una entrega que no se captura como dato. Queda como aviso
-                            para quien lee el flujo; el sistema no la revisa.
-                        </p>
-                        <textarea
-                            id="stage-note-output"
-                            rows={3}
-                            value={modal.etapa.outputNote}
-                            onChange={(event) => cambiarEtapa("outputNote", event.target.value)}
-                            placeholder="Ej. Propuesta aprobada por la entidad, o 300 manuales impresos con su evidencia de entrega"
-                            maxLength={2000}
-                        />
-                    </div>
-
-                    <div className="modal-field">
-                        <label htmlFor="etapa-dias">Duración</label>
-                        <div className="days-input">
-                            <input
-                                id="etapa-dias"
-                                type="number"
-                                min="1"
-                                max="365"
-                                value={modal.etapa.estimatedDays}
-                                onChange={(event) => cambiarEtapa("estimatedDays", event.target.value)}
-                                required
-                            />
-                            <span>días hábiles</span>
-                        </div>
-                    </div>
-
-                    <div className="modal-actions">
-                        {modal.editando && (
-                            <button
-                                type="button"
-                                className="modal-cancel flow-modal-remove"
-                                onClick={() => {
-                                    const fase = fases.find((una) => una.clave === modal.faseClave);
-                                    quitarEtapa(fase, modal.etapa);
-                                    cerrarModal();
-                                }}
-                            >
-                                Quitar esta etapa
-                            </button>
-                        )}
-                        <button type="button" className="modal-cancel" onClick={cerrarModal}>
-                            Cancelar
-                        </button>
-                        <button type="submit" className="modal-primary">
-                            {modal.editando ? "Guardar cambios" : "+ Agregar etapa"}
-                        </button>
-                    </div>
-                </FlowModal>
+                    onQuitar={() => {
+                        const fase = fases.find((una) => una.clave === modal.faseClave);
+                        quitarEtapa(fase, modal.etapa);
+                        cerrarModal();
+                    }}
+                />
             )}
 
             {modal?.tipo === "fase" && (

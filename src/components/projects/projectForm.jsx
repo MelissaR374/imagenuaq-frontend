@@ -219,7 +219,7 @@ function ProjectForm({ onCreated, onCancel }) {
         <label className="project-form-field">
           <span className="project-form-label">
             Urgencia
-            <Help text="Un número: mayor es más urgente. La imprenta y la producción priorizan por urgencia, nunca por orden de llegada (RF-FLW-08)." />
+            <Help text="Un número: mayor es más urgente. La imprenta y la producción priorizan por urgencia." />
           </span>
           <input
             type="number"

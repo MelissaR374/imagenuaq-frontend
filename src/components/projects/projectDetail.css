@@ -141,8 +141,7 @@
 }
 
 .project-sec h5,
-.project-stage h5,
-.project-stage-form h5 {
+.project-stage h5 {
   margin: 14px 0 6px;
 
   color: var(--text-secondary);
@@ -437,8 +436,7 @@
    THE SELECTED STAGE
 ========================================================= */
 
-.project-stage,
-.project-stage-form {
+.project-stage {
   margin-top: 14px;
   padding: 16px 18px;
 

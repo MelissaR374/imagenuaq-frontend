@@ -45,3 +45,17 @@ export const MICROSOFT_PARAM = "microsoft";
 export function activationLink(token) {
   return `${FRONTEND_DOMAIN}/?${INVITE_PARAM}=${encodeURIComponent(token)}`;
 }
+
+/** Nombre del parámetro donde viaja el token de un enlace de solo lectura a una carpeta. */
+export const SHARED_PARAM = "shared";
+
+/**
+ * El enlace de solo lectura que se le manda a alguien sin cuenta. Lo abre en esta misma
+ * aplicación, que muestra la carpeta sin pedir sesión; ver components/documents/sharedFolder.jsx.
+ *
+ * @param {string} token
+ * @returns {string}
+ */
+export function sharedLink(token) {
+  return `${FRONTEND_DOMAIN}/?${SHARED_PARAM}=${encodeURIComponent(token)}`;
+}

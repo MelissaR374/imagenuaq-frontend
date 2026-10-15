@@ -446,3 +446,84 @@ export const markSpreadsheetRows = (id, input = {}) =>
 
 export const clearSpreadsheetMarks = (id) =>
   request(`/spreadsheets/${id}/baseline`, { method: "DELETE" });
+
+export const getProjectFolder = (projectId) => request(`/projects/${projectId}/folder`);
+
+export const listTopFolders = () => request("/documents/folders");
+
+export const getFolder = (id) => request(`/documents/folders/${id}`);
+
+export const createFolder = (parentId, name) =>
+  request("/documents/folders", { method: "POST", body: { parentId, name } });
+
+export const updateFolder = (id, changes) =>
+  request(`/documents/folders/${id}`, { method: "PATCH", body: changes });
+
+export const deleteFolder = (id) => request(`/documents/folders/${id}`, { method: "DELETE" });
+
+/** Reemplaza las áreas con que se comparte la carpeta: `[{ areaId, level: "read"|"write" }]`. */
+export const setFolderAreas = (id, areas) =>
+  request(`/documents/folders/${id}/areas`, { method: "PUT", body: { areas } });
+
+/** Sube el archivo tal cual, sin multipart: el cuerpo es el archivo y el nombre va en la URL. */
+export async function uploadFile(folderId, file) {
+  const response = await fetch(
+    `${API_URL}/documents/folders/${folderId}/files?name=${encodeURIComponent(file.name)}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${getToken()}`,
+        "Content-Type": file.type || "application/octet-stream",
+      },
+      body: file,
+    },
+  );
+
+  if (!response.ok) {
+    throw await toError(response);
+  }
+  return response.json();
+}
+
+/** El contenido de un archivo como Blob; se pide con fetch porque un enlace no manda el token. */
+export async function downloadFile(id) {
+  const response = await fetch(`${API_URL}/documents/${id}/content`, {
+    headers: { Authorization: `Bearer ${getToken()}` },
+  });
+
+  if (!response.ok) {
+    throw await toError(response);
+  }
+  return response.blob();
+}
+
+export const updateFile = (id, changes) =>
+  request(`/documents/${id}`, { method: "PATCH", body: changes });
+
+export const deleteFile = (id) => request(`/documents/${id}`, { method: "DELETE" });
+
+export const listFolderLinks = (id) => request(`/documents/folders/${id}/links`);
+
+/** Un enlace de solo lectura que vence en `expiresAt`. Su token sólo viene en esta respuesta. */
+export const createFolderLink = (id, expiresAt) =>
+  request(`/documents/folders/${id}/links`, { method: "POST", body: { expiresAt } });
+
+export const revokeLink = (id) => request(`/documents/links/${id}`, { method: "DELETE" });
+
+export const getRetention = () => request("/documents/retention");
+
+export const setRetention = (months) =>
+  request("/documents/retention", { method: "PUT", body: { months } });
+
+/** Lo que muestra un enlace de solo lectura: su carpeta, o `folderId` si está debajo. Sin sesión. */
+export const getSharedFolder = (token, folderId = null) =>
+  request(
+    folderId === null
+      ? `/shared/${encodeURIComponent(token)}`
+      : `/shared/${encodeURIComponent(token)}/folders/${folderId}`,
+    { auth: false },
+  );
+
+/** La URL de descarga bajo un enlace; no lleva token de sesión, así que sirve en un <a>. */
+export const sharedFileUrl = (token, fileId) =>
+  `${API_URL}/shared/${encodeURIComponent(token)}/files/${fileId}/content`;

@@ -72,11 +72,6 @@ const menuSections = [
         roles: ["trabajador", "finanzas"]
       },
 
-      {
-        label: "Mis archivos",
-        icon: MdAttachFile,
-        roles: ["trabajador"]
-      },
             
     ],
   },
@@ -98,6 +93,12 @@ const menuSections = [
         label: "Proyectos",
         icon: MdFolder,
         roles: ["admin"],
+      },
+      {
+        label: "Archivos",
+        icon: MdAttachFile,
+        roles: [],
+        permission: "document.browse",
       },
       {
         label: "Personas y carga",
@@ -143,6 +144,11 @@ const menuSections = [
       {
         label: "Formatos de solicitud",
         icon: MdDescription,
+        roles: ["admin"],
+      },
+      {
+        label: "Retención de archivos",
+        icon: MdAttachFile,
         roles: ["admin"],
       },
       {
@@ -241,8 +247,11 @@ const menuSections = [
   },
 ];
 
-/** `foto` es el object URL de la foto de perfil, o null para mostrar las iniciales. */
-function Sidebar({ usuario, foto = null, role = "admin", activeItem = "Proyectos", onNavigate, onLogout}) {
+/**
+ * `foto` es el object URL de la foto de perfil, o null para mostrar las iniciales. Un elemento se
+ * ve si el rol está en su lista o si `permisos` trae el permiso que pide.
+ */
+function Sidebar({ usuario, foto = null, role = "admin", permisos = [], activeItem = "Proyectos", onNavigate, onLogout}) {
   
   const [isClosed, setIsClosed] = useState(false);
 
@@ -264,7 +273,7 @@ function Sidebar({ usuario, foto = null, role = "admin", activeItem = "Proyectos
       <nav className="sidebar-menu">
         {menuSections.map((section, sectionIndex) => {
           const visibleItems = section.items.filter((item) =>
-            item.roles.includes(role),
+            item.roles.includes(role) || permisos.includes(item.permission),
           );
 
           if (visibleItems.length === 0) {

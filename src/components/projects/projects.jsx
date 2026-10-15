@@ -400,7 +400,7 @@ function Projects({ user }) {
           type="button"
           onClick={() => setCapturando(true)}
         >
-          Nuevo project
+          Nuevo proyecto
         </button>
       </div>
 
@@ -427,7 +427,7 @@ function Projects({ user }) {
           <option value="">Con etapa en cualquier área</option>
           {areas.map((area) => (
             <option value={area.id} key={area.id}>
-              Con stage en {area.name}
+              Con etapa en {area.name}
             </option>
           ))}
         </select>
@@ -486,7 +486,7 @@ function Projects({ user }) {
 
         {filtered ? (
           <button className="projects-clear" type="button" onClick={clearFilters}>
-            Quitar filters
+            Quitar filtros
           </button>
         ) : null}
       </div>

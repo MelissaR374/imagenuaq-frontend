@@ -26,6 +26,8 @@ import { shortDate } from "../shared/format.js";
 import { nameOfKey } from "../shared/vocabulary.js";
 import Help from "../shared/help.jsx";
 import FieldInput from "../shared/fieldInput.jsx";
+import FolderBrowser from "../documents/folderBrowser.jsx";
+import StageModal from "../FlowDesigner/StageModal.jsx";
 import "./projectDetail.css";
 
 const STAGE_STATES = {
@@ -217,7 +219,7 @@ function LiveFlow({
       <div className="project-flow-phase">
         <span className="project-flow-phase-name">Agregar</span>
         <button className="project-card-add" type="button" onClick={onAdd} disabled={busy}>
-          + Agregar stage
+          + Agregar etapa
         </button>
       </div>
 
@@ -606,122 +608,77 @@ function StagePanel({
 }
 
 /** Adding a stage: the phase is chosen by its name, not by a presentation number. */
-function StageForm({ datos, areas, phases, vocabulary, busy, onChange, onSubmit, onCancel }) {
-  const keys = [...vocabulary.entries()];
-
-  function change(key, value) {
-    onChange({ ...datos, [key]: value });
-  }
-
-  function toggleKey(cual, key) {
-    const currentOnes = datos[cual];
-    change(
-      cual,
-      currentOnes.includes(key)
-        ? currentOnes.filter((one) => one !== key)
-        : [...currentOnes, key],
-    );
-  }
+/**
+ * What a stage in a project needs on top of what a template stage has: the phase it joins and
+ * whether it starts now. Rendered inside the flow designer's stage window, in its markup.
+ */
+function StageExtras({ draft, phases, onChange }) {
+  const lastSeq = phases.length === 0 ? 0 : phases[phases.length - 1].seq;
 
   return (
-    <form className="project-stage-form" onSubmit={onSubmit}>
-      <h3>Agregar una etapa</h3>
-
-      <div className="project-grid">
-        <label className="project-field">
-          <span className="project-label">Área</span>
-          <select
-            value={datos.areaId}
-            onChange={(event) => change("areaId", event.target.value)}
-            required
-          >
-            {areas.map((area) => (
-              <option value={area.id} key={area.id}>
-                {area.name}
-              </option>
-            ))}
-          </select>
+    <>
+      <div className="modal-field">
+        <label htmlFor="stage-phase">
+          En qué fase
+          <Help text="Dos etapas en la misma fase corren en paralelo: la fase concluye cuando no queda ninguna abierta." />
         </label>
-
-        <label className="project-field">
-          <span className="project-label">Nombre de la etapa</span>
-          <input
-            value={datos.title}
-            onChange={(event) => change("title", event.target.value)}
-            placeholder="Ej: Propuesta de diseño"
-            required
-          />
-        </label>
-
-        <label className="project-field">
-          <span className="project-label">
-            En qué fase
-            <Help text="Dos etapas en la misma fase corren en paralelo: la fase concluye cuando no queda ninguna abierta." />
-          </span>
-          <select value={datos.seq} onChange={(event) => change("seq", event.target.value)}>
-            {phases.map((phase, index) => (
-              <option value={phase.seq} key={phase.seq}>
-                {index + 1}
-                {phase.name === null ? "" : ` · ${phase.name}`}, en paralelo con lo que ya tiene
-              </option>
-            ))}
-            <option value={phases.length === 0 ? 1 : phases[phases.length - 1].seq + 1}>
-              Fase nueva, al final
+        <select
+          id="stage-phase"
+          value={draft.seq}
+          onChange={(event) => onChange("seq", event.target.value)}
+        >
+          {phases.map((phase, index) => (
+            <option value={phase.seq} key={phase.seq}>
+              {index + 1}
+              {phase.name === null ? "" : ` · ${phase.name}`}, en paralelo con lo que ya tiene
             </option>
-          </select>
-        </label>
-
-        <label className="project-field">
-          <span className="project-label">Empieza</span>
-          <select value={datos.status} onChange={(event) => change("status", event.target.value)}>
-            <option value="pending">Pendiente</option>
-            <option value="active">Activa</option>
-          </select>
-        </label>
+          ))}
+          <option value={lastSeq + 1}>Fase nueva, al final</option>
+        </select>
       </div>
 
-      <h5>Qué necesita para trabajar</h5>
-      <div className="project-chips">
-        {keys.map(([key, field]) => (
-          <button
-            className={datos.inputs.includes(key) ? "project-chip is-on" : "project-chip"}
-            type="button"
-            onClick={() => toggleKey("inputs", key)}
-            key={key}
-          >
-            {field.name}
-          </button>
-        ))}
+      <div className="modal-field">
+        <label htmlFor="stage-start">Empieza</label>
+        <select
+          id="stage-start"
+          value={draft.status}
+          onChange={(event) => onChange("status", event.target.value)}
+        >
+          <option value="pending">Pendiente</option>
+          <option value="active">Activa</option>
+        </select>
       </div>
-
-      <h5>Qué entrega</h5>
-      <p className="project-note">
-        Es one promesa: el visto bueno de esta stage se niega mientras alguno no tenga value, y por
-        eso la stage siguiente lo encuentra.
-      </p>
-      <div className="project-chips">
-        {keys.map(([key, field]) => (
-          <button
-            className={datos.outputs.includes(key) ? "project-chip is-on" : "project-chip"}
-            type="button"
-            onClick={() => toggleKey("outputs", key)}
-            key={key}
-          >
-            {field.name}
-          </button>
-        ))}
-      </div>
-
-      <div className="project-action-row">
-        <button className="project-quiet" type="button" onClick={onCancel}>
-          Cancelar
-        </button>
-        <button className="project-btn is-primary" type="submit" disabled={busy}>
-          Agregar stage
-        </button>
-      </div>
-    </form>
+    </>
   );
+}
+
+/**
+ * The project's folder (RF-ARC-01). The server creates it on first use and answers 404 when the
+ * viewer's areas have no part in the project, which reads here as no access rather than an error.
+ */
+function ProjectFiles({ projectId, areas }) {
+  const [folder, setFolder] = useState(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .getProjectFolder(projectId)
+      .then((data) => {
+        if (!cancelled) setFolder(data.folder);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setError(err.status === 404 ? "Sin acceso a los archivos de este proyecto." : err.message);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId]);
+
+  if (error !== null) return <p className="project-note">{error}</p>;
+  if (folder === null) return <p className="project-note">Cargando…</p>;
+  return <FolderBrowser key={folder.id} root={folder} areas={areas} />;
 }
 
 function ProjectDetail({
@@ -733,7 +690,8 @@ function ProjectDetail({
   const [statuses, setEstatus] = useState(initialStatuses ?? []);
   const [people, setGente] = useState([]);
   const [selected, setElegida] = useState(null);
-  const [newStage, setNuevaEtapa] = useState(null);
+  const [newStage, setNewStage] = useState(null);
+  const [newStageMembers, setNewStageMembers] = useState([]);
   const [newKey, setClaveNueva] = useState("");
   const [confirmingArchive, setConfirmandoArchivo] = useState(false);
   const [error, setError] = useState(null);
@@ -794,6 +752,29 @@ function ProjectDetail({
   const selectedStage =
     detail === null ? null : detail.stages.find((stage) => stage.id === selected) ?? null;
   const stageAreaId = selectedStage === null ? null : selectedStage.areaId;
+  const newStageAreaId = newStage === null ? null : newStage.areaId;
+
+  useEffect(() => {
+    if (newStageAreaId === null || newStageAreaId === "") {
+      return;
+    }
+    let cancelled = false;
+    api
+      .listUsers({ areaId: newStageAreaId })
+      .then((response) => {
+        if (!cancelled) {
+          setNewStageMembers(response.users);
+        }
+      })
+      .catch((failure) => {
+        if (!cancelled) {
+          setError(failure.message);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [newStageAreaId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -965,6 +946,15 @@ function ProjectDetail({
     });
   }
 
+  function changeNewStage(field, value) {
+    const next = { ...newStage, [field]: value };
+    if (field === "areaId") {
+      next.defaultAssigneeId = "";
+      setNewStageMembers([]);
+    }
+    setNewStage(next);
+  }
+
   async function addStage(event) {
     event.preventDefault();
     const done = await run(() =>
@@ -973,12 +963,16 @@ function ProjectDetail({
         title: newStage.title,
         seq: Number(newStage.seq),
         status: newStage.status,
+        assignedTo: newStage.defaultAssigneeId === "" ? null : Number(newStage.defaultAssigneeId),
         inputs: newStage.inputs,
         outputs: newStage.outputs,
+        inputNote: newStage.inputNote,
+        outputNote: newStage.outputNote,
+        estimatedDays: Number(newStage.estimatedDays),
       }),
     );
     if (done !== null) {
-      setNuevaEtapa(null);
+      setNewStage(null);
     }
   }
 
@@ -1080,13 +1074,17 @@ function ProjectDetail({
             openStages={openStages}
             onSelect={(id) => setElegida(id === selected ? null : id)}
             onAdd={() =>
-              setNuevaEtapa({
+              setNewStage({
                 areaId: areas.length === 0 ? "" : areas[0].id,
                 title: "",
                 seq: phases.length === 0 ? 1 : phases[phases.length - 1].seq + 1,
                 status: "pending",
+                defaultAssigneeId: "",
                 inputs: [],
                 outputs: [],
+                inputNote: "",
+                outputNote: "",
+                estimatedDays: 1,
               })
             }
             onConclude={conclude}
@@ -1095,16 +1093,23 @@ function ProjectDetail({
         </section>
 
         {newStage !== null ? (
-          <StageForm
-            datos={newStage}
+          <StageModal
+            etapa={newStage}
             areas={areas}
-            phases={phases}
-            vocabulary={vocabulary}
-            busy={busy}
-            onChange={setNuevaEtapa}
+            miembros={newStageMembers}
+            vocabulario={[...vocabulary.entries()].map(([key, field]) => ({
+              key,
+              name: field.name,
+              type: field.type,
+            }))}
+            etiquetaPersona="Persona responsable"
+            sinPersona="Sin responsable todavía"
+            onCambiar={changeNewStage}
+            onClose={() => setNewStage(null)}
             onSubmit={addStage}
-            onCancel={() => setNuevaEtapa(null)}
-          />
+          >
+            <StageExtras draft={newStage} phases={phases} onChange={changeNewStage} />
+          </StageModal>
         ) : null}
 
         {selectedStage === null ? null : (
@@ -1262,6 +1267,11 @@ function ProjectDetail({
             </div>
           </section>
         </div>
+
+        <section className="project-sec">
+          <h3>Archivos</h3>
+          <ProjectFiles projectId={detail.id} areas={areas} />
+        </section>
 
         <section className="project-sec">
           <h3>Solicitudes que contesta</h3>

@@ -2,6 +2,7 @@
 //
 // La sesión se recupera preguntándole al servidor con GET /api/auth/me, no leyendo el
 // token: el token sigue pareciendo válido durante siete días aunque la cuenta ya no exista.
+// Un enlace de solo lectura (?shared=) muestra su carpeta sin pedir sesión.
 import { useEffect, useState } from "react";
 import { MdLightMode, MdDarkMode } from "react-icons/md";
 
@@ -19,9 +20,12 @@ import Profile from "./components/profile/profile.jsx";
 import Notifications from "./components/notifications/notifications.jsx";
 import FlowDesigner from "./components/FlowDesigner/FlowDesigner.jsx";
 import StatusCatalog from "./components/statusCatalog/statusCatalog.jsx";
+import Documents from "./components/documents/documents.jsx";
+import Retention from "./components/documents/retention.jsx";
+import SharedFolder from "./components/documents/sharedFolder.jsx";
 
 import * as api from "./api/client.js";
-import { MICROSOFT_PARAM } from "./config.js";
+import { MICROSOFT_PARAM, SHARED_PARAM } from "./config.js";
 import "./App.css";
 
 /**
@@ -47,7 +51,12 @@ const DESCRIPCIONES = {
     "Los estatus con que se muestran solicitudes y proyectos, globales y por área.",
   "Diseñador de flujos":
     "Las plantillas de flujo: sus fases y las etapas de cada una.",
+  Archivos: "Todas las carpetas: las de cada proyecto, con su clave, y las sueltas.",
+  "Retención de archivos": "Cuánto tiempo se conservan los archivos.",
 };
+
+/** El token de un enlace de solo lectura, si la página se abrió con uno. */
+const TOKEN_COMPARTIDO = new URLSearchParams(window.location.search).get(SHARED_PARAM);
 
 /** El menú usa nombres de rol en español y el servidor los manda en inglés. */
 const ROLES = {
@@ -69,7 +78,13 @@ function reemplazarFoto(blob) {
 }
 
 function App() {
+  if (TOKEN_COMPARTIDO) return <SharedFolder token={TOKEN_COMPARTIDO} />;
+  return <Aplicacion />;
+}
+
+function Aplicacion() {
   const [usuario, setUsuario] = useState(null);
+  const [permisos, setPermisos] = useState([]);
   const [pestana, setPestana] = useState(() =>
     new URLSearchParams(window.location.search).has(MICROSOFT_PARAM)
       ? "Libros de Excel"
@@ -116,6 +131,13 @@ function App() {
     let cancelado = false;
 
     api
+      .session()
+      .then((data) => {
+        if (!cancelado) setPermisos(data.permissions ?? []);
+      })
+      .catch(() => {});
+
+    api
       .getPicture(usuarioId)
       .then((blob) => {
         if (!cancelado) setFoto(reemplazarFoto(blob));
@@ -158,6 +180,7 @@ function App() {
         usuario={usuario}
         foto={foto}
         role={ROLES[usuario.role] ?? "trabajador"}
+        permisos={permisos}
         activeItem={activa}
         onNavigate={setPestana}
         onLogout={cerrarSesion}
@@ -217,6 +240,10 @@ function App() {
           <StatusCatalog />
         ) : activa === "Diseñador de flujos" && usuario.role === "admin" ? (
           <FlowDesigner />
+        ) : activa === "Archivos" && permisos.includes("document.browse") ? (
+          <Documents />
+        ) : activa === "Retención de archivos" && usuario.role === "admin" ? (
+          <Retention />
         ) : null}
       </main>
     </div>

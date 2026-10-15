@@ -1,0 +1,123 @@
+/* «Retención de archivos»: one setting on a card. Styled after the «Lienzo» screens
+   (projectDetail.css) with the tokens from App.css. */
+.retention {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+
+  max-width: 520px;
+  padding: 18px 20px;
+
+  border: 1px solid var(--border);
+  border-radius: 8px;
+
+  background: var(--surface);
+}
+
+.retention-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  color: var(--text-secondary);
+
+  font-size: var(--size-small);
+}
+
+.retention-field input {
+  width: 120px;
+  height: 32px;
+  padding: 0 8px;
+
+  border: 1px solid var(--border);
+  border-radius: 6px;
+
+  background: var(--field);
+  color: var(--text);
+
+  font: inherit;
+  font-size: var(--size-body);
+  font-weight: 600;
+}
+
+.retention-field input:focus {
+  border-color: var(--accent-line);
+  outline: none;
+}
+
+.retention-note {
+  margin: 0;
+
+  color: var(--text-secondary);
+
+  font-size: var(--size-small);
+  line-height: 1.5;
+}
+
+.retention-error,
+.retention-done {
+  margin: 0;
+  padding: 9px 12px;
+
+  border-radius: 0 6px 6px 0;
+
+  color: var(--text);
+
+  font-size: var(--size-small);
+}
+
+.retention-error {
+  border-left: 3px solid var(--danger);
+  background: var(--danger-soft);
+}
+
+.retention-done {
+  border-left: 3px solid var(--success);
+  background: var(--success-soft);
+}
+
+.retention-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+
+  padding-top: 12px;
+
+  border-top: 1px solid var(--border-light);
+}
+
+.retention-actions .retention-note {
+  color: var(--text-muted);
+}
+
+.retention-btn {
+  height: 32px;
+  padding: 0 14px;
+
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+
+  background: var(--accent);
+  color: #ffffff;
+
+  font: inherit;
+  font-size: var(--size-small);
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.retention-btn:hover:not(:disabled) {
+  border-color: var(--accent-hover);
+  background: var(--accent-hover);
+}
+
+.retention-btn:disabled {
+  border-color: var(--border);
+
+  background: var(--surface-secondary);
+  color: var(--text-muted);
+
+  cursor: default;
+}
