@@ -70,6 +70,13 @@ function reemplazarFoto(blob) {
 
 function App() {
   const [usuario, setUsuario] = useState(null);
+
+  const [notificationRefreshKey, setNotificationRefreshKey] = useState(0);
+
+  function actualizarContadorNotificaciones() {
+    setNotificationRefreshKey((actual) => actual + 1);
+  }
+
   const [pestana, setPestana] = useState(() =>
     new URLSearchParams(window.location.search).has(MICROSOFT_PARAM)
       ? "Libros de Excel"
@@ -161,6 +168,7 @@ function App() {
         activeItem={activa}
         onNavigate={setPestana}
         onLogout={cerrarSesion}
+        notificationRefreshKey={notificationRefreshKey}
       />
 
       <main className="main-content">
@@ -189,7 +197,7 @@ function App() {
         </header>
 
         {activa === "Notificaciones" ? (
-          <Notifications />
+          <Notifications onUnreadChange={actualizarContadorNotificaciones} />
         ) : activa === "Mi perfil" ? (
           <Profile
             usuario={usuario}

@@ -446,3 +446,29 @@ export const markSpreadsheetRows = (id, input = {}) =>
 
 export const clearSpreadsheetMarks = (id) =>
   request(`/spreadsheets/${id}/baseline`, { method: "DELETE" });
+
+
+/* NOTIFICACIONES*/
+
+//Consulta las notificaciones del usuario autenticado.
+export const listNotifications = (params = {}) =>
+  request(withQuery("/notifications", params));
+
+//Consulta cuántas notificaciones tiene sin leer.
+export const countUnreadNotifications = () =>
+  request("/notifications/unread-count");
+
+/**
+ * Marca una notificación como leída.
+ * Solo permite modificar notificaciones del usuario autenticado.
+*/
+export const markNotificationAsRead = (id) =>
+  request(`/notifications/${id}/read`, {
+    method: "PATCH",
+  });
+
+//Marca todas las notificaciones del usuario como leídas.
+export const markAllNotificationsAsRead = () =>
+  request("/notifications/read-all", {
+    method: "PATCH",
+  });

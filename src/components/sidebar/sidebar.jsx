@@ -1,4 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { io } from "socket.io-client";
+import * as api from "../../api/client.js";
+import { API_URL } from "../../config.js";
 import "./sidebar.css";
 
 import {
@@ -242,9 +245,80 @@ const menuSections = [
 ];
 
 /** `foto` es el object URL de la foto de perfil, o null para mostrar las iniciales. */
-function Sidebar({ usuario, foto = null, role = "admin", activeItem = "Proyectos", onNavigate, onLogout}) {
+function Sidebar({ 
+    usuario, 
+    foto = null, 
+    role = "admin", 
+    activeItem = "Proyectos", 
+    onNavigate, 
+    onLogout,
+    notificationRefreshKey = 0,
+  }) {
   
   const [isClosed, setIsClosed] = useState(false);
+  const [sinLeer, setSinLeer] = useState(0);
+
+  useEffect(() => {
+    let cancelado = false;
+
+    async function actualizarContador() {
+      try {
+        const respuesta = await api.countUnreadNotifications();
+
+        if (!cancelado) {
+          setSinLeer(respuesta.unreadCount ?? 0);
+        }
+      } catch (error) {
+        console.error("No se pudo consultar el contador:", error);
+      }
+    }
+
+    actualizarContador();
+
+    return () => {
+      cancelado = true;
+    };
+  }, [usuario.id, notificationRefreshKey]);
+
+  useEffect(() => {
+    const token = api.getToken();
+    if (!token) return;
+
+    let activo = true;
+
+    const socketUrl = new URL(
+      API_URL,
+      window.location.origin
+    ).origin;
+
+    const socket = io(socketUrl, {
+      auth: { token },
+      transports: ["websocket"],
+      reconnection: true,
+    });
+
+    async function actualizarContador() {
+      try {
+        const respuesta = await api.countUnreadNotifications();
+
+        if (activo) {
+          setSinLeer(respuesta.unreadCount ?? 0);
+        }
+      } catch (error) {
+        console.error("No se pudo actualizar el contador:", error);
+      }
+    }
+
+    socket.on("notification:new", actualizarContador);
+    socket.on("connect", actualizarContador);
+
+    return () => {
+      activo = false;
+      socket.disconnect();
+    };
+  }, [usuario.id]);
+
+
 
   return (
     <aside className={`sidebar ${isClosed ? "closed" : ""}`}>
@@ -291,7 +365,18 @@ function Sidebar({ usuario, foto = null, role = "admin", activeItem = "Proyectos
                     >
                       <Icon className="sidebar-item-icon" />
 
-                      <span className="sidebar-item-label">{item.label}</span>
+                      <span className="sidebar-item-label">
+                        {item.label}
+                      </span>
+
+                      {item.label === "Notificaciones" && sinLeer > 0 &&(
+                        <span 
+                          className="notification-badge"
+                          aria-label={`${sinLeer} notificaciones sin leer`}
+                        >
+                          {sinLeer > 99 ? "99+"  : sinLeer}
+                        </span>
+                      )}
                     </button>
                   );
                 })}

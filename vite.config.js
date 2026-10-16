@@ -1,4 +1,3 @@
-/** https://vite.dev/config/ */
 import react, { reactCompilerPreset } from '@vitejs/plugin-react'
 import babel from '@rolldown/plugin-babel'
 import { defineConfig } from 'vite'
@@ -8,13 +7,22 @@ export default defineConfig({
     react(),
     babel({ presets: [reactCompilerPreset()] })
   ],
+
   server: {
     proxy: {
+      // EXISTENTE: Peticiones HTTP a Express.
       '/api': {
         target: 'http://localhost:3000',
         changeOrigin: true,
       },
+
+      '/socket.io': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        ws: true,
+      },
     },
+
     watch: {
       usePolling: true,
     },
