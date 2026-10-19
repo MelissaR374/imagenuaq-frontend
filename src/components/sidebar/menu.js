@@ -27,6 +27,7 @@ import {
   MdSwapHoriz,
   MdSchema,
   MdViewQuilt,
+  MdCalendarMonth,
 } from "react-icons/md";
 
 export const menuSections = [
@@ -55,6 +56,11 @@ export const menuSections = [
       },
       
 
+      {
+        label: "Calendario",
+        icon: MdCalendarMonth,
+        permission: "calendar.read",
+      },
       {
         label: "Mis tareas",
         icon:MdCheckBox,
@@ -101,11 +107,6 @@ export const menuSections = [
       {
         label: "Empleados",
         icon: MdBadge,
-        roles: ["admin"],
-      },
-      {
-        label: "Calendario",
-        icon: MdCalendarToday,
         roles: ["admin"],
       },
     ],
@@ -218,11 +219,6 @@ export const menuSections = [
         label: "Equipo",
         icon: MdPeople,
         permission: "task.write",
-      },
-      {
-        label: "Calendario del área",
-        icon: MdCalendarToday,
-        roles: ["lider"],
       },
     ],
   },

@@ -575,3 +575,36 @@ export async function deliverStage(projectId, stageId, note, file = null) {
     body: { note, fileId },
   });
 }
+
+/**
+ * Lo que pasa entre `from` y `to` (YYYY-MM-DD): etapas, ausencias sin motivo, eventos globales y
+ * ventanas de cierre. `scope` es "mine", "area" o "all" (solo coordinación).
+ */
+export const getCalendar = (params) => request(withQuery("/calendar", params));
+
+/** Un evento global, que ven todos: festivo o general, una vez o repitiéndose. */
+export const createCalendarEvent = (body) => request("/calendar/events", { method: "POST", body });
+
+/** Cambia o mueve un evento global; los campos que no se mandan se quedan como estaban. */
+export const updateCalendarEvent = (eventId, body) =>
+  request(`/calendar/events/${eventId}`, { method: "PATCH", body });
+
+export const deleteCalendarEvent = (eventId) => request(`/calendar/events/${eventId}`, { method: "DELETE" });
+
+/** Todas las ventanas de cierre de semestre, de la más antigua a la más reciente. */
+export const listClosures = () => request("/calendar/closures");
+
+export const createClosure = (body) => request("/calendar/closures", { method: "POST", body });
+
+export const updateClosure = (closureId, body) =>
+  request(`/calendar/closures/${closureId}`, { method: "PATCH", body });
+
+export const deleteClosure = (closureId) => request(`/calendar/closures/${closureId}`, { method: "DELETE" });
+
+/** Pega una nota en un día: `scope` es "personal", "area" (con `areaId`) o "global" (solo coordinación). */
+export const createNote = (body) => request("/calendar/notes", { method: "POST", body });
+
+/** Cambia el texto de una nota propia o la pasa a otro día (`day`). */
+export const updateNote = (noteId, body) => request(`/calendar/notes/${noteId}`, { method: "PATCH", body });
+
+export const deleteNote = (noteId) => request(`/calendar/notes/${noteId}`, { method: "DELETE" });
