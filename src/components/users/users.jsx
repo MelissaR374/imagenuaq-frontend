@@ -1,12 +1,13 @@
 // Pestaña "Personal": la lista de la gente que trabaja aquí y el formulario para dar de
-// alta a alguien nuevo. Solo la ven los administradores. Los estilos van en users.css.
+// alta a alguien nuevo o corregir sus datos. Solo la ven los administradores. Los estilos
+// van en users.css. El rol no se cambia al editar: el servidor lo ignora en PATCH.
 //
 // Al crear una cuenta el servidor devuelve un token de invitación y no lo guarda: esa
 // respuesta es la única vez que se puede ver, por eso se muestra en una tarjeta aparte.
 // La tarjeta ofrece el enlace de activación, armado con VITE_FRONTEND_DOMAIN (ver
 // ../../config.js), y también el token suelto, porque un enlace largo no siempre sobrevive
 // al correo o a WhatsApp y la pantalla de entrada acepta pegarlo a mano.
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import * as api from "../../api/client.js";
 import { activationLink } from "../../config.js";
@@ -55,6 +56,8 @@ function Users({ admin }) {
   const [contratos, setContratos] = useState([]);
 
   const [form, setForm] = useState(FORMULARIO_VACIO);
+  const [editando, setEditando] = useState(null);
+  const formRef = useRef(null);
   const [invitacion, setInvitacion] = useState(null);
   const [copiado, setCopiado] = useState(null);
   const [guardando, setGuardando] = useState(false);
@@ -111,6 +114,53 @@ function Users({ admin }) {
   function handleChange(event) {
     const { name, type, value, checked } = event.target;
     setForm({ ...form, [name]: type === "checkbox" ? checked : value });
+  }
+
+  function handleEditar(usuario) {
+    setEditando(usuario);
+    setErrorForm(null);
+    setForm({
+      fullName: usuario.fullName,
+      email: usuario.email,
+      roleId: String(usuario.roleId),
+      contractTypeId: usuario.contractTypeId ? String(usuario.contractTypeId) : "",
+      primaryAreaId: usuario.primaryAreaId ? String(usuario.primaryAreaId) : "",
+      birthday: usuario.birthday ?? "",
+      isAreaLeader: usuario.areas.some(
+        (area) => area.id === usuario.primaryAreaId && area.isAreaLeader,
+      ),
+    });
+    formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function handleCancelarEdicion() {
+    setEditando(null);
+    setErrorForm(null);
+    setForm(FORMULARIO_VACIO);
+  }
+
+  async function handleGuardar(event) {
+    event.preventDefault();
+    setErrorForm(null);
+    setGuardando(true);
+
+    try {
+      await api.updateUser(editando.id, {
+        fullName: form.fullName.trim(),
+        email: form.email.trim(),
+        contractTypeId: Number(form.contractTypeId),
+        primaryAreaId: form.primaryAreaId ? Number(form.primaryAreaId) : null,
+        birthday: form.birthday || null,
+      });
+
+      setEditando(null);
+      setForm(FORMULARIO_VACIO);
+      setRecarga(recarga + 1);
+    } catch (err) {
+      setErrorForm(err.message);
+    } finally {
+      setGuardando(false);
+    }
   }
 
   async function handleCrear(event) {
@@ -256,8 +306,14 @@ function Users({ admin }) {
         </aside>
       )}
 
-      <form className="user-form" onSubmit={handleCrear}>
-        <h2 className="user-form-title">Dar de alta a una persona</h2>
+      <form
+        className="user-form"
+        ref={formRef}
+        onSubmit={editando ? handleGuardar : handleCrear}
+      >
+        <h2 className="user-form-title">
+          {editando ? `Editar a ${editando.fullName}` : "Dar de alta a una persona"}
+        </h2>
 
         <div className="user-form-field">
           <label className="user-form-label" htmlFor="user-full-name">
@@ -303,6 +359,7 @@ function Users({ admin }) {
             id="user-role"
             name="roleId"
             required
+            disabled={Boolean(editando)}
             value={form.roleId}
             onChange={handleChange}
           >
@@ -314,6 +371,9 @@ function Users({ admin }) {
               </option>
             ))}
           </select>
+          {editando && (
+            <p className="user-form-hint">El rol no se cambia desde aquí.</p>
+          )}
         </div>
 
         <div className="user-form-field">
@@ -364,6 +424,11 @@ function Users({ admin }) {
               </option>
             ))}
           </select>
+          {editando && (
+            <p className="user-form-hint">
+              Las áreas a las que pertenece se cambian en «Áreas y usuarios».
+            </p>
+          )}
         </div>
 
         <div className="user-form-field user-form-field-check">
@@ -372,7 +437,7 @@ function Users({ admin }) {
             id="user-area-leader"
             name="isAreaLeader"
             type="checkbox"
-            disabled={!form.primaryAreaId}
+            disabled={!form.primaryAreaId || Boolean(editando)}
             checked={form.isAreaLeader}
             onChange={handleChange}
           />
@@ -402,8 +467,24 @@ function Users({ admin }) {
         </p>
 
         <button className="user-form-submit" type="submit" disabled={guardando}>
-          {guardando ? "Creando..." : "Crear cuenta e invitar"}
+          {editando
+            ? guardando
+              ? "Guardando..."
+              : "Guardar cambios"
+            : guardando
+              ? "Creando..."
+              : "Crear cuenta e invitar"}
         </button>
+
+        {editando && (
+          <button
+            className="user-form-cancel"
+            type="button"
+            onClick={handleCancelarEdicion}
+          >
+            Cancelar
+          </button>
+        )}
       </form>
 
       <div className="users-filters">
@@ -506,6 +587,15 @@ function Users({ admin }) {
               </td>
 
               <td className="users-cell-actions">
+                <button
+                  className="users-action"
+                  type="button"
+                  disabled={Boolean(usuario.deletedAt)}
+                  onClick={() => handleEditar(usuario)}
+                >
+                  Editar
+                </button>
+                  
                 <button
                   className="users-action"
                   type="button"
