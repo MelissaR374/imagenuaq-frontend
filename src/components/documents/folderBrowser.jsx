@@ -7,6 +7,7 @@
 import { useEffect, useState } from "react";
 
 import * as api from "../../api/client.js";
+import { saveBlob } from "../shared/download.js";
 import { sharedLink } from "../../config.js";
 import { fileSize, shortDate } from "../shared/format.js";
 import FileIcon from "../shared/fileIcon.jsx";
@@ -21,15 +22,6 @@ function inDays(days) {
   return date.toISOString().slice(0, 10);
 }
 
-/** Hands a Blob to the browser as a download under `name`. */
-function saveBlob(blob, name) {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = name;
-  link.click();
-  URL.revokeObjectURL(url);
-}
 
 /**
  * @param {{ root: { id: number, name: string }, areas: Array<{ id: number, name: string }> }} props

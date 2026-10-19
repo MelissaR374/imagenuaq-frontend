@@ -45,3 +45,9 @@ export function fileSize(bytes) {
   }
   return unit === 0 ? `${value} B` : `${value.toFixed(1)} ${units[unit]}`;
 }
+
+/** Whole days between two moments, at least one: how long a stage took (RF-PRY-04). */
+export function daysBetween(from, to) {
+  return Math.max(1, Math.round((new Date(to) - new Date(from)) / 86_400_000));
+}
+

@@ -532,3 +532,19 @@ export const getSharedFolder = (token, folderId = null) =>
 /** La URL de descarga bajo un enlace; no lleva token de sesión, así que sirve en un <a>. */
 export const sharedFileUrl = (token, fileId) =>
   `${API_URL}/shared/${encodeURIComponent(token)}/files/${fileId}/content`;
+
+/**
+ * Entrega una etapa abierta: la evidencia escrita y, opcional, un archivo, que primero se sube a
+ * la carpeta del proyecto.
+ */
+export async function deliverStage(projectId, stageId, note, file = null) {
+  let fileId = null;
+  if (file !== null) {
+    const { folder } = await getProjectFolder(projectId);
+    fileId = (await uploadFile(folder.id, file)).file.id;
+  }
+  return request(`/projects/${projectId}/stages/${stageId}/delivery`, {
+    method: "PUT",
+    body: { note, fileId },
+  });
+}

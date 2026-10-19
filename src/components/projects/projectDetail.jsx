@@ -22,12 +22,13 @@
 import { Fragment, useEffect, useState } from "react";
 
 import * as api from "../../api/client.js";
-import { shortDate } from "../shared/format.js";
+import { shortDate, daysBetween } from "../shared/format.js";
 import { nameOfKey } from "../shared/vocabulary.js";
 import Help from "../shared/help.jsx";
 import FieldInput from "../shared/fieldInput.jsx";
 import FolderBrowser from "../documents/folderBrowser.jsx";
 import StageModal from "../FlowDesigner/StageModal.jsx";
+import StageDelivery from "./stageDelivery.jsx";
 import "./projectDetail.css";
 
 const STAGE_STATES = {
@@ -161,6 +162,9 @@ function StageCard({ stage, fieldValues, vocabulary, selected, onSelect }) {
         {STAGE_STATES[stage.status] ?? stage.status}
         {stage.attempt > 1 ? ` · intento ${stage.attempt}` : ""}
         {stage.assignedToName === null ? "" : ` · ${stage.assignedToName}`}
+        {stage.startedAt !== null && stage.endedAt !== null
+          ? ` · ${daysBetween(stage.startedAt, stage.endedAt)} d`
+          : ""}
       </span>
       {stage.outputs.length === 0 ? null : (
         <span className="project-card-outputs">
@@ -300,7 +304,7 @@ function myPartIn(stage, user) {
  */
 function StagePanel({
   stage, detail, phases, vocabulary, user, people, busy, missing, nextPhase,
-  onAssignee, onHold, onResume, onStart, onSignOff,
+  onAssignee, onHold, onResume, onStart, onSignOff, onDeliver,
 }) {
   const [reason, setMotivo] = useState("");
   const [waiting, setEsperando] = useState(false);
@@ -415,6 +419,13 @@ function StagePanel({
             Los valores se capturan abajo, en «Valores del proyecto», y se guardan con todo lo
             demás.
           </p>
+
+          <StageDelivery
+            key={stage.id}
+            stage={stage}
+            busy={busy}
+            onDeliver={(note, file) => onDeliver(stage, note, file)}
+          />
         </div>
 
         <div>
@@ -937,6 +948,12 @@ function ProjectDetail({
     }
   }
 
+  /** Records the delivery, uploading the optional file to the project's folder first. */
+  async function deliver(stage, note, file) {
+    const after = await run(() => api.deliverStage(detail.id, stage.id, note, file));
+    return after !== null;
+  }
+
   async function conclude(alsoArchive) {
     await run(async () => {
       await api.closeProject(detail.id);
@@ -1145,6 +1162,7 @@ function ProjectDetail({
               run(() => api.updateProjectStage(detail.id, stage.id, { status: "active" }))
             }
             onSignOff={signOff}
+            onDeliver={deliver}
           />
         )}
 
