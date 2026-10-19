@@ -29,19 +29,19 @@ const TABS = [
   {
     key: "open",
     label: "Abiertos",
-    rule: "Trabajo en curso: ni concluido ni quitado de en medio.",
+    rule: "Trabajo en curso.",
   },
   {
     key: "closed",
     label: "Cerrados",
-    rule: "Ya se concluyeron. Cerrar se niega mientras alguna etapa siga abierta.",
+    rule: "Ya se concluyeron.",
   },
   {
     key: "archived",
     label: "Archivados",
-    rule: "Quitados de en medio. Archivar es otra cosa que concluir.",
+    rule: "Archivados",
   },
-  { key: "all", label: "Todos", rule: "Todo lo que existe, en cualquier estado." },
+  { key: "all", label: "Todos", rule: "Todo lo que existe." },
 ];
 
 const NO_FILTERS = {
@@ -148,6 +148,7 @@ function ProjectRow({ project, onOpen }) {
           dueOn={project.dueOn}
           closed={project.closedAt !== null || project.archivedAt !== null}
         />
+        {project.inClosure ? <span className="projects-closure">En ventana de cierre</span> : null}
       </td>
       <td className="projects-num">{project.priority}</td>
     </tr>

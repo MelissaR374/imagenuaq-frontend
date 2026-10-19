@@ -247,3 +247,33 @@
 
   transition: color 0.3s ease;
 }
+/* Printing a screen («Calendario», «Cronograma»): only the screen, its title and the page
+   content, landscape, without the sidebar or the controls marked print-hide. */
+@page {
+  size: landscape;
+  margin: 10mm;
+}
+
+@media print {
+  .sidebar,
+  .header-actions,
+  .main-description,
+  .print-hide {
+    display: none !important;
+  }
+
+  #root > * {
+    width: 100% !important;
+    margin-left: 0 !important;
+  }
+
+  .app-container,
+  .main-content {
+    display: block;
+
+    min-height: 0;
+    padding: 0;
+
+    overflow: visible;
+  }
+}

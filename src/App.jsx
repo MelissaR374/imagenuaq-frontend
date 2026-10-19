@@ -28,6 +28,8 @@ import MyTasks from "./components/tasks/myTasks.jsx";
 import Unassigned from "./components/tasks/unassigned.jsx";
 import Team from "./components/tasks/team.jsx";
 import Overview from "./components/tasks/overview.jsx";
+import Calendar from "./components/calendar/calendar.jsx";
+import Timeline from "./components/timeline/timeline.jsx";
 
 import * as api from "./api/client.js";
 import { MICROSOFT_PARAM, SHARED_PARAM } from "./config.js";
@@ -62,6 +64,8 @@ const DESCRIPCIONES = {
   "Por asignar": "Las etapas de tu área que todavía no tienen responsable",
   Equipo: "Las etapas abiertas de cada persona del área y quién falta esta semana.",
   "Panorama de áreas": "Lo que cada área tiene por asignar y la carga de su gente esta semana.",
+  Calendario: "Las etapas, ausencias y fechas institucionales del mes, y las ventanas de cierre de semestre.",
+  Cronograma: "Qué tan ocupada está cada área día por día, contando a quién le falta gente.",
 };
 
 /** El token de un enlace de solo lectura, si la página se abrió con uno. */
@@ -290,6 +294,14 @@ function Aplicacion() {
         ) : activa === "Panorama de áreas" ? (
           <Overview
             onOpenInbox={(areaId) => abrirEnArea("Por asignar", areaId)}
+            onOpenProject={puedeAbrirProyectos ? abrirProyecto : null}
+          />
+        ) : activa === "Cronograma" ? (
+          <Timeline isAdmin={usuario.role === "admin"} onOpenProject={puedeAbrirProyectos ? abrirProyecto : null} />
+        ) : activa === "Calendario" ? (
+          <Calendar
+            isAdmin={usuario.role === "admin"}
+            canWrite={permisos.includes("calendar.write")}
             onOpenProject={puedeAbrirProyectos ? abrirProyecto : null}
           />
         ) : null}

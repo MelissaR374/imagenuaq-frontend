@@ -1041,6 +1041,9 @@ function ProjectDetail({
             · {projectFlow} · {state}
           </span>
           <h2>{detail.title}</h2>
+          {detail.inClosure ? (
+            <span className="project-closure">Con costo y en ventana de cierre de semestre</span>
+          ) : null}
         </div>
 
         {place === null ? null : (
