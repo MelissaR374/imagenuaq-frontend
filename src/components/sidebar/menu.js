@@ -47,7 +47,7 @@ export const menuSections = [
       {
         label: "Cronograma",
         icon: MdSchedule,
-        roles: ["admin", "lider","finanzas","trabajador"]
+        permission: "calendar.read",
       },
       {
         label: "Mensajes",

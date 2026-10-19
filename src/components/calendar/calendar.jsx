@@ -4,6 +4,8 @@
 // a day; global events and closure windows are written by whoever holds `calendar.write`, by form or by
 // dragging them to another day.
 import { useEffect, useState } from "react";
+import { flushSync } from "react-dom";
+import { MdPrint } from "react-icons/md";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
@@ -65,6 +67,7 @@ function Calendar({ isAdmin, canWrite, onOpenProject = null }) {
       return false;
     }
   });
+  const [printing, setPrinting] = useState(false);
   const [data, setData] = useState(null);
   const [people, setPeople] = useState(new Map());
   const [areas, setAreas] = useState({ mine: [], all: [] });
@@ -127,6 +130,13 @@ function Calendar({ isAdmin, canWrite, onOpenProject = null }) {
     } catch {
       return;
     }
+  }
+
+  /** Prints the month with every event unfolded, then folds it back as it was. */
+  function print() {
+    flushSync(() => setPrinting(true));
+    window.print();
+    setPrinting(false);
   }
 
   function chooseScope(next) {
@@ -245,7 +255,7 @@ function Calendar({ isAdmin, canWrite, onOpenProject = null }) {
 
   return (
     <div className="calendar">
-      <div className="calendar-toolbar">
+      <div className="calendar-toolbar print-hide">
         <div className="calendar-scope" role="tablist">
           {scopes.map((option) => (
             <button
@@ -282,19 +292,24 @@ function Calendar({ isAdmin, canWrite, onOpenProject = null }) {
           </div>
         )}
 
-        {canWrite ? (
-          <div className="calendar-admin">
-            <button className="calendar-btn" type="button" onClick={() => setShowClosures(!showClosures)}>
-              Ventanas de cierre
-            </button>
-            <button className="calendar-btn is-primary" type="button" onClick={() => setEditing({ event: null })}>
-              Nuevo evento
-            </button>
-          </div>
-        ) : null}
+        <div className="calendar-admin">
+          <button className="calendar-btn" type="button" onClick={print}>
+            <MdPrint aria-hidden="true" /> Imprimir
+          </button>
+          {canWrite ? (
+            <>
+              <button className="calendar-btn" type="button" onClick={() => setShowClosures(!showClosures)}>
+                Ventanas de cierre
+              </button>
+              <button className="calendar-btn is-primary" type="button" onClick={() => setEditing({ event: null })}>
+                Nuevo evento
+              </button>
+            </>
+          ) : null}
+        </div>
       </div>
 
-      <div className="calendar-legend" role="group" aria-label="Mostrar">
+      <div className="calendar-legend print-hide" role="group" aria-label="Mostrar">
         {LAYERS.map((layer) => (
           <button
             className={hidden.includes(layer.kind) ? `calendar-key is-${layer.kind} is-off` : `calendar-key is-${layer.kind}`}
@@ -328,7 +343,7 @@ function Calendar({ isAdmin, canWrite, onOpenProject = null }) {
           firstDay={1}
           height="auto"
           fixedWeekCount={false}
-          dayMaxEvents={showAll ? false : DAY_LIMIT}
+          dayMaxEvents={showAll || printing ? false : DAY_LIMIT}
           headerToolbar={{ left: "today", center: "title", right: "prev,next" }}
           eventOrder="order,start,title"
           eventDurationEditable={false}

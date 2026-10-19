@@ -782,6 +782,81 @@
   font-size: var(--size-small);
 }
 
+.calendar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+@media print {
+  .calendar-month {
+    padding: 0;
+
+    border: 0;
+  }
+
+  .calendar-month .fc .fc-button,
+  .calendar-closures,
+  .calendar-overlay,
+  .calendar-error {
+    display: none;
+  }
+
+  .calendar-month .fc .fc-daygrid-day-frame {
+    min-height: 0;
+  }
+
+  .calendar-month .fc .fc-toolbar.fc-header-toolbar {
+    margin-bottom: 6px;
+  }
+
+  .calendar-month .fc .fc-daygrid-body tr {
+    break-inside: avoid;
+  }
+
+  .calendar-month .fc .fc-daygrid-day-number {
+    padding: 2px 4px;
+  }
+
+  .calendar-month .fc .calendar-ev {
+    margin: 0 2px 1px;
+    padding: 0 4px;
+
+    font-size: 9px;
+    line-height: 1.25;
+  }
+
+  .calendar-month .fc .calendar-ev.is-note {
+    margin: 1px 2px 2px;
+  }
+
+  .calendar-postit {
+    padding: 2px 4px;
+
+    box-shadow: none;
+
+    font-size: 9px;
+
+    transform: none;
+  }
+
+  .fc-daygrid-event-harness:nth-child(even) .calendar-postit {
+    transform: none;
+  }
+
+  .calendar-ev-who,
+  .calendar-ev-time,
+  .calendar-postit-scope {
+    font-size: 8px;
+  }
+
+  .calendar-month .fc,
+  .calendar-month .fc * {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}
+
 @media (max-width: 720px) {
   .calendar-admin,
   .calendar-switch {

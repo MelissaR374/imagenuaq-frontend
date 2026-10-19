@@ -146,6 +146,9 @@ export const listPermissions = () => request("/roles/permissions");
 
 export const listAreas = () => request("/areas");
 
+/** Quién está en un área; lo puede leer cualquier sesión. */
+export const listAreaMembers = (areaId) => request(`/areas/${areaId}/members`);
+
 export const listContractTypes = () => request("/contract-types");
 
 /**
