@@ -87,7 +87,7 @@ function ImportConfig({ onGo = null }) {
   /** Salir del mapeo con cambios sin guardar pregunta antes, en lugar de tirarlos. */
   function tryToGo(target) {
     if (step === "mapeo" && dirty) {
-      setSaliendo(target);
+      setSaliendo({ target });
       return;
     }
     goTo(target);
@@ -153,7 +153,7 @@ function ImportConfig({ onGo = null }) {
               <button className="imp-quiet" type="button" onClick={() => setSaliendo(null)}>
                 Quedarme en el mapeo
               </button>
-              <button className="imp-btn" type="button" onClick={() => goTo(leaving)}>
+              <button className="imp-btn" type="button" onClick={() => goTo(leaving.target)}>
                 Descartar los cambios
               </button>
             </div>

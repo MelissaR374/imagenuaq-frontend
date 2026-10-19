@@ -207,8 +207,8 @@ function ConversionForm({ data, flow, busy, onChange, onSubmit, onCancel }) {
   if (flow) {
     const stages = flow.phases.reduce((total, phase) => total + phase.stages.length, 0);
     flowNote = `El proyecto nace con el flujo de la solicitud: ${flow.phases.length} ${
-      flow.phases.length === 1 ? "phase" : "fases"
-    } y ${stages} ${stages === 1 ? "stage" : "stages"}. Las de la primera fase empiezan activas.`;
+      flow.phases.length === 1 ? "fase" : "fases"
+    } y ${stages} ${stages === 1 ? "etapa" : "etapas"}. Las de la primera fase empiezan activas.`;
   }
 
   return (
@@ -531,9 +531,9 @@ function RequestDetail({ request, areas, onClose, onChanged }) {
   if (designing) {
     return (
       <FlowDesigner
-        request={detail}
+        solicitud={detail}
         onGuardado={flowSaved}
-        onClose={() => setDisenando(false)}
+        onCerrar={() => setDisenando(false)}
       />
     );
   }
@@ -575,7 +575,7 @@ function RequestDetail({ request, areas, onClose, onChanged }) {
           {detail.missingRequired.length === 1 ? "lo pide" : "los pide"} y el libro de Excel{" "}
           {detail.missingRequired.length === 1 ? "lo traía" : "los traía"} vacío
           {detail.missingRequired.length === 1 ? "" : "s"}. Se puede capturar aquí abajo; hasta
-          entonces no se puede converting en proyecto.
+          entonces no se puede convertir en proyecto.
         </p>
       ) : null}
 
@@ -731,7 +731,7 @@ function RequestDetail({ request, areas, onClose, onChanged }) {
                 onClick={() => setDisenando(true)}
                 disabled={busy}
               >
-                Editar el flow
+                Editar el flujo
               </button>
               {confirmingClearFlow ? (
                 <>
@@ -761,7 +761,7 @@ function RequestDetail({ request, areas, onClose, onChanged }) {
                   onClick={() => setConfirmandoQuitarFlujo(true)}
                   disabled={busy}
                 >
-                  Quitar el flow
+                  Quitar el flujo
                 </button>
               )}
             </div>
@@ -813,7 +813,7 @@ function RequestDetail({ request, areas, onClose, onChanged }) {
                   onClick={() => setDisenando(true)}
                   disabled={busy}
                 >
-                  Diseñar su flow
+                  Diseñar su flujo
                 </button>
               </div>
             )}

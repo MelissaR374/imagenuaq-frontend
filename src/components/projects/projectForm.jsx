@@ -219,7 +219,7 @@ function ProjectForm({ onCreated, onCancel }) {
         <label className="project-form-field">
           <span className="project-form-label">
             Urgencia
-            <Help text="Un número: mayor es más urgente. La imprenta y la producción priorizan por urgencia, nunca por orden de llegada (RF-FLW-08)." />
+            <Help text="Un número: mayor es más urgente. La imprenta y la producción priorizan por urgencia." />
           </span>
           <input
             type="number"
@@ -251,7 +251,7 @@ function ProjectForm({ onCreated, onCancel }) {
         <h3>Flujo</h3>
         <label className="project-form-field">
           <span className="project-form-label">
-            Partir de one template
+            Partir de una plantilla
             <Help text="Las fases de la plantilla se copian como etapas de este proyecto. El proyecto no queda apuntando a la plantilla: editarla después no lo toca." />
           </span>
           <select value={templateId} onChange={(event) => setPlantillaId(event.target.value)}>

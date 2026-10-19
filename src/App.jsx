@@ -2,11 +2,13 @@
 //
 // La sesión se recupera preguntándole al servidor con GET /api/auth/me, no leyendo el
 // token: el token sigue pareciendo válido durante siete días aunque la cuenta ya no exista.
+// Un enlace de solo lectura (?shared=) muestra su carpeta sin pedir sesión.
 import { useEffect, useState } from "react";
 import { MdLightMode, MdDarkMode } from "react-icons/md";
 
 import Login from "./components/login/login.jsx";
 import Sidebar from "./components/sidebar/sidebar.jsx";
+import { canSee } from "./components/sidebar/menu.js";
 import Users from "./components/users/users.jsx";
 import Areas from "./components/areas/areas.jsx";
 import Roles from "./components/roles/roles.jsx";
@@ -19,9 +21,16 @@ import Profile from "./components/profile/profile.jsx";
 import Notifications from "./components/notifications/notifications.jsx";
 import FlowDesigner from "./components/FlowDesigner/FlowDesigner.jsx";
 import StatusCatalog from "./components/statusCatalog/statusCatalog.jsx";
+import Documents from "./components/documents/documents.jsx";
+import Retention from "./components/documents/retention.jsx";
+import SharedFolder from "./components/documents/sharedFolder.jsx";
+import MyTasks from "./components/tasks/myTasks.jsx";
+import Unassigned from "./components/tasks/unassigned.jsx";
+import Team from "./components/tasks/team.jsx";
+import Overview from "./components/tasks/overview.jsx";
 
 import * as api from "./api/client.js";
-import { MICROSOFT_PARAM } from "./config.js";
+import { MICROSOFT_PARAM, SHARED_PARAM } from "./config.js";
 import "./App.css";
 
 /**
@@ -47,7 +56,16 @@ const DESCRIPCIONES = {
     "Los estatus con que se muestran solicitudes y proyectos, globales y por área.",
   "Diseñador de flujos":
     "Las plantillas de flujo: sus fases y las etapas de cada una.",
+  Archivos: "Todas las carpetas de cada proyecto.",
+  "Retención de archivos": "Cuánto tiempo se conservan los archivos.",
+  "Mis tareas": "Las etapas de desarrollo de un proyecto a tu cargo",
+  "Por asignar": "Las etapas de tu área que todavía no tienen responsable",
+  Equipo: "Las etapas abiertas de cada persona del área y quién falta esta semana.",
+  "Panorama de áreas": "Lo que cada área tiene por asignar y la carga de su gente esta semana.",
 };
+
+/** El token de un enlace de solo lectura, si la página se abrió con uno. */
+const TOKEN_COMPARTIDO = new URLSearchParams(window.location.search).get(SHARED_PARAM);
 
 /** El menú usa nombres de rol en español y el servidor los manda en inglés. */
 const ROLES = {
@@ -69,12 +87,20 @@ function reemplazarFoto(blob) {
 }
 
 function App() {
+  if (TOKEN_COMPARTIDO) return <SharedFolder token={TOKEN_COMPARTIDO} />;
+  return <Aplicacion />;
+}
+
+function Aplicacion() {
   const [usuario, setUsuario] = useState(null);
+  const [permisos, setPermisos] = useState([]);
   const [pestana, setPestana] = useState(() =>
     new URLSearchParams(window.location.search).has(MICROSOFT_PARAM)
       ? "Libros de Excel"
       : null,
   );
+  const [proyectoPorAbrir, setProyectoPorAbrir] = useState(null);
+  const [areaPorAbrir, setAreaPorAbrir] = useState(null);
 
   const [modoOscuro, setModoOscuro] = useState(() => {
     const savedTheme = localStorage.getItem("theme");
@@ -116,6 +142,13 @@ function App() {
     let cancelado = false;
 
     api
+      .session()
+      .then((data) => {
+        if (!cancelado) setPermisos(data.permissions ?? []);
+      })
+      .catch(() => {});
+
+    api
       .getPicture(usuarioId)
       .then((blob) => {
         if (!cancelado) setFoto(reemplazarFoto(blob));
@@ -145,8 +178,23 @@ function App() {
   if (verificando) return <p className="app-booting">Cargando...</p>;
   if (!usuario) return <Login onEntrar={setUsuario} />;
 
+  const rol = ROLES[usuario.role] ?? "trabajador";
   const activa =
     pestana ?? (usuario.role === "admin" ? "Empleados" : "Notificaciones");
+
+  const puedeAbrirProyectos = canSee("Proyectos", rol, permisos);
+
+  /** Lleva a «Proyectos» con ese proyecto ya abierto, desde una tarea o una etapa. */
+  function abrirProyecto(id) {
+    setProyectoPorAbrir(id);
+    setPestana("Proyectos");
+  }
+
+  /** Lleva a «Por asignar» o a «Equipo» con esa área ya elegida, desde el panorama. */
+  function abrirEnArea(nombre, areaId) {
+    setAreaPorAbrir(areaId);
+    setPestana(nombre);
+  }
 
   function cambiarTema() {
     setModoOscuro((actual) => !actual);
@@ -157,9 +205,14 @@ function App() {
       <Sidebar
         usuario={usuario}
         foto={foto}
-        role={ROLES[usuario.role] ?? "trabajador"}
+        role={rol}
+        permisos={permisos}
         activeItem={activa}
-        onNavigate={setPestana}
+        onNavigate={(nombre) => {
+          setProyectoPorAbrir(null);
+          setAreaPorAbrir(null);
+          setPestana(nombre);
+        }}
         onLogout={cerrarSesion}
       />
 
@@ -188,7 +241,7 @@ function App() {
           </div>
         </header>
 
-        {activa === "Notificaciones" ? (
+        {!canSee(activa, rol, permisos) ? null : activa === "Notificaciones" ? (
           <Notifications />
         ) : activa === "Mi perfil" ? (
           <Profile
@@ -197,26 +250,48 @@ function App() {
             onActualizar={actualizarUsuario}
             onFoto={cambiarFoto}
           />
-        ) : activa === "Empleados" && usuario.role === "admin" ? (
+        ) : activa === "Empleados" ? (
           <Users admin={usuario} />
-        ) : activa === "Áreas y usuarios" && usuario.role === "admin" ? (
+        ) : activa === "Áreas y usuarios" ? (
           <Areas />
-        ) : activa === "Roles y permisos" && usuario.role === "admin" ? (
+        ) : activa === "Roles y permisos" ? (
           <Roles />
-        ) : activa === "Formatos de solicitud" && usuario.role === "admin" ? (
+        ) : activa === "Formatos de solicitud" ? (
           <Schemas />
-        ) : activa === "Libros de Excel" && usuario.role === "admin" ? (
-          <Spreadsheets onIr={setPestana} />
-        ) : activa === "Importar de Excel" && usuario.role === "admin" ? (
-          <ImportConfig onIr={setPestana} />
-        ) : activa === "Bandeja de solicitudes" && usuario.role === "admin" ? (
+        ) : activa === "Libros de Excel" ? (
+          <Spreadsheets onGo={setPestana} />
+        ) : activa === "Importar de Excel" ? (
+          <ImportConfig onGo={setPestana} />
+        ) : activa === "Bandeja de solicitudes" ? (
           <Inbox />
-        ) : activa === "Proyectos" && usuario.role === "admin" ? (
-          <Projects usuario={usuario} />
-        ) : activa === "Catálogo de estatus" && usuario.role === "admin" ? (
+        ) : activa === "Proyectos" ? (
+          <Projects user={usuario} openId={proyectoPorAbrir} />
+        ) : activa === "Catálogo de estatus" ? (
           <StatusCatalog />
-        ) : activa === "Diseñador de flujos" && usuario.role === "admin" ? (
+        ) : activa === "Diseñador de flujos" ? (
           <FlowDesigner />
+        ) : activa === "Archivos" ? (
+          <Documents />
+        ) : activa === "Retención de archivos" ? (
+          <Retention />
+        ) : activa === "Mis tareas" ? (
+          <MyTasks
+            canReview={permisos.includes("task.write")}
+            onOpenProject={puedeAbrirProyectos ? abrirProyecto : null}
+          />
+        ) : activa === "Por asignar" ? (
+          <Unassigned
+            openAreaId={areaPorAbrir}
+            onOpenProject={puedeAbrirProyectos ? abrirProyecto : null}
+            onOpenTeam={(areaId) => abrirEnArea("Equipo", areaId)}
+          />
+        ) : activa === "Equipo" ? (
+          <Team openAreaId={areaPorAbrir} onOpenProject={puedeAbrirProyectos ? abrirProyecto : null} />
+        ) : activa === "Panorama de áreas" ? (
+          <Overview
+            onOpenInbox={(areaId) => abrirEnArea("Por asignar", areaId)}
+            onOpenProject={puedeAbrirProyectos ? abrirProyecto : null}
+          />
         ) : null}
       </main>
     </div>

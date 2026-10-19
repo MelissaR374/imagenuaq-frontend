@@ -1,0 +1,41 @@
+/* A stored file shown in place: image, PDF or video. */
+
+.file-preview {
+  overflow: hidden;
+
+  border: 1px solid var(--border);
+  border-radius: 8px;
+
+  background: var(--surface-secondary);
+}
+
+.file-preview img,
+.file-preview video {
+  display: block;
+
+  max-width: 100%;
+  max-height: 480px;
+  margin: 0 auto;
+}
+
+.file-preview iframe {
+  display: block;
+
+  width: 100%;
+  height: 520px;
+
+  border: 0;
+}
+
+.file-preview-note,
+.file-preview-error {
+  margin: 0;
+
+  color: var(--text-muted);
+
+  font-size: var(--size-small);
+}
+
+.file-preview-error {
+  color: var(--danger);
+}

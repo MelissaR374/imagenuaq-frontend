@@ -459,10 +459,10 @@ function ImportMapper({ book, onDirty, onSaved, onContinue }) {
   }
 
   function buildMap() {
-    const fields = {};
+    const mapped = {};
     for (const field of fields) {
       const rule = cleanRule(rules[field.code]);
-      if (rule !== undefined) fields[field.code] = rule;
+      if (rule !== undefined) mapped[field.code] = rule;
     }
 
     const status = cleanRule(rules.status);
@@ -480,7 +480,7 @@ function ImportMapper({ book, onDirty, onSaved, onContinue }) {
       requester: cleanRule(rules.requester),
       status,
       hashColumns: hashColumns.length > 0 ? hashColumns : undefined,
-      fields,
+      fields: mapped,
     };
   }
 
@@ -607,7 +607,7 @@ function ImportMapper({ book, onDirty, onSaved, onContinue }) {
 
             <label className="imp-field-plain">
               <span className="imp-label">
-                Reconocer one row already importada por
+                Reconocer una fila ya importada por
                 <Help text="Es la identidad de la fila. Una columna Id del formulario es mejor: corregir una errata en la hoja no se lee como una fila nueva. Con todas las columnas mapeadas, cualquier edición posterior entra como una solicitud nueva y se marca como posible duplicado." />
               </span>
               <select
@@ -620,7 +620,7 @@ function ImportMapper({ book, onDirty, onSaved, onContinue }) {
                 <option value="">Todas las columnas mapeadas</option>
                 {headers.map((header, index) => (
                   <option value={header} key={`h-${header}-${index}`}>
-                    La column {header}
+                    La columna {header}
                     {header.toLowerCase() === "id" ? " (recomendado)" : ""}
                   </option>
                 ))}
@@ -635,7 +635,7 @@ function ImportMapper({ book, onDirty, onSaved, onContinue }) {
           <>
             <section className="imp-sec imp-fixed">
               <h3>
-                Para todo el book
+                Para todo el libro
                 <Help text="Valores que este libro da igual a todas sus filas, porque no tiene columna para ellos. Se escriben una vez aquí." />
               </h3>
 
@@ -705,7 +705,7 @@ function ImportMapper({ book, onDirty, onSaved, onContinue }) {
                 <h3>Qué estatus es cada valor de la columna</h3>
                 <p className="imp-note">
                   Estos son los valores que la columna «{rules.status.column}» trae en las
-                  primeras rows.
+                  primeras filas.
                 </p>
                 <div className="imp-equiv">
                   {equivalenceRows.map((text) => (

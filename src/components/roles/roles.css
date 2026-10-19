@@ -414,6 +414,10 @@
   gap: 4px;
 }
 
+.roles-perm-tabs {
+  display: block;
+}
+
 .roles-cell {
   padding: 6px;
 

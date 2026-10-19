@@ -141,8 +141,7 @@
 }
 
 .project-sec h5,
-.project-stage h5,
-.project-stage-form h5 {
+.project-stage h5 {
   margin: 14px 0 6px;
 
   color: var(--text-secondary);
@@ -437,8 +436,7 @@
    THE SELECTED STAGE
 ========================================================= */
 
-.project-stage,
-.project-stage-form {
+.project-stage {
   margin-top: 14px;
   padding: 16px 18px;
 
@@ -866,4 +864,114 @@
   .project-body {
     padding: 14px 14px 20px;
   }
+}
+
+/* =========================================================
+   STAGE DELIVERY
+========================================================= */
+
+.project-delivery {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  margin-top: 14px;
+  padding-top: 12px;
+
+  border-top: 1px solid var(--border-light);
+}
+
+.project-delivery h5 {
+  margin: 0;
+}
+
+.project-delivery-done,
+.project-delivery-form {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+
+  padding: 10px 12px;
+
+  border: 1px solid var(--border);
+  border-radius: 7px;
+
+  background: var(--surface-secondary);
+}
+
+.project-delivery-done {
+  border-left: 3px solid var(--success);
+}
+
+.project-delivery-form {
+  align-items: stretch;
+}
+
+.project-delivery-note {
+  margin: 0;
+
+  color: var(--text);
+
+  font-size: var(--size-body);
+  line-height: 1.5;
+  white-space: pre-line;
+  word-break: break-word;
+}
+
+.project-delivery-form textarea {
+  width: 100%;
+  padding: 6px 8px;
+
+  border: 1px solid var(--border);
+  border-radius: 6px;
+
+  background: var(--field);
+  color: var(--text);
+
+  font: inherit;
+  font-size: var(--size-body);
+
+  resize: vertical;
+}
+
+.project-delivery-form textarea:focus {
+  border-color: var(--accent-line);
+  outline: none;
+}
+
+.project-delivery-form input[type="file"] {
+  height: auto;
+  padding: 6px 8px;
+
+  font-size: var(--size-small);
+}
+
+.project-delivery-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  padding: 4px 10px;
+
+  border: 1px solid var(--border);
+  border-radius: 6px;
+
+  background: var(--surface);
+  color: var(--accent-line);
+
+  font: inherit;
+  font-size: var(--size-small);
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.project-delivery-file:hover {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+
+.project-delivery-file .file-icon {
+  font-size: 16px;
 }

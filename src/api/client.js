@@ -34,11 +34,16 @@ async function request(path, { method = "GET", body, auth = true } = {}) {
   if (body !== undefined) headers["Content-Type"] = "application/json";
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const response = await fetch(`${API_URL}${path}`, {
-    method,
-    headers,
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
+  let response;
+  try {
+    response = await fetch(`${API_URL}${path}`, {
+      method,
+      headers,
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+  } catch {
+    throw new ApiError("No se pudo conectar con el servidor. Intenta de nuevo.", 0);
+  }
 
   if (response.status === 204) return null;
 
@@ -446,3 +451,127 @@ export const markSpreadsheetRows = (id, input = {}) =>
 
 export const clearSpreadsheetMarks = (id) =>
   request(`/spreadsheets/${id}/baseline`, { method: "DELETE" });
+
+export const getProjectFolder = (projectId) => request(`/projects/${projectId}/folder`);
+
+export const listTopFolders = () => request("/documents/folders");
+
+export const getFolder = (id) => request(`/documents/folders/${id}`);
+
+export const createFolder = (parentId, name) =>
+  request("/documents/folders", { method: "POST", body: { parentId, name } });
+
+export const updateFolder = (id, changes) =>
+  request(`/documents/folders/${id}`, { method: "PATCH", body: changes });
+
+export const deleteFolder = (id) => request(`/documents/folders/${id}`, { method: "DELETE" });
+
+/** Reemplaza las áreas con que se comparte la carpeta: `[{ areaId, level: "read"|"write" }]`. */
+export const setFolderAreas = (id, areas) =>
+  request(`/documents/folders/${id}/areas`, { method: "PUT", body: { areas } });
+
+/** Sube el archivo tal cual, sin multipart: el cuerpo es el archivo y el nombre va en la URL. */
+export async function uploadFile(folderId, file) {
+  const response = await fetch(
+    `${API_URL}/documents/folders/${folderId}/files?name=${encodeURIComponent(file.name)}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${getToken()}`,
+        "Content-Type": file.type || "application/octet-stream",
+      },
+      body: file,
+    },
+  );
+
+  if (!response.ok) {
+    throw await toError(response);
+  }
+  return response.json();
+}
+
+/** El contenido de un archivo como Blob; se pide con fetch porque un enlace no manda el token. */
+export async function downloadFile(id) {
+  const response = await fetch(`${API_URL}/documents/${id}/content`, {
+    headers: { Authorization: `Bearer ${getToken()}` },
+  });
+
+  if (!response.ok) {
+    throw await toError(response);
+  }
+  return response.blob();
+}
+
+export const updateFile = (id, changes) =>
+  request(`/documents/${id}`, { method: "PATCH", body: changes });
+
+export const deleteFile = (id) => request(`/documents/${id}`, { method: "DELETE" });
+
+export const listFolderLinks = (id) => request(`/documents/folders/${id}/links`);
+
+/** Un enlace de solo lectura que vence en `expiresAt`. Su token sólo viene en esta respuesta. */
+export const createFolderLink = (id, expiresAt) =>
+  request(`/documents/folders/${id}/links`, { method: "POST", body: { expiresAt } });
+
+export const revokeLink = (id) => request(`/documents/links/${id}`, { method: "DELETE" });
+
+export const getRetention = () => request("/documents/retention");
+
+export const setRetention = (months) =>
+  request("/documents/retention", { method: "PUT", body: { months } });
+
+/** Lo que muestra un enlace de solo lectura: su carpeta, o `folderId` si está debajo. Sin sesión. */
+export const getSharedFolder = (token, folderId = null) =>
+  request(
+    folderId === null
+      ? `/shared/${encodeURIComponent(token)}`
+      : `/shared/${encodeURIComponent(token)}/folders/${folderId}`,
+    { auth: false },
+  );
+
+/** La URL de descarga bajo un enlace; no lleva token de sesión, así que sirve en un <a>. */
+export const sharedFileUrl = (token, fileId) =>
+  `${API_URL}/shared/${encodeURIComponent(token)}/files/${fileId}/content`;
+
+/** Las etapas abiertas a cargo del usuario, con lo que ya entregó en cada una. */
+export const listMyTasks = () => request("/tasks/mine");
+
+/** Lo que el área todavía tiene que repartir: sus etapas abiertas sin responsable. */
+export const listUnassigned = (areaId) => request(withQuery("/tasks/unassigned", { areaId }));
+
+/** La carga de cada integrante del área, del menos cargado al más; `from` y `to` en AAAA-MM-DD. */
+export const getWorkload = (areaId, window = {}) =>
+  request(withQuery("/tasks/workload", { areaId, ...window }));
+
+/**
+ * Cada área en que el usuario reparte trabajo (todas para coordinación), con lo que le falta
+ * asignar y la carga de su gente; `from` y `to` en AAAA-MM-DD.
+ */
+export const getTaskOverview = (window = {}) => request(withQuery("/tasks/overview", window));
+
+/** Las etapas entregadas que esperan el visto bueno de quien consulta: las de sus áreas, o todas para coordinación. */
+export const listToReview = () => request("/tasks/review");
+
+/** El visto bueno desde la cola de revisión: `decision` es "approved" o "rejected", con comentario opcional. */
+export const signOffStage = (stageId, decision, comment = null) =>
+  request(`/tasks/stages/${stageId}/approvals`, { method: "POST", body: { decision, comment } });
+
+/** Le da una etapa sin responsable a un integrante de su área; `userId` nulo la regresa a la bandeja. */
+export const assignStage = (stageId, userId) =>
+  request(`/tasks/stages/${stageId}/assignee`, { method: "PUT", body: { userId } });
+
+/**
+ * Entrega una etapa abierta: la evidencia escrita y, opcional, un archivo, que primero se sube a
+ * la carpeta del proyecto.
+ */
+export async function deliverStage(projectId, stageId, note, file = null) {
+  let fileId = null;
+  if (file !== null) {
+    const { folder } = await getProjectFolder(projectId);
+    fileId = (await uploadFile(folder.id, file)).file.id;
+  }
+  return request(`/projects/${projectId}/stages/${stageId}/delivery`, {
+    method: "PUT",
+    body: { note, fileId },
+  });
+}

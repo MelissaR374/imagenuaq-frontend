@@ -12,6 +12,7 @@ import { Fragment, useEffect, useState } from "react";
 
 import * as api from "../../api/client.js";
 import Help from "../shared/help.jsx";
+import { tabsFor } from "../sidebar/menu.js";
 import "./roles.css";
 
 const ROLE_NAME_MAX = 50;
@@ -608,6 +609,14 @@ function Roles() {
                             <Help text={permission.description} />
                           )}
                         </span>
+                        {tabsFor(permission.code).length > 0 && (
+                          <span className="roles-perm-tabs">
+                            Da acceso a{" "}
+                            {tabsFor(permission.code)
+                              .map((tab) => `«${tab}»`)
+                              .join(" y ")}
+                          </span>
+                        )}
                       </th>
 
                       {draft.roles.map((role) => (

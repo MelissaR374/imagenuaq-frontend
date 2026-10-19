@@ -1,0 +1,500 @@
+/* The folder browser, inside a project's detail and in «Archivos». Styled after the «Lienzo»
+   screens (projectDetail.css, projects.css) with the tokens from App.css. */
+.folder-browser {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  min-width: 0;
+}
+
+/* =========================================================
+   PATH
+========================================================= */
+
+.folder-path {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+
+.folder-path-step {
+  padding: 2px 6px;
+
+  border: 0;
+  border-radius: 4px;
+
+  background: transparent;
+  color: var(--accent-line);
+
+  font: inherit;
+  font-size: var(--size-small);
+
+  cursor: pointer;
+}
+
+.folder-path-step:hover {
+  background: var(--accent-soft);
+}
+
+.folder-path-step[aria-current="page"] {
+  color: var(--text);
+
+  font-weight: 600;
+
+  cursor: default;
+}
+
+.folder-path-step[aria-current="page"]:hover {
+  background: transparent;
+}
+
+.folder-path-step + .folder-path-step::before {
+  content: "/";
+
+  margin-right: 8px;
+
+  color: var(--text-muted);
+
+  font-weight: 400;
+}
+
+/* =========================================================
+   MESSAGES
+========================================================= */
+
+.folder-note {
+  margin: 0;
+
+  color: var(--text-secondary);
+
+  font-size: var(--size-small);
+}
+
+.folder-error {
+  margin: 0;
+  padding: 9px 12px;
+
+  border-left: 3px solid var(--danger);
+  border-radius: 0 6px 6px 0;
+
+  background: var(--danger-soft);
+  color: var(--text);
+
+  font-size: var(--size-small);
+}
+
+/* =========================================================
+   ACTIONS
+========================================================= */
+
+.folder-actions,
+.folder-new,
+.folder-link-new {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.folder-new input,
+.folder-link-new input,
+.folder-grants select,
+.folder-issued input {
+  height: 32px;
+  padding: 0 8px;
+
+  border: 1px solid var(--border);
+  border-radius: 6px;
+
+  background: var(--field);
+  color: var(--text);
+
+  font: inherit;
+  font-size: var(--size-small);
+}
+
+.folder-new input {
+  width: 180px;
+}
+
+.folder-new input:focus,
+.folder-link-new input:focus,
+.folder-grants select:focus,
+.folder-issued input:focus {
+  border-color: var(--accent-line);
+  outline: none;
+}
+
+.folder-link-new label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  color: var(--text-secondary);
+
+  font-size: var(--size-small);
+}
+
+.folder-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+
+  height: 32px;
+  padding: 0 12px;
+
+  border: 1px solid var(--border);
+  border-radius: 6px;
+
+  background: var(--surface);
+  color: var(--text);
+
+  font: inherit;
+  font-size: var(--size-small);
+
+  cursor: pointer;
+}
+
+.folder-btn:hover:not(:disabled) {
+  border-color: var(--accent-line);
+}
+
+.folder-btn:disabled {
+  color: var(--text-muted);
+  cursor: default;
+}
+
+.folder-btn.is-primary {
+  border-color: var(--accent);
+
+  background: var(--accent);
+  color: #ffffff;
+
+  font-weight: 600;
+}
+
+.folder-btn.is-primary:hover {
+  border-color: var(--accent-hover);
+  background: var(--accent-hover);
+}
+
+.folder-btn.is-on {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+
+/* The file input is the label's: the label is what shows, as a button. */
+.folder-upload input {
+  position: absolute;
+
+  width: 1px;
+  height: 1px;
+
+  opacity: 0;
+}
+
+.folder-upload:focus-within {
+  outline: 2px solid var(--accent-line);
+  outline-offset: 2px;
+}
+
+.folder-quiet {
+  padding: 2px 8px;
+
+  border: 1px solid transparent;
+  border-radius: 4px;
+
+  background: transparent;
+  color: var(--accent-line);
+
+  font: inherit;
+  font-size: var(--size-small);
+  white-space: nowrap;
+
+  cursor: pointer;
+}
+
+.folder-quiet:hover:not(:disabled) {
+  background: var(--accent-soft);
+}
+
+.folder-quiet:disabled {
+  color: var(--text-muted);
+  cursor: default;
+}
+
+.folder-quiet.is-danger {
+  color: var(--danger);
+}
+
+.folder-quiet.is-danger:hover:not(:disabled) {
+  background: var(--danger-soft);
+}
+
+.folder-readonly {
+  padding: 3px 9px;
+
+  border: 1px solid var(--border);
+  border-radius: 999px;
+
+  color: var(--text-secondary);
+
+  font-size: var(--size-small);
+}
+
+/* =========================================================
+   PANELS: LINKS AND AREA ACCESS
+========================================================= */
+
+.folder-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  padding: 12px 14px;
+
+  border: 1px solid var(--border);
+  border-radius: 8px;
+
+  background: var(--surface-secondary);
+}
+
+.folder-panel h4 {
+  margin: 0;
+
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.folder-issued {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  margin: 0;
+  padding: 9px 12px;
+
+  border-left: 3px solid var(--success);
+  border-radius: 0 6px 6px 0;
+
+  background: var(--success-soft);
+  color: var(--text);
+
+  font-size: var(--size-small);
+}
+
+.folder-issued input {
+  width: 100%;
+
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+
+.folder-links,
+.folder-grants {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+
+  list-style: none;
+}
+
+.folder-links li,
+.folder-grants li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+
+  padding: 7px 0;
+
+  border-top: 1px solid var(--border-light);
+
+  color: var(--text);
+
+  font-size: var(--size-small);
+}
+
+.folder-links li:first-child,
+.folder-grants li:first-child {
+  border-top: 0;
+}
+
+.folder-grants select {
+  min-width: 140px;
+}
+
+.folder-panel-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* =========================================================
+   CONTENTS
+========================================================= */
+
+.folder-table-wrap {
+  overflow-x: auto;
+
+  border: 1px solid var(--border);
+  border-radius: 8px;
+
+  background: var(--surface);
+}
+
+.folder-table {
+  width: 100%;
+
+  border-collapse: collapse;
+
+  font-size: var(--size-body);
+}
+
+.folder-table th {
+  padding: 9px 12px;
+
+  border-bottom: 1px solid var(--border);
+
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.folder-table td {
+  padding: 8px 12px;
+
+  border-bottom: 1px solid var(--border-light);
+
+  color: var(--text);
+
+  vertical-align: middle;
+}
+
+.folder-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.folder-row:hover {
+  background: var(--surface-secondary);
+}
+
+.folder-row td:nth-child(2),
+.folder-row td:nth-child(3) {
+  color: var(--text-secondary);
+
+  font-size: var(--size-small);
+  white-space: nowrap;
+}
+
+.folder-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  min-width: 0;
+
+  word-break: break-word;
+}
+
+.folder-name .file-icon {
+  flex-shrink: 0;
+
+  color: var(--text-muted);
+
+  font-size: 18px;
+}
+
+.folder-name .file-icon.is-folder {
+  color: var(--accent-line);
+}
+
+.folder-name .file-icon.is-pdf {
+  color: var(--danger);
+}
+
+.folder-name .file-icon.is-image {
+  color: var(--success);
+}
+
+.folder-name .file-icon.is-sheet {
+  color: var(--success);
+}
+
+.folder-name .file-icon.is-video,
+.folder-name .file-icon.is-slides {
+  color: var(--warning);
+}
+
+.folder-open {
+  padding: 0;
+
+  border: 0;
+
+  background: transparent;
+  color: var(--text);
+
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+
+  cursor: pointer;
+}
+
+.folder-open:hover {
+  color: var(--accent-line);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.folder-row-actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.folder-hidden {
+  position: absolute;
+
+  width: 1px;
+  height: 1px;
+
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.folder-empty {
+  padding: 22px 12px;
+
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+
+  color: var(--text-muted);
+
+  font-size: var(--size-small);
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .folder-table th:nth-child(3),
+  .folder-table td:nth-child(3) {
+    display: none;
+  }
+
+  .folder-new input {
+    width: 100%;
+  }
+
+  .folder-new {
+    flex: 1 1 100%;
+  }
+}

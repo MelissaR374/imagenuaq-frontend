@@ -519,8 +519,11 @@ Busca el primer elemento que sea de este tipo dentro de su contenedor y que teng
     text-decoration: underline;
 }
 
-.users-action-danger {
+.users-action + .users-action {
     margin-left: 12px;
+}
+
+.users-action-danger {
     color: #e45c5c;
 }
 
@@ -866,4 +869,19 @@ Busca el primer elemento que sea de este tipo dentro de su contenedor y que teng
     .user-form-submit {
         width: 100%;
     }
+}
+.user-form-cancel {
+    grid-column: 1 / -1;
+    justify-self: start;
+    height: 32px;
+    min-width: 140px;
+    padding: 0 16px;
+    border: 1px solid #c9d3df;
+    border-radius: 5px;
+    background: transparent;
+    color: inherit;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
 }
