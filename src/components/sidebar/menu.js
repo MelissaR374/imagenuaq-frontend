@@ -26,6 +26,7 @@ import {
   MdLabel,
   MdSwapHoriz,
   MdSchema,
+  MdViewQuilt,
 } from "react-icons/md";
 
 export const menuSections = [
@@ -57,7 +58,7 @@ export const menuSections = [
       {
         label: "Mis tareas",
         icon:MdCheckBox,
-        roles: ["trabajador", "finanzas"]
+        permission: "task.read",
       },
       {
         label: "Mi semana",
@@ -96,11 +97,6 @@ export const menuSections = [
         label: "Archivos",
         icon: MdAttachFile,
         permission: "document.browse",
-      },
-      {
-        label: "Personas y carga",
-        icon: MdPeople,
-        roles: ["admin"],
       },
       {
         label: "Empleados",
@@ -204,10 +200,14 @@ export const menuSections = [
         roles: ["lider"],
       },
       {
+        label: "Panorama de áreas",
+        icon: MdViewQuilt,
+        permission: "task.write",
+      },
+      {
         label: "Por asignar",
         icon: MdInbox,
-        roles: ["lider"],
-        badge: 12,
+        permission: "task.write",
       },
       {
         label: "Proyectos del área",
@@ -217,7 +217,7 @@ export const menuSections = [
       {
         label: "Equipo",
         icon: MdPeople,
-        roles: ["lider"],
+        permission: "task.write",
       },
       {
         label: "Calendario del área",

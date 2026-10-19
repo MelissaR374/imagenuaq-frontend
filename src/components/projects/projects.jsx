@@ -16,7 +16,7 @@
 import { useEffect, useState } from "react";
 
 import * as api from "../../api/client.js";
-import { shortDate } from "../shared/format.js";
+import { shortDate, daysUntil } from "../shared/format.js";
 import { vocabularyOf } from "../shared/vocabulary.js";
 import ProjectDetail from "./projectDetail.jsx";
 import ProjectForm from "./projectForm.jsx";
@@ -53,14 +53,6 @@ const NO_FILTERS = {
   fieldValue: "",
   sort: "priority",
 };
-
-/** The days between today and a date, to say "en 9 d" or "vencido hace 21 d". */
-function daysUntil(fecha) {
-  const day = 24 * 60 * 60 * 1000;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return Math.round((new Date(fecha).setHours(0, 0, 0, 0) - today) / day);
-}
 
 /** The due date with what is left of it, or how long ago it passed. */
 function DueDate({ dueOn, closed }) {
@@ -162,7 +154,11 @@ function ProjectRow({ project, onOpen }) {
   );
 }
 
-function Projects({ user }) {
+/**
+ * @param {{ user: object, openId?: number|null }} props `openId` opens that project on arrival,
+ *   as when «Mis tareas» sends someone to one.
+ */
+function Projects({ user, openId = null }) {
   const [projects, setProyectos] = useState([]);
   const [areas, setAreas] = useState([]);
   const [statuses, setEstatus] = useState([]);
@@ -175,7 +171,7 @@ function Projects({ user }) {
   const [total, setTotal] = useState(0);
   const [loading, setCargando] = useState(true);
   const [error, setError] = useState(null);
-  const [opened, setAbierto] = useState(null);
+  const [opened, setAbierto] = useState(openId === null ? null : { id: openId });
   const [capturing, setCapturando] = useState(false);
   const [version, setVersion] = useState(0);
 

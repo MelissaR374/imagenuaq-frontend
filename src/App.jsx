@@ -24,6 +24,10 @@ import StatusCatalog from "./components/statusCatalog/statusCatalog.jsx";
 import Documents from "./components/documents/documents.jsx";
 import Retention from "./components/documents/retention.jsx";
 import SharedFolder from "./components/documents/sharedFolder.jsx";
+import MyTasks from "./components/tasks/myTasks.jsx";
+import Unassigned from "./components/tasks/unassigned.jsx";
+import Team from "./components/tasks/team.jsx";
+import Overview from "./components/tasks/overview.jsx";
 
 import * as api from "./api/client.js";
 import { MICROSOFT_PARAM, SHARED_PARAM } from "./config.js";
@@ -52,8 +56,12 @@ const DESCRIPCIONES = {
     "Los estatus con que se muestran solicitudes y proyectos, globales y por área.",
   "Diseñador de flujos":
     "Las plantillas de flujo: sus fases y las etapas de cada una.",
-  Archivos: "Todas las carpetas: las de cada proyecto, con su clave, y las sueltas.",
+  Archivos: "Todas las carpetas de cada proyecto.",
   "Retención de archivos": "Cuánto tiempo se conservan los archivos.",
+  "Mis tareas": "Las etapas de desarrollo de un proyecto a tu cargo",
+  "Por asignar": "Las etapas de tu área que todavía no tienen responsable",
+  Equipo: "Las etapas abiertas de cada persona del área y quién falta esta semana.",
+  "Panorama de áreas": "Lo que cada área tiene por asignar y la carga de su gente esta semana.",
 };
 
 /** El token de un enlace de solo lectura, si la página se abrió con uno. */
@@ -91,6 +99,8 @@ function Aplicacion() {
       ? "Libros de Excel"
       : null,
   );
+  const [proyectoPorAbrir, setProyectoPorAbrir] = useState(null);
+  const [areaPorAbrir, setAreaPorAbrir] = useState(null);
 
   const [modoOscuro, setModoOscuro] = useState(() => {
     const savedTheme = localStorage.getItem("theme");
@@ -172,6 +182,20 @@ function Aplicacion() {
   const activa =
     pestana ?? (usuario.role === "admin" ? "Empleados" : "Notificaciones");
 
+  const puedeAbrirProyectos = canSee("Proyectos", rol, permisos);
+
+  /** Lleva a «Proyectos» con ese proyecto ya abierto, desde una tarea o una etapa. */
+  function abrirProyecto(id) {
+    setProyectoPorAbrir(id);
+    setPestana("Proyectos");
+  }
+
+  /** Lleva a «Por asignar» o a «Equipo» con esa área ya elegida, desde el panorama. */
+  function abrirEnArea(nombre, areaId) {
+    setAreaPorAbrir(areaId);
+    setPestana(nombre);
+  }
+
   function cambiarTema() {
     setModoOscuro((actual) => !actual);
   }
@@ -184,7 +208,11 @@ function Aplicacion() {
         role={rol}
         permisos={permisos}
         activeItem={activa}
-        onNavigate={setPestana}
+        onNavigate={(nombre) => {
+          setProyectoPorAbrir(null);
+          setAreaPorAbrir(null);
+          setPestana(nombre);
+        }}
         onLogout={cerrarSesion}
       />
 
@@ -237,7 +265,7 @@ function Aplicacion() {
         ) : activa === "Bandeja de solicitudes" ? (
           <Inbox />
         ) : activa === "Proyectos" ? (
-          <Projects user={usuario} />
+          <Projects user={usuario} openId={proyectoPorAbrir} />
         ) : activa === "Catálogo de estatus" ? (
           <StatusCatalog />
         ) : activa === "Diseñador de flujos" ? (
@@ -246,6 +274,21 @@ function Aplicacion() {
           <Documents />
         ) : activa === "Retención de archivos" ? (
           <Retention />
+        ) : activa === "Mis tareas" ? (
+          <MyTasks onOpenProject={puedeAbrirProyectos ? abrirProyecto : null} />
+        ) : activa === "Por asignar" ? (
+          <Unassigned
+            openAreaId={areaPorAbrir}
+            onOpenProject={puedeAbrirProyectos ? abrirProyecto : null}
+            onOpenTeam={(areaId) => abrirEnArea("Equipo", areaId)}
+          />
+        ) : activa === "Equipo" ? (
+          <Team openAreaId={areaPorAbrir} onOpenProject={puedeAbrirProyectos ? abrirProyecto : null} />
+        ) : activa === "Panorama de áreas" ? (
+          <Overview
+            onOpenInbox={(areaId) => abrirEnArea("Por asignar", areaId)}
+            onOpenProject={puedeAbrirProyectos ? abrirProyecto : null}
+          />
         ) : null}
       </main>
     </div>

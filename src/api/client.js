@@ -533,6 +533,26 @@ export const getSharedFolder = (token, folderId = null) =>
 export const sharedFileUrl = (token, fileId) =>
   `${API_URL}/shared/${encodeURIComponent(token)}/files/${fileId}/content`;
 
+/** Las etapas abiertas a cargo del usuario, con lo que ya entregó en cada una. */
+export const listMyTasks = () => request("/tasks/mine");
+
+/** Lo que el área todavía tiene que repartir: sus etapas abiertas sin responsable. */
+export const listUnassigned = (areaId) => request(withQuery("/tasks/unassigned", { areaId }));
+
+/** La carga de cada integrante del área, del menos cargado al más; `from` y `to` en AAAA-MM-DD. */
+export const getWorkload = (areaId, window = {}) =>
+  request(withQuery("/tasks/workload", { areaId, ...window }));
+
+/**
+ * Cada área en que el usuario reparte trabajo (todas para coordinación), con lo que le falta
+ * asignar y la carga de su gente; `from` y `to` en AAAA-MM-DD.
+ */
+export const getTaskOverview = (window = {}) => request(withQuery("/tasks/overview", window));
+
+/** Le da una etapa sin responsable a un integrante de su área; `userId` nulo la regresa a la bandeja. */
+export const assignStage = (stageId, userId) =>
+  request(`/tasks/stages/${stageId}/assignee`, { method: "PUT", body: { userId } });
+
 /**
  * Entrega una etapa abierta: la evidencia escrita y, opcional, un archivo, que primero se sube a
  * la carpeta del proyecto.
