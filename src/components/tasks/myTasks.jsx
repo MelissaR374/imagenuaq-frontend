@@ -1,11 +1,13 @@
 // «Mis tareas»: the open stages a person is responsible for, most urgent project first (RF-TSK-03).
 // A stage is finished from here by delivering it (RF-FLW-03); it then waits for its sign-off, which
-// closes it and starts the next one, and until then it stays on the list marked as delivered.
+// closes it and starts the next one, and until then it stays on the list marked as delivered. Area
+// leaders and coordination also see, first, what others delivered and waits for their sign-off.
 import { useEffect, useState } from "react";
 
 import * as api from "../../api/client.js";
 import { dayDate } from "../shared/format.js";
 import StageDelivery from "../projects/stageDelivery.jsx";
+import ReviewItem from "./reviewItem.jsx";
 import { thisWeek } from "./taskText.js";
 import "./tasks.css";
 
@@ -16,11 +18,13 @@ const STAGE_STATES = {
 };
 
 /**
- * @param {{ onOpenProject?: ((projectId: number) => void) | null }} props Without it, as for someone
- *   who cannot see «Proyectos», there is no button to open the project.
+ * @param {{ canReview?: boolean, onOpenProject?: ((projectId: number) => void) | null }} props
+ *   `canReview` (`task.write`) adds the sign-off queue. Without `onOpenProject`, as for someone who
+ *   cannot see «Proyectos», there is no button to open the project.
  */
-function MyTasks({ onOpenProject = null }) {
+function MyTasks({ canReview = false, onOpenProject = null }) {
   const [stages, setStages] = useState(null);
+  const [review, setReview] = useState([]);
   const [openId, setOpenId] = useState(null);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -39,6 +43,39 @@ function MyTasks({ onOpenProject = null }) {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!canReview) return;
+    let cancelled = false;
+    api
+      .listToReview()
+      .then((data) => {
+        if (!cancelled) setReview(data.stages);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err.message);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [canReview]);
+
+  async function signOff(stage, decision, comment) {
+    setBusy(true);
+    setError(null);
+    try {
+      await api.signOffStage(stage.id, decision, comment.trim() === "" ? null : comment.trim());
+      const [queue, mine] = await Promise.all([api.listToReview(), api.listMyTasks()]);
+      setReview(queue.stages);
+      setStages(mine.stages);
+      return true;
+    } catch (err) {
+      setError(err.message);
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function deliver(stage, note, file) {
     setBusy(true);
@@ -64,6 +101,25 @@ function MyTasks({ onOpenProject = null }) {
   return (
     <div className="tasks">
       {error !== null ? <p className="tasks-error">{error}</p> : null}
+
+      {review.length > 0 ? (
+        <section className="tasks-sec">
+          <h3>Por revisar ({review.length})</h3>
+          <ul className="tasks-list">
+            {review.map((stage) => (
+              <ReviewItem
+                stage={stage}
+                busy={busy}
+                onSignOff={(decision, comment) => signOff(stage, decision, comment)}
+                onOpenProject={onOpenProject}
+                key={stage.id}
+              />
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {review.length > 0 ? <h3 className="tasks-sec-title">A tu cargo</h3> : null}
 
       {stages.length === 0 ? (
         <p className="tasks-empty">No tienes etapas abiertas a tu nombre.</p>

@@ -1,6 +1,7 @@
 // What a stage delivered (RF-FLW-03): the written evidence and, optionally, a file that lands in the
 // project's folder. Whoever is on the stage hands it in before the sign-off, and whoever signs reads
-// it here. A second delivery on the same attempt replaces the first; a rerun starts blank.
+// it here, without `onDeliver`. A second delivery on the same attempt replaces the first; a rerun
+// starts blank.
 import { useState } from "react";
 
 import * as api from "../../api/client.js";
@@ -12,11 +13,13 @@ import "./projectDetail.css";
 const OPEN = ["active", "waiting_external"];
 
 /**
- * @param {{ stage: object, busy: boolean, onDeliver: (note: string, file: File|null) => Promise<boolean> }} props
+ * @param {{ stage: object, busy?: boolean,
+ *   onDeliver?: ((note: string, file: File|null) => Promise<boolean>) | null }} props Without
+ *   `onDeliver` the delivery is only read, as by whoever signs it off.
  */
-function StageDelivery({ stage, busy, onDeliver }) {
+function StageDelivery({ stage, busy = false, onDeliver = null }) {
   const delivered = stage.deliveredAt !== null && stage.deliveredAt !== undefined;
-  const open = OPEN.includes(stage.status);
+  const open = OPEN.includes(stage.status) && onDeliver !== null;
   const [editing, setEditing] = useState(false);
   const [note, setNote] = useState("");
   const [file, setFile] = useState(null);

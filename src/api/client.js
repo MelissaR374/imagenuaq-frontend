@@ -549,6 +549,13 @@ export const getWorkload = (areaId, window = {}) =>
  */
 export const getTaskOverview = (window = {}) => request(withQuery("/tasks/overview", window));
 
+/** Las etapas entregadas que esperan el visto bueno de quien consulta: las de sus áreas, o todas para coordinación. */
+export const listToReview = () => request("/tasks/review");
+
+/** El visto bueno desde la cola de revisión: `decision` es "approved" o "rejected", con comentario opcional. */
+export const signOffStage = (stageId, decision, comment = null) =>
+  request(`/tasks/stages/${stageId}/approvals`, { method: "POST", body: { decision, comment } });
+
 /** Le da una etapa sin responsable a un integrante de su área; `userId` nulo la regresa a la bandeja. */
 export const assignStage = (stageId, userId) =>
   request(`/tasks/stages/${stageId}/assignee`, { method: "PUT", body: { userId } });

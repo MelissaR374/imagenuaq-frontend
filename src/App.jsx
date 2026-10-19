@@ -275,7 +275,10 @@ function Aplicacion() {
         ) : activa === "Retención de archivos" ? (
           <Retention />
         ) : activa === "Mis tareas" ? (
-          <MyTasks onOpenProject={puedeAbrirProyectos ? abrirProyecto : null} />
+          <MyTasks
+            canReview={permisos.includes("task.write")}
+            onOpenProject={puedeAbrirProyectos ? abrirProyecto : null}
+          />
         ) : activa === "Por asignar" ? (
           <Unassigned
             openAreaId={areaPorAbrir}
