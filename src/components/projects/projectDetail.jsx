@@ -1,43 +1,33 @@
-// A project at full screen, with its live flow, its stages, its values and the requests it
-// answers. It opens over the list and over the sidebar because it carries a process with many
-// parts at once and, opened under its row, it was cut short.
+// A project at full screen, over the list and over the sidebar. A header says everything about the
+// project at a glance and edits it in place; below it, tabs split the rest: the stages, the values,
+// the files and the requests it answers. In «Etapas» the flow is a list of phases on the left and
+// the chosen stage opens beside it, so a click never sends the reader scrolling to find its panel.
 //
 // The two vocabularies of state exist because of DATAMODEL.md §8.1 and do not touch: the status is
 // the one from the catalog coordination edits live, moved by a hand; the state of the work is the
-// stage machine, moved by a sign-off. A project can say "Recibido" with every stage concluded, so
-// the screen shows them side by side: it is the only way for the contradiction to be seen instead
-// of hidden.
+// stage machine, moved by a sign-off. The header shows both, and warns when the work is finished
+// but the status does not say so.
 //
 // A project has no "current stage": the current stage is the set of open stages, because one
-// project can be in two areas at once (RF-FLW-09). That is why the flow is shown whole, phase by
-// phase and with its attempt: when a sign-off rejects, the stage closes and opens again as the
-// next attempt, and both stay in sight.
+// project can be in two areas at once (RF-FLW-09). The list shows each stage's latest attempt; the
+// sign-offs of earlier attempts stay in its panel, so a rejection's reason is not lost.
 //
 // `done` is never set by hand: a sign-off closes a stage (RF-FLW-03), and a sign-off that leaves
 // its phase with nothing open starts the next phase in the same statement (§2.12). Concluding the
-// project lives at the end of the flow, not in the footer, because it is the walk's last step.
-//
-// Cancelling a stage is not offered: it is not a feature of the system, even though the API takes
-// it.
-import { Fragment, useEffect, useState } from "react";
+// project closes the list of stages, because it is the walk's last step. Cancelling a stage is not
+// offered: it is not a feature of the system, even though the API takes it.
+import { useEffect, useState } from "react";
 
 import * as api from "../../api/client.js";
-import { shortDate, daysBetween } from "../shared/format.js";
+import { shortDate, dayDate, daysBetween, daysUntil } from "../shared/format.js";
 import { nameOfKey } from "../shared/vocabulary.js";
 import Help from "../shared/help.jsx";
 import FieldInput from "../shared/fieldInput.jsx";
 import FolderBrowser from "../documents/folderBrowser.jsx";
 import StageModal from "../FlowDesigner/StageModal.jsx";
+import { STAGE_STATUS_LABELS } from "../tasks/taskText.js";
 import StageDelivery from "./stageDelivery.jsx";
 import "./projectDetail.css";
-
-const STAGE_STATES = {
-  pending: "Pendiente",
-  active: "Activa",
-  waiting_external: "En espera",
-  done: "Concluida",
-  cancelled: "Cancelada",
-};
 
 const OPEN_STATES = ["active", "waiting_external"];
 
@@ -58,6 +48,16 @@ const FINANCE_KEYS = {
   requiere_cotizacion: { name: "Requiere cotización", type: "boolean" },
 };
 
+const TABS = [
+  { key: "stages", label: "Etapas" },
+  { key: "data", label: "Datos" },
+  { key: "files", label: "Archivos" },
+  { key: "requests", label: "Solicitudes" },
+];
+
+/** The header fields «Editar» changes, as the draft keeps them. */
+const HEADER_KEYS = ["title", "requester", "priority", "startsOn", "dueOn", "hasCost"];
+
 /** A key's name and type, looking at the vocabulary and at the two finance ones. */
 function fieldOfKey(vocabulary, key) {
   const financeKey = FINANCE_KEYS[key];
@@ -71,6 +71,18 @@ function fieldOfKey(vocabulary, key) {
   return { code: key, name: fromVocabulary.name, type: fromVocabulary.type };
 }
 
+/** Each stage definition's latest attempt: what the list shows. Earlier attempts are history. */
+function latestAttempts(stages) {
+  const latest = new Map();
+  for (const stage of stages) {
+    const seen = latest.get(stage.flowStageId);
+    if (seen === undefined || stage.attempt > seen.attempt) {
+      latest.set(stage.flowStageId, stage);
+    }
+  }
+  return [...latest.values()];
+}
+
 /** The stages grouped by their phase: the same `seq` twice is two stages running in parallel. */
 function phasesOf(stages) {
   const phases = new Map();
@@ -80,7 +92,18 @@ function phasesOf(stages) {
     }
     phases.get(stage.seq).stages.push(stage);
   }
-  return [...phases.values()].sort((one, other) => one.seq - other.seq);
+  return [...phases.values()]
+    .sort((one, other) => one.seq - other.seq)
+    .map((phase) => ({ ...phase, stages: phase.stages.sort((a, b) => a.position - b.position) }));
+}
+
+/** "Fase 2 · Producción", without repeating a name that only says its number. */
+function phaseLabel(index, name) {
+  const number = `Fase ${index + 1}`;
+  if (name === null || name === undefined || name.trim() === "" || name.trim().toLowerCase() === number.toLowerCase()) {
+    return number;
+  }
+  return `${number} · ${name}`;
 }
 
 /** Whether a key already has a value: it is what the sign-off demands (RF-FLW-06). */
@@ -88,197 +111,35 @@ function hasValue(fieldValues, key) {
   return fieldValues.some((value) => value.key === key && value.value !== "");
 }
 
-/**
- * The two vocabularies of state, side by side, and the warning when they contradict each other.
- * They are not merged on purpose; what can be done is to make them visible.
- */
-function HowItIs({ detail, statuses, busy, onStatus }) {
-  const openStages = detail.stages.filter((stage) => OPEN_STATES.includes(stage.status));
-  const doneStages = detail.stages.filter((stage) => stage.status === "done");
-
-  let work = "Todavía sin etapas: se agregan al final del flujo.";
-  if (openStages.length > 0) {
-    work = `Se trabaja en ${openStages
-      .map((stage) => `${stage.title} (${stage.areaName})`)
-      .join(", ")}.`;
-  } else if (doneStages.length > 0) {
-    work = `Ninguna etapa abierta; ${doneStages.length} ${
-      doneStages.length === 1 ? "concluida" : "doneStages"
-    }.`;
-  }
-
-  const workFinished =
-    detail.stages.length > 0 && openStages.length === 0 && doneStages.length > 0;
-  const statusSaysSo = detail.statusIsTerminal || detail.closedAt !== null;
-
-  return (
-    <section className="project-how">
-      <div className="project-how-half">
-        <h3>Estatus</h3>
-        <select
-          value={detail.statusId}
-          onChange={(event) => onStatus(event.target.value)}
-          disabled={busy}
-        >
-          {statuses.map((one) => (
-            <option value={one.id} key={one.id}>
-              {one.label}
-              {one.isGlobal ? "" : ` (${one.areaName})`}
-            </option>
-          ))}
-        </select>
-        <p className="project-note">
-          Desde {shortDate(detail.statusSince)}. 
-        </p>
-      </div>
-
-      <div className="project-how-half">
-        <h3>Estado del trabajo</h3>
-        <p className="project-how-work">{work}</p>
-      </div>
-
-      {workFinished && !statusSaysSo ? (
-        <p className="project-warn">
-          El trabajo ya no tiene etapas abiertas, pero el estatus sigue en «{detail.statusLabel}».
-          Nada lo mueve solo.
-        </p>
-      ) : null}
-    </section>
-  );
+/** The draft of the header: what «Editar» changes, as it stands saved. */
+function headerFrom(project) {
+  return {
+    title: project.title,
+    requester: project.requester ?? "",
+    priority: String(project.priority),
+    startsOn: project.startsOn ?? "",
+    dueOn: project.dueOn ?? "",
+    hasCost: project.hasCost,
+  };
 }
 
-/** A stage card in the flow, with its state and what it owes. */
-function StageCard({ stage, fieldValues, vocabulary, selected, onSelect }) {
-  let className = `project-card is-${stage.status}`;
-  if (selected) {
-    className += " is-selected";
+/** The draft of the values, keyed by their field key. */
+function valuesFrom(project) {
+  const values = {};
+  for (const value of project.fieldValues) {
+    values[value.key] = value.value;
   }
-
-  return (
-    <button className={className} type="button" onClick={() => onSelect(stage.id)}>
-      <span className="project-card-area">{stage.areaName}</span>
-      <strong>{stage.title}</strong>
-      <span className="project-card-meta">
-        {STAGE_STATES[stage.status] ?? stage.status}
-        {stage.attempt > 1 ? ` · intento ${stage.attempt}` : ""}
-        {stage.assignedToName === null ? "" : ` · ${stage.assignedToName}`}
-        {stage.startedAt !== null && stage.endedAt !== null
-          ? ` · ${daysBetween(stage.startedAt, stage.endedAt)} d`
-          : ""}
-      </span>
-      {stage.outputs.length === 0 ? null : (
-        <span className="project-card-outputs">
-          {stage.outputs.map((key) => (
-            <span
-              className={
-                hasValue(fieldValues, key) ? "project-owed is-done" : "project-owed"
-              }
-              key={key}
-            >
-              {nameOfKey(vocabulary, key)}
-            </span>
-          ))}
-        </span>
-      )}
-    </button>
-  );
+  return values;
 }
 
-/**
- * The live flow: phase after phase, and at the end the FIN column, where the project is concluded.
- * It is the designer's canvas, with each stage's state.
- */
-function LiveFlow({
-  detail, phases, vocabulary, selected, busy, openStages,
-  onSelect, onAdd, onConclude, onArchiveClosed,
-}) {
-  const [alsoArchive, setTambienArchivar] = useState(false);
-
-  return (
-    <div className="project-flow">
-      {phases.map((phase, index) => (
-        <Fragment key={phase.seq}>
-          {index > 0 ? <div className="project-flow-arrow" /> : null}
-          <div className="project-flow-phase">
-            <span className="project-flow-phase-name">
-              FASE {index + 1}
-              {phase.name === null ? "" : ` · ${phase.name}`}
-            </span>
-            {phase.stages.map((stage) => (
-              <StageCard
-                stage={stage}
-                fieldValues={detail.fieldValues}
-                vocabulary={vocabulary}
-                selected={stage.id === selected}
-                onSelect={onSelect}
-                key={stage.id}
-              />
-            ))}
-          </div>
-        </Fragment>
-      ))}
-
-      {phases.length > 0 ? <div className="project-flow-arrow" /> : null}
-
-      <div className="project-flow-phase">
-        <span className="project-flow-phase-name">Agregar</span>
-        <button className="project-card-add" type="button" onClick={onAdd} disabled={busy}>
-          + Agregar etapa
-        </button>
-      </div>
-
-      <div className="project-flow-arrow" />
-
-      <div className="project-flow-phase project-flow-end">
-        <span className="project-flow-phase-name">FIN</span>
-        {detail.closedAt === null ? (
-          <div className="project-card is-end">
-            <button
-              className="project-btn is-primary"
-              type="button"
-              onClick={() => onConclude(alsoArchive)}
-              disabled={busy || openStages.length > 0}
-            >
-              Concluir proyecto
-            </button>
-            <label className="project-check">
-              <input
-                type="checkbox"
-                checked={alsoArchive}
-                onChange={(event) => setTambienArchivar(event.target.checked)}
-              />
-              y archivarlo
-              <Help text="Concluir dice que el trabajo terminó. Archivar lo quita de en medio sin decir nada del trabajo; se puede archivar después." />
-            </label>
-            {openStages.length > 0 ? (
-              <span className="project-card-why">
-                {openStages.length} {openStages.length === 1 ? "etapa sigue abierta" : "etapas siguen abiertas"}
-              </span>
-            ) : null}
-          </div>
-        ) : (
-          <div className="project-card is-done">
-            <strong>Concluido</strong>
-            <span className="project-card-meta">{shortDate(detail.closedAt)}</span>
-            {detail.archivedAt === null ? (
-              <button
-                className="project-btn"
-                type="button"
-                onClick={onArchiveClosed}
-                disabled={busy}
-              >
-                Archivar
-              </button>
-            ) : (
-              <span className="project-card-meta">
-                Archivado el {shortDate(detail.archivedAt)}
-              </span>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
-  );
+/** The due date with what is left of it, or how long ago it passed. */
+function dueNote(dueOn, closed) {
+  if (dueOn === null || dueOn === undefined) return { text: "Sin fecha de entrega", late: false };
+  const days = daysUntil(dueOn);
+  let left = `en ${days} d`;
+  if (days === 0) left = "hoy";
+  if (days < 0) left = `vencido hace ${-days} d`;
+  return { text: closed ? dayDate(dueOn) : `${dayDate(dueOn)} · ${left}`, late: !closed && days < 0 };
 }
 
 /** What belongs to whoever is looking, said in one sentence. */
@@ -299,18 +160,321 @@ function myPartIn(stage, user) {
 }
 
 /**
- * The selected stage, under the flow: what it asks for, what it owes and what can be done with it.
- * What can be done depends on the stage's state and on who is looking at it.
+ * The top of the project: who asked for it, its status, its dates and how far the work has gone.
+ * «Editar» turns the same strip into the form that changes it, saved from right there.
+ */
+function ProjectHead({
+  detail, statuses, stages, busy, place, onPrevious, onNext, onClose, onStatus, onSaveHeader, onArchive,
+}) {
+  const [editing, setEditing] = useState(false);
+  const [header, setHeader] = useState(() => headerFrom(detail));
+  const [confirmingArchive, setConfirmingArchive] = useState(false);
+
+  const closed = detail.closedAt !== null || detail.archivedAt !== null;
+  const due = dueNote(detail.dueOn, closed);
+  const done = stages.filter((stage) => stage.status === "done").length;
+  const waiting = stages.filter((stage) => stage.status === "waiting_external").length;
+  const open = stages.filter((stage) => OPEN_STATES.includes(stage.status)).length;
+  const workFinished = stages.length > 0 && open === 0 && done > 0;
+  const statusSaysSo = detail.statusIsTerminal || detail.closedAt !== null;
+
+  let state = "Abierto";
+  if (detail.archivedAt !== null) state = `Archivado el ${shortDate(detail.archivedAt)}`;
+  else if (detail.closedAt !== null) state = `Concluido el ${shortDate(detail.closedAt)}`;
+
+  function write(key, value) {
+    setHeader({ ...header, [key]: value });
+  }
+
+  async function save(event) {
+    event.preventDefault();
+    if (await onSaveHeader(header)) setEditing(false);
+  }
+
+  return (
+    <header className="project-head">
+      <div className="project-head-top">
+        <button className="project-close" type="button" onClick={onClose} aria-label="Volver a la lista">
+          ✕
+        </button>
+        <div className="project-head-title">
+          <span className="project-bar-eyebrow">
+            {detail.key} · {detail.requests.length === 0 ? "captura directa" : "de una solicitud"} · {state}
+          </span>
+          <h2>{detail.title}</h2>
+          <span className="project-head-requester">{detail.requester || "Sin entidad solicitante"}</span>
+        </div>
+
+        <div className="project-head-actions">
+          {editing ? null : (
+            <button
+              className="project-btn"
+              type="button"
+              onClick={() => {
+                setHeader(headerFrom(detail));
+                setEditing(true);
+              }}
+              disabled={busy}
+            >
+              Editar
+            </button>
+          )}
+          {detail.archivedAt !== null ? null : confirmingArchive ? (
+            <span className="project-confirm">
+              Se quita de en medio; se puede ver en «Archivados».
+              <button className="project-btn" type="button" onClick={onArchive} disabled={busy}>
+                Archivar
+              </button>
+              <button className="project-quiet" type="button" onClick={() => setConfirmingArchive(false)}>
+                Dejarlo
+              </button>
+            </span>
+          ) : (
+            <button className="project-quiet" type="button" onClick={() => setConfirmingArchive(true)} disabled={busy}>
+              Archivar
+            </button>
+          )}
+          {place === null ? null : (
+            <div className="project-bar-move">
+              <span>
+                {place.position} de {place.total}
+              </span>
+              <button className="project-quiet" type="button" onClick={onPrevious} disabled={onPrevious === null} aria-label="Anterior">
+                ‹
+              </button>
+              <button className="project-quiet" type="button" onClick={onNext} disabled={onNext === null} aria-label="Siguiente">
+                ›
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {editing ? (
+        <form className="project-head-form" onSubmit={save}>
+          <label className="project-field is-wide">
+            <span className="project-label">Título</span>
+            <input value={header.title} required onChange={(event) => write("title", event.target.value)} />
+          </label>
+          <label className="project-field is-wide">
+            <span className="project-label">Entidad solicitante</span>
+            <input value={header.requester} onChange={(event) => write("requester", event.target.value)} />
+          </label>
+          <label className="project-field">
+            <span className="project-label">
+              Urgencia
+              <Help text="Un número: mayor es más urgente. La imprenta y la producción priorizan por urgencia, nunca por orden de llegada (RF-FLW-08)." />
+            </span>
+            <input type="number" value={header.priority} onChange={(event) => write("priority", event.target.value)} />
+          </label>
+          <label className="project-field">
+            <span className="project-label">Empieza</span>
+            <input type="date" value={header.startsOn} onChange={(event) => write("startsOn", event.target.value)} />
+          </label>
+          <label className="project-field">
+            <span className="project-label">Entrega</span>
+            <input type="date" value={header.dueOn} onChange={(event) => write("dueOn", event.target.value)} />
+          </label>
+          <label className="project-check">
+            <input type="checkbox" checked={header.hasCost} onChange={(event) => write("hasCost", event.target.checked)} />
+            Con costo
+          </label>
+          <div className="project-action-row">
+            <button className="project-quiet" type="button" onClick={() => setEditing(false)}>
+              Cancelar
+            </button>
+            <button className="project-btn is-primary" type="submit" disabled={busy}>
+              {busy ? "Guardando…" : "Guardar"}
+            </button>
+          </div>
+        </form>
+      ) : (
+        <dl className="project-facts">
+          <div className="project-fact">
+            <dt>Estatus</dt>
+            <dd>
+              <select value={detail.statusId} onChange={(event) => onStatus(event.target.value)} disabled={busy}>
+                {statuses.map((one) => (
+                  <option value={one.id} key={one.id}>
+                    {one.label}
+                    {one.isGlobal ? "" : ` (${one.areaName})`}
+                  </option>
+                ))}
+              </select>
+              <span className="project-fact-note">desde {shortDate(detail.statusSince)}</span>
+            </dd>
+          </div>
+          <div className="project-fact">
+            <dt>Entrega</dt>
+            <dd className={due.late ? "is-late" : undefined}>{due.text}</dd>
+          </div>
+          <div className="project-fact">
+            <dt>Empieza</dt>
+            <dd>{detail.startsOn === null ? "Sin fecha" : dayDate(detail.startsOn)}</dd>
+          </div>
+          <div className="project-fact">
+            <dt>Urgencia</dt>
+            <dd>{detail.priority}</dd>
+          </div>
+          <div className="project-fact">
+            <dt>Costo</dt>
+            <dd>
+              {detail.hasCost ? "Con costo" : "Sin costo"}
+              {detail.inClosure ? <span className="project-closure">En ventana de cierre</span> : null}
+            </dd>
+          </div>
+        </dl>
+      )}
+
+      <div className="project-progress">
+        <div
+          className="project-progress-bar"
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={stages.length}
+          aria-valuenow={done}
+          aria-label="Etapas concluidas"
+        >
+          <span style={{ width: stages.length === 0 ? "0%" : `${(done / stages.length) * 100}%` }} />
+        </div>
+        <span className="project-progress-text">
+          {stages.length === 0
+            ? "Todavía sin etapas."
+            : `${done} de ${stages.length} ${stages.length === 1 ? "etapa concluida" : "etapas concluidas"}`}
+          {open - waiting > 0 ? ` · ${open - waiting} en curso` : ""}
+          {waiting > 0 ? ` · ${waiting} en espera` : ""}
+        </span>
+      </div>
+
+      {workFinished && !statusSaysSo ? (
+        <p className="project-warn">
+          El trabajo ya no tiene etapas abiertas, pero el estatus sigue en «{detail.statusLabel}». Nada lo mueve solo.
+        </p>
+      ) : null}
+    </header>
+  );
+}
+
+/** One stage in the list: its state as a mark, its area and title, and who has it. */
+function StageRow({ stage, fieldValues, selected, onSelect }) {
+  const owed = stage.outputs.filter((key) => !hasValue(fieldValues, key)).length;
+  let who = stage.assignedToName ?? "Sin responsable";
+  if (stage.status === "waiting_external") who = "En espera";
+  if (stage.status === "done" && stage.startedAt !== null && stage.endedAt !== null) {
+    who = `${stage.assignedToName ?? "Concluida"} · ${daysBetween(stage.startedAt, stage.endedAt)} d`;
+  }
+
+  return (
+    <li>
+      <button
+        className={`project-row is-${stage.status}${selected ? " is-selected" : ""}`}
+        type="button"
+        aria-pressed={selected}
+        onClick={() => onSelect(stage.id)}
+      >
+        <span className="project-row-mark" aria-label={STAGE_STATUS_LABELS[stage.status] ?? stage.status} />
+        <span className="project-row-main">
+          <span className="project-row-area">{stage.areaName}</span>
+          <span className="project-row-title">{stage.title}</span>
+        </span>
+        <span className="project-row-side">
+          <span className="project-row-who">{who}</span>
+          {stage.attempt > 1 ? <span className="project-row-tag">intento {stage.attempt}</span> : null}
+          {owed > 0 && stage.status !== "done" ? <span className="project-row-tag is-owed">debe {owed}</span> : null}
+        </span>
+      </button>
+    </li>
+  );
+}
+
+/** The flow as a list: phase after phase, then adding a stage and concluding the project. */
+function StageList({ detail, phases, openStages, selected, busy, onSelect, onAdd, onConclude, onArchiveClosed }) {
+  const [alsoArchive, setAlsoArchive] = useState(false);
+
+  return (
+    <div className="project-list">
+      <div className="project-list-head">
+        <h3>Flujo</h3>
+        <button className="project-btn" type="button" onClick={onAdd} disabled={busy}>
+          + Etapa
+        </button>
+      </div>
+
+      {phases.length === 0 ? <p className="project-note">Todavía sin etapas: agrega la primera.</p> : null}
+
+      {phases.map((phase, index) => (
+        <section className="project-phase" key={phase.seq}>
+          <h4>{phaseLabel(index, phase.name)}</h4>
+          <ul className="project-rows">
+            {phase.stages.map((stage) => (
+              <StageRow
+                stage={stage}
+                fieldValues={detail.fieldValues}
+                selected={stage.id === selected}
+                onSelect={onSelect}
+                key={stage.id}
+              />
+            ))}
+          </ul>
+        </section>
+      ))}
+
+      <section className="project-phase is-end">
+        <h4>Fin</h4>
+        {detail.closedAt === null ? (
+          <div className="project-end">
+            <button
+              className="project-btn is-primary"
+              type="button"
+              onClick={() => onConclude(alsoArchive)}
+              disabled={busy || openStages.length > 0}
+            >
+              Concluir proyecto
+            </button>
+            <label className="project-check">
+              <input type="checkbox" checked={alsoArchive} onChange={(event) => setAlsoArchive(event.target.checked)} />
+              y archivarlo
+              <Help text="Concluir dice que el trabajo terminó. Archivar lo quita de en medio sin decir nada del trabajo; se puede archivar después." />
+            </label>
+            {openStages.length > 0 ? (
+              <span className="project-note">
+                {openStages.length} {openStages.length === 1 ? "etapa sigue abierta" : "etapas siguen abiertas"}
+              </span>
+            ) : null}
+          </div>
+        ) : (
+          <div className="project-end">
+            <strong>Concluido el {shortDate(detail.closedAt)}</strong>
+            {detail.archivedAt === null ? (
+              <button className="project-btn" type="button" onClick={onArchiveClosed} disabled={busy}>
+                Archivar
+              </button>
+            ) : (
+              <span className="project-note">Archivado el {shortDate(detail.archivedAt)}</span>
+            )}
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
+/**
+ * The selected stage: what it asks for, what it owes and what can be done with it. What can be
+ * done depends on the stage's state and on who is looking at it.
  */
 function StagePanel({
-  stage, detail, phases, vocabulary, user, people, busy, missing, nextPhase,
+  stage, history, detail, phases, vocabulary, user, people, busy, missing, nextPhase,
   onAssignee, onHold, onResume, onStart, onSignOff, onDeliver,
 }) {
-  const [reason, setMotivo] = useState("");
-  const [waiting, setEsperando] = useState(false);
-  const [signOff, setFirma] = useState(null);
+  const [reason, setReason] = useState("");
+  const [waiting, setWaiting] = useState(false);
+  const [signing, setSigning] = useState(null);
 
   const phaseIndex = phases.findIndex((phase) => phase.seq === stage.seq);
+  const approvals = history.flatMap((attempt) =>
+    attempt.approvals.map((approval) => ({ ...approval, attempt: attempt.attempt })),
+  );
 
   let signOffEffect = `Aprobar concluye la etapa${
     nextPhase === null
@@ -327,13 +491,12 @@ function StagePanel({
     <section className="project-stage">
       <header className="project-stage-head">
         <span className="project-stage-place">
-          FASE {phaseIndex + 1}
-          {stage.phaseName === null ? "" : ` · ${stage.phaseName}`} · {stage.areaName}
+          {phaseLabel(phaseIndex, stage.phaseName)} · {stage.areaName}
         </span>
         <h3>
           {stage.title}
           <span className={`project-stage-state is-${stage.status}`}>
-            {STAGE_STATES[stage.status] ?? stage.status}
+            {STAGE_STATUS_LABELS[stage.status] ?? stage.status}
             {stage.attempt > 1 ? ` · intento ${stage.attempt}` : ""}
           </span>
         </h3>
@@ -346,279 +509,225 @@ function StagePanel({
         </p>
       ) : null}
 
-      <div className="project-stage-columns">
-        <div>
-          <h4>Lo que pide la etapa</h4>
+      <div className="project-field">
+        <span className="project-label">
+          Responsable
+          <Help text="Quien atiende la etapa. Se elige entre la gente del área; la responsable del área y coordinación pueden cambiarlo." />
+        </span>
+        <select
+          value={stage.assignedTo ?? ""}
+          onChange={(event) => onAssignee(stage, event.target.value)}
+          disabled={busy || stage.status === "done"}
+        >
+          <option value="">Sin responsable</option>
+          {people.map((person) => (
+            <option value={person.id} key={person.id}>
+              {person.fullName}
+            </option>
+          ))}
+        </select>
+      </div>
 
+      <div className="project-stage-actions">
+        {stage.status === "pending" ? (
+          <div className="project-action">
+            <button className="project-btn" type="button" onClick={() => onStart(stage)} disabled={busy}>
+              Iniciar ahora
+            </button>
+            <p className="project-note">Empieza sola cuando concluya la fase anterior. Iniciar ahora es la excepción.</p>
+          </div>
+        ) : null}
+
+        {stage.status === "waiting_external" ? (
+          <div className="project-action">
+            <button className="project-btn is-primary" type="button" onClick={() => onResume(stage)} disabled={busy}>
+              Ya respondieron: reanudar
+            </button>
+            <p className="project-note">Vuelve a quedar activa, con su mismo intento.</p>
+          </div>
+        ) : null}
+
+        {stage.status === "active" && !waiting && signing === null ? (
+          <button className="project-btn" type="button" onClick={() => setWaiting(true)} disabled={busy}>
+            Poner en espera
+            <Help text="Para cuando lo que falta no está en nuestras manos: un visto bueno de la entidad, material de un proveedor, un anticipo." />
+          </button>
+        ) : null}
+
+        {OPEN_STATES.includes(stage.status) && !waiting && signing === null ? (
+          <button
+            className="project-btn is-primary"
+            type="button"
+            onClick={() => setSigning({ decision: "approved", comment: "" })}
+            disabled={busy || missing !== null}
+          >
+            Visto bueno
+          </button>
+        ) : null}
+      </div>
+
+      {OPEN_STATES.includes(stage.status) && !waiting && signing === null ? (
+        <p className={missing === null ? "project-note" : "project-note is-blocked"}>{signOffEffect}</p>
+      ) : null}
+
+      {waiting ? (
+        <form
+          className="project-wait"
+          onSubmit={(event) => {
+            event.preventDefault();
+            onHold(stage, reason);
+            setWaiting(false);
+            setReason("");
+          }}
+        >
+          <h5>Poner en espera</h5>
+          <p className="project-note">La etapa sigue siendo de su área, pero el tiempo que pase esperando queda dicho, no escondido.</p>
+          <div className="project-chips">
+            {REASONS.map((one) => (
+              <button
+                className={reason === one ? "project-chip is-on" : "project-chip"}
+                type="button"
+                onClick={() => setReason(one)}
+                key={one}
+              >
+                {one}
+              </button>
+            ))}
+          </div>
+          <input
+            value={reason}
+            onChange={(event) => setReason(event.target.value)}
+            placeholder="Ej: esperamos el visto bueno de la facultad"
+          />
+          <div className="project-action-row">
+            <button className="project-quiet" type="button" onClick={() => setWaiting(false)}>
+              Cancelar
+            </button>
+            <button className="project-btn" type="submit" disabled={busy || reason.trim() === ""}>
+              Poner en espera
+            </button>
+          </div>
+        </form>
+      ) : null}
+
+      {signing === null ? null : (
+        <form
+          className="project-sign"
+          onSubmit={(event) => {
+            event.preventDefault();
+            onSignOff(stage, signing);
+            setSigning(null);
+          }}
+        >
+          <h5>Visto bueno de «{stage.title}»</h5>
           <div className="project-field">
-            <span className="project-label">
-              Responsable
-              <Help text="Quien atiende la etapa. Se elige entre la gente del área; la responsable del área y coordinación pueden cambiarlo." />
-            </span>
-            <select
-              value={stage.assignedTo ?? ""}
-              onChange={(event) => onAssignee(stage, event.target.value)}
-              disabled={busy || stage.status === "done"}
-            >
-              <option value="">Sin responsable</option>
-              {people.map((persona) => (
-                <option value={persona.id} key={persona.id}>
-                  {persona.fullName}
-                </option>
-              ))}
+            <span className="project-label">Decisión</span>
+            <select value={signing.decision} onChange={(event) => setSigning({ ...signing, decision: event.target.value })}>
+              <option value="approved">Aprobar</option>
+              <option value="rejected">Rechazar</option>
             </select>
           </div>
-
-          <h5>Necesita</h5>
-          {stage.inputs.length === 0 ? (
-            <p className="project-note">Nada de otra etapa.</p>
-          ) : (
-            <ul className="project-io">
-              {stage.inputs.map((key) => {
-                const value = detail.fieldValues.find((one) => one.key === key);
-                return (
-                  <li key={key}>
-                    <span className="project-label">{nameOfKey(vocabulary, key)}</span>
-                    {value === undefined || value.value === "" ? (
-                      <span className="project-missing">sin valor todavía</span>
-                    ) : (
-                      <span className="project-value">{value.value}</span>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-
-          <h5>
-            Entrega{" "}
-            {stage.outputs.length === 0
-              ? ""
-              : `${stage.outputs.filter((key) => hasValue(detail.fieldValues, key)).length} de ${stage.outputs.length}`}
-          </h5>
-          {stage.outputs.length === 0 ? (
-            <p className="project-note">Nada que otra etapa espere.</p>
-          ) : (
-            <ul className="project-io">
-              {stage.outputs.map((key) => {
-                const value = detail.fieldValues.find((one) => one.key === key);
-                return (
-                  <li key={key}>
-                    <span className="project-label">{nameOfKey(vocabulary, key)}</span>
-                    {value === undefined || value.value === "" ? (
-                      <span className="project-missing">sin valor todavía</span>
-                    ) : (
-                      <span className="project-value">{value.value}</span>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
           <p className="project-note">
-            Los valores se capturan abajo, en «Valores del proyecto», y se guardan con todo lo
-            demás.
+            {signing.decision === "approved"
+              ? signOffEffect
+              : `La etapa se cierra y vuelve a abrirse como intento ${stage.attempt + 1}, para que el trabajo devuelto quede a la vista.`}
           </p>
+          <div className="project-field">
+            <span className="project-label">
+              Comentario
+              <Help text="La conformidad del solicitante va aquí: el visto bueno es interno." />
+            </span>
+            <textarea value={signing.comment} onChange={(event) => setSigning({ ...signing, comment: event.target.value })} rows={3} />
+          </div>
+          <div className="project-action-row">
+            <button className="project-quiet" type="button" onClick={() => setSigning(null)}>
+              Cancelar
+            </button>
+            <button className="project-btn is-primary" type="submit" disabled={busy}>
+              Registrar
+            </button>
+          </div>
+        </form>
+      )}
 
-          <StageDelivery
-            key={stage.id}
-            stage={stage}
-            busy={busy}
-            onDeliver={(note, file) => onDeliver(stage, note, file)}
-          />
-        </div>
+      <h4>Necesita</h4>
+      {stage.inputs.length === 0 ? (
+        <p className="project-note">Nada de otra etapa.</p>
+      ) : (
+        <ul className="project-io">
+          {stage.inputs.map((key) => {
+            const value = detail.fieldValues.find((one) => one.key === key);
+            return (
+              <li key={key}>
+                <span className="project-label">{nameOfKey(vocabulary, key)}</span>
+                {value === undefined || value.value === "" ? (
+                  <span className="project-missing">sin valor todavía</span>
+                ) : (
+                  <span className="project-value">{value.value}</span>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
 
-        <div>
-          <h4>Acciones</h4>
-
-          {stage.status === "pending" ? (
-            <div className="project-action">
-              <button
-                className="project-btn"
-                type="button"
-                onClick={() => onStart(stage)}
-                disabled={busy}
-              >
-                Iniciar ahora
-              </button>
-              <p className="project-note">
-                Empieza sola cuando concluya la fase anterior. Iniciar ahora es la excepción.
-              </p>
-            </div>
-          ) : null}
-
-          {stage.status === "waiting_external" ? (
-            <div className="project-action">
-              <button
-                className="project-btn is-primary"
-                type="button"
-                onClick={() => onResume(stage)}
-                disabled={busy}
-              >
-                Ya respondieron: reanudar
-              </button>
-              <p className="project-note">Vuelve a quedar activa, con su mismo intento.</p>
-            </div>
-          ) : null}
-
-          {stage.status === "active" ? (
-            <div className="project-action">
-              {waiting ? (
-                <form
-                  className="project-wait"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    onHold(stage, reason);
-                    setEsperando(false);
-                    setMotivo("");
-                  }}
-                >
-                  <h5>Poner en espera</h5>
-                  <p className="project-note">
-                    La etapa sigue siendo de su área, pero el tiempo que pase esperando queda
-                    dicho, no escondido.
-                  </p>
-                  <div className="project-chips">
-                    {REASONS.map((one) => (
-                      <button
-                        className={reason === one ? "project-chip is-on" : "project-chip"}
-                        type="button"
-                        onClick={() => setMotivo(one)}
-                        key={one}
-                      >
-                        {one}
-                      </button>
-                    ))}
-                  </div>
-                  <input
-                    value={reason}
-                    onChange={(event) => setMotivo(event.target.value)}
-                    placeholder="Ej: esperamos el visto bueno de la facultad"
-                  />
-                  <div className="project-action-row">
-                    <button
-                      className="project-quiet"
-                      type="button"
-                      onClick={() => setEsperando(false)}
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      className="project-btn"
-                      type="submit"
-                      disabled={busy || reason.trim() === ""}
-                    >
-                      Poner en espera
-                    </button>
-                  </div>
-                </form>
-              ) : (
-                <>
-                  <button
-                    className="project-btn"
-                    type="button"
-                    onClick={() => setEsperando(true)}
-                    disabled={busy}
-                  >
-                    Poner en espera
-                    <Help text="Para cuando lo que falta no está en nuestras manos: un visto bueno de la entidad, material de un proveedor, un anticipo." />
-                  </button>
-                  <p className="project-note">Pide el motivo y lo deja a la vista.</p>
-                </>
-              )}
-            </div>
-          ) : null}
-
-          {OPEN_STATES.includes(stage.status) ? (
-            <div className="project-action">
-              {signOff === null ? (
-                <>
-                  <button
-                    className="project-btn is-primary"
-                    type="button"
-                    onClick={() => setFirma({ decision: "approved", comment: "" })}
-                    disabled={busy || missing !== null}
-                  >
-                    Visto bueno
-                  </button>
-                  <p className={missing === null ? "project-note" : "project-note is-blocked"}>
-                    {signOffEffect}
-                  </p>
-                </>
-              ) : (
-                <form
-                  className="project-sign"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    onSignOff(stage, signOff);
-                    setFirma(null);
-                  }}
-                >
-                  <h5>Visto bueno de «{stage.title}»</h5>
-                  <div className="project-field">
-                    <span className="project-label">Decisión</span>
-                    <select
-                      value={signOff.decision}
-                      onChange={(event) => setFirma({ ...signOff, decision: event.target.value })}
-                    >
-                      <option value="approved">Aprobar</option>
-                      <option value="rejected">Rechazar</option>
-                    </select>
-                  </div>
-                  <p className="project-note">
-                    {signOff.decision === "approved"
-                      ? signOffEffect
-                      : `La etapa se cierra y vuelve a abrirse como intento ${
-                          stage.attempt + 1
-                        }, para que el trabajo devuelto quede a la vista.`}
-                  </p>
-                  <div className="project-field">
-                    <span className="project-label">
-                      Comentario
-                      <Help text="La conformidad del solicitante va aquí: el visto bueno es interno." />
-                    </span>
-                    <textarea
-                      value={signOff.comment}
-                      onChange={(event) => setFirma({ ...signOff, comment: event.target.value })}
-                      rows={3}
-                    />
-                  </div>
-                  <div className="project-action-row">
-                    <button className="project-quiet" type="button" onClick={() => setFirma(null)}>
-                      Cancelar
-                    </button>
-                    <button className="project-btn is-primary" type="submit" disabled={busy}>
-                      Registrar
-                    </button>
-                  </div>
-                </form>
-              )}
-            </div>
-          ) : null}
-
-          <h5>Vistos buenos</h5>
-          {stage.approvals.length === 0 ? (
-            <p className="project-note">Ninguno todavía.</p>
-          ) : (
-            <ul className="project-approvals">
-              {stage.approvals.map((visto) => (
-                <li key={visto.id}>
-                  <span className="project-label">
-                    {visto.decision === "approved" ? "Aprobó" : "Rechazó"} {visto.approverName} ·{" "}
-                    {shortDate(visto.decidedAt)}
-                  </span>
-                  {visto.comment === null ? null : <span>{visto.comment}</span>}
+      <h4>
+        Entrega
+        {stage.outputs.length === 0
+          ? ""
+          : ` · ${stage.outputs.filter((key) => hasValue(detail.fieldValues, key)).length} de ${stage.outputs.length}`}
+      </h4>
+      {stage.outputs.length === 0 ? (
+        <p className="project-note">Nada que otra etapa espere.</p>
+      ) : (
+        <>
+          <ul className="project-io">
+            {stage.outputs.map((key) => {
+              const value = detail.fieldValues.find((one) => one.key === key);
+              return (
+                <li key={key}>
+                  <span className="project-label">{nameOfKey(vocabulary, key)}</span>
+                  {value === undefined || value.value === "" ? (
+                    <span className="project-missing">sin valor todavía</span>
+                  ) : (
+                    <span className="project-value">{value.value}</span>
+                  )}
                 </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </div>
+              );
+            })}
+          </ul>
+          <p className="project-note">Los valores se capturan en la pestaña «Datos».</p>
+        </>
+      )}
+
+      <StageDelivery
+        key={stage.id}
+        stage={stage}
+        busy={busy}
+        onDeliver={(note, file) => onDeliver(stage, note, file)}
+      />
+
+      <h4>Vistos buenos</h4>
+      {approvals.length === 0 ? (
+        <p className="project-note">Ninguno todavía.</p>
+      ) : (
+        <ul className="project-approvals">
+          {approvals.map((approval) => (
+            <li key={approval.id}>
+              <span className="project-label">
+                {approval.decision === "approved" ? "Aprobó" : "Rechazó"} {approval.approverName} ·{" "}
+                {shortDate(approval.decidedAt)}
+                {history.length > 1 ? ` · intento ${approval.attempt}` : ""}
+              </span>
+              {approval.comment === null ? null : <span>{approval.comment}</span>}
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }
 
-/** Adding a stage: the phase is chosen by its name, not by a presentation number. */
 /**
  * What a stage in a project needs on top of what a template stage has: the phase it joins and
  * whether it starts now. Rendered inside the flow designer's stage window, in its markup.
@@ -633,15 +742,10 @@ function StageExtras({ draft, phases, onChange }) {
           En qué fase
           <Help text="Dos etapas en la misma fase corren en paralelo: la fase concluye cuando no queda ninguna abierta." />
         </label>
-        <select
-          id="stage-phase"
-          value={draft.seq}
-          onChange={(event) => onChange("seq", event.target.value)}
-        >
+        <select id="stage-phase" value={draft.seq} onChange={(event) => onChange("seq", event.target.value)}>
           {phases.map((phase, index) => (
             <option value={phase.seq} key={phase.seq}>
-              {index + 1}
-              {phase.name === null ? "" : ` · ${phase.name}`}, en paralelo con lo que ya tiene
+              {phaseLabel(index, phase.name)}, en paralelo con lo que ya tiene
             </option>
           ))}
           <option value={lastSeq + 1}>Fase nueva, al final</option>
@@ -650,16 +754,96 @@ function StageExtras({ draft, phases, onChange }) {
 
       <div className="modal-field">
         <label htmlFor="stage-start">Empieza</label>
-        <select
-          id="stage-start"
-          value={draft.status}
-          onChange={(event) => onChange("status", event.target.value)}
-        >
+        <select id="stage-start" value={draft.status} onChange={(event) => onChange("status", event.target.value)}>
           <option value="pending">Pendiente</option>
           <option value="active">Activa</option>
         </select>
       </div>
     </>
+  );
+}
+
+/**
+ * The project's values (RF-FLW-06): what one stage produces and another reads without capturing it
+ * again. Saved from this tab, apart from the header.
+ */
+function ProjectData({ detail, vocabulary, busy, onSave }) {
+  const [values, setValues] = useState(() => valuesFrom(detail));
+  const [newKey, setNewKey] = useState("");
+
+  const saved = valuesFrom(detail);
+  const keys = Object.keys(values);
+  const changed = keys.filter((key) => String(values[key] ?? "") !== String(saved[key] ?? ""));
+  const toAdd = [...vocabulary.entries()].filter(([key]) => !keys.includes(key));
+
+  function addKey(key) {
+    if (key === "") return;
+    setValues({ ...values, [key]: "" });
+    setNewKey("");
+  }
+
+  return (
+    <section className="project-sec">
+      <h3>
+        Valores del proyecto
+        <Help text="Lo que una etapa produce y otra lee sin recapturar (RF-FLW-06): el número de orden, el folio del SIN, el pantone." />
+      </h3>
+
+      {keys.length === 0 ? (
+        <p className="project-note">Todavía ninguno.</p>
+      ) : (
+        <div className="project-grid">
+          {keys.map((key) => {
+            const field = fieldOfKey(vocabulary, key);
+            const savedHere = detail.fieldValues.find((one) => one.key === key);
+            let origin = "nuevo, sin guardar";
+            if (savedHere !== undefined) {
+              const stage = detail.stages.find((one) => one.id === savedHere.producedByStageId);
+              origin =
+                savedHere.producedByStageId === null ? "de la solicitud" : `lo produjo ${stage?.title ?? "una etapa"}`;
+            }
+            return (
+              <div className={changed.includes(key) ? "project-typed is-changed" : "project-typed"} key={key}>
+                <FieldInput field={field} value={values[key]} onChange={(value) => setValues({ ...values, [key]: value })} />
+                <span className="project-origin">{origin}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="project-add-value">
+        <select value={newKey} onChange={(event) => addKey(event.target.value)}>
+          <option value="">Agregar un dato…</option>
+          {toAdd.map(([key, field]) => (
+            <option value={key} key={key}>
+              {field.name}
+            </option>
+          ))}
+          {Object.keys(FINANCE_KEYS)
+            .filter((key) => !keys.includes(key))
+            .map((key) => (
+              <option value={key} key={key}>
+                {FINANCE_KEYS[key].name}
+              </option>
+            ))}
+        </select>
+      </div>
+
+      {changed.length === 0 ? null : (
+        <div className="project-save-bar">
+          <span className="project-dirty">
+            {changed.length} {changed.length === 1 ? "cambio" : "cambios"} sin guardar
+          </span>
+          <button className="project-btn" type="button" onClick={() => setValues(valuesFrom(detail))} disabled={busy}>
+            Descartar
+          </button>
+          <button className="project-btn is-primary" type="button" onClick={() => onSave(values, saved)} disabled={busy}>
+            {busy ? "Guardando…" : "Guardar valores"}
+          </button>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -696,17 +880,16 @@ function ProjectDetail({
   project, areas, statuses: initialStatuses, vocabulary, user,
   place, onPrevious, onNext, onClose, onChanged,
 }) {
-  const [detail, setDetalle] = useState(null);
-  const [draft, setBorrador] = useState(null);
-  const [statuses, setEstatus] = useState(initialStatuses ?? []);
-  const [people, setGente] = useState([]);
-  const [selected, setElegida] = useState(null);
+  const [detail, setDetail] = useState(null);
+  const [statuses, setStatuses] = useState(initialStatuses ?? []);
+  const [people, setPeople] = useState([]);
+  const [selected, setSelected] = useState(null);
+  const [tab, setTab] = useState("stages");
   const [newStage, setNewStage] = useState(null);
   const [newStageMembers, setNewStageMembers] = useState([]);
-  const [newKey, setClaveNueva] = useState("");
-  const [confirmingArchive, setConfirmandoArchivo] = useState(false);
   const [error, setError] = useState(null);
-  const [busy, setOcupado] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [version, setVersion] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -717,8 +900,7 @@ function ProjectDetail({
         if (cancelled) {
           return;
         }
-        setDetalle(response.project);
-        setBorrador(draftFrom(response.project));
+        setDetail(response.project);
 
         const withStage = [...new Set(response.project.stages.map((stage) => stage.areaId))];
         const lists = await Promise.all([
@@ -735,7 +917,7 @@ function ProjectDetail({
             byId.set(one.id, one);
           }
         }
-        setEstatus([...byId.values()]);
+        setStatuses([...byId.values()]);
       } catch (failure) {
         if (!cancelled) {
           setError(failure.message);
@@ -751,17 +933,20 @@ function ProjectDetail({
 
   useEffect(() => {
     function onKeyDown(event) {
-      if (event.key === "Escape") {
+      if (event.key === "Escape" && newStage === null) {
         onClose();
       }
     }
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onClose]);
+  }, [onClose, newStage]);
 
+  const stages = detail === null ? [] : latestAttempts(detail.stages);
+  const phases = phasesOf(stages);
+  const openStages = stages.filter((stage) => OPEN_STATES.includes(stage.status));
   const selectedStage =
-    detail === null ? null : detail.stages.find((stage) => stage.id === selected) ?? null;
+    stages.find((stage) => stage.id === selected) ?? openStages[0] ?? stages[0] ?? null;
   const stageAreaId = selectedStage === null ? null : selectedStage.areaId;
   const newStageAreaId = newStage === null ? null : newStage.areaId;
 
@@ -788,57 +973,37 @@ function ProjectDetail({
   }, [newStageAreaId]);
 
   useEffect(() => {
+    if (stageAreaId === null) {
+      return;
+    }
     let cancelled = false;
-
-    async function loadPeople() {
-      if (stageAreaId === null) {
-        return;
-      }
-      try {
-        const response = await api.listUsers({ areaId: stageAreaId });
+    api
+      .listUsers({ areaId: stageAreaId })
+      .then((response) => {
         if (!cancelled) {
-          setGente(response.users);
+          setPeople(response.users);
         }
-      } catch (failure) {
+      })
+      .catch((failure) => {
         if (!cancelled) {
           setError(failure.message);
         }
-      }
-    }
-
-    loadPeople();
+      });
     return () => {
       cancelled = true;
     };
   }, [stageAreaId]);
 
-  /** The draft: what is editable in the project and its values, as they stand saved. */
-  function draftFrom(actual) {
-    const values = {};
-    for (const value of actual.fieldValues) {
-      values[value.key] = value.value;
-    }
-    return {
-      title: actual.title,
-      requester: actual.requester ?? "",
-      priority: String(actual.priority),
-      startsOn: actual.startsOn ?? "",
-      dueOn: actual.dueOn ?? "",
-      hasCost: actual.hasCost,
-      values,
-    };
-  }
-
   async function reload() {
     const response = await api.getProject(project.id);
-    setDetalle(response.project);
-    setBorrador(draftFrom(response.project));
+    setDetail(response.project);
+    setVersion((current) => current + 1);
     onChanged();
     return response.project;
   }
 
   async function run(action) {
-    setOcupado(true);
+    setBusy(true);
     setError(null);
     try {
       await action();
@@ -847,24 +1012,8 @@ function ProjectDetail({
       setError(failure.message);
       return null;
     } finally {
-      setOcupado(false);
+      setBusy(false);
     }
-  }
-
-  function write(key, value) {
-    setBorrador((actual) => ({ ...actual, [key]: value }));
-  }
-
-  function writeValue(key, value) {
-    setBorrador((actual) => ({ ...actual, values: { ...actual.values, [key]: value } }));
-  }
-
-  function addKey(key) {
-    if (key === "") {
-      return;
-    }
-    writeValue(key, "");
-    setClaveNueva("");
   }
 
   if (detail === null) {
@@ -875,52 +1024,25 @@ function ProjectDetail({
     );
   }
 
-  const saved = draftFrom(detail);
-  const changed = [];
-  for (const key of ["title", "requester", "priority", "startsOn", "dueOn", "hasCost"]) {
-    if (String(draft[key]) !== String(saved[key])) {
-      changed.push(key);
-    }
-  }
-  for (const key of Object.keys(draft.values)) {
-    if (String(draft.values[key] ?? "") !== String(saved.values[key] ?? "")) {
-      changed.push(key);
-    }
-  }
-  const dirty = changed.length > 0;
-
-  function mark(key, base) {
-    return changed.includes(key) ? `${base} is-changed` : base;
-  }
-
-  async function save() {
+  /** Saves the header's fields that changed; true when it went through. */
+  async function saveHeader(header) {
+    const saved = headerFrom(detail);
     const changes = {};
-    if (draft.title !== saved.title) {
-      changes.title = draft.title;
+    for (const key of HEADER_KEYS) {
+      if (String(header[key]) === String(saved[key])) continue;
+      if (key === "priority") changes.priority = Number(header.priority);
+      else if (key === "startsOn" || key === "dueOn") changes[key] = header[key] === "" ? null : header[key];
+      else changes[key] = header[key];
     }
-    if (draft.requester !== saved.requester) {
-      changes.requester = draft.requester;
-    }
-    if (draft.priority !== saved.priority) {
-      changes.priority = Number(draft.priority);
-    }
-    if (draft.startsOn !== saved.startsOn) {
-      changes.startsOn = draft.startsOn === "" ? null : draft.startsOn;
-    }
-    if (draft.dueOn !== saved.dueOn) {
-      changes.dueOn = draft.dueOn === "" ? null : draft.dueOn;
-    }
-    if (draft.hasCost !== saved.hasCost) {
-      changes.hasCost = draft.hasCost;
-    }
+    if (Object.keys(changes).length === 0) return true;
+    return (await run(() => api.updateProject(detail.id, changes))) !== null;
+  }
 
+  async function saveValues(values, saved) {
     await run(async () => {
-      if (Object.keys(changes).length > 0) {
-        await api.updateProject(detail.id, changes);
-      }
-      for (const key of Object.keys(draft.values)) {
-        const before = saved.values[key];
-        const now = draft.values[key];
+      for (const key of Object.keys(values)) {
+        const before = saved[key];
+        const now = values[key];
         if (String(now ?? "") === String(before ?? "")) {
           continue;
         }
@@ -935,16 +1057,16 @@ function ProjectDetail({
     });
   }
 
-  async function signOff(stage, signOff) {
+  async function signOff(stage, decision) {
     const after = await run(() =>
       api.createApproval(detail.id, stage.id, {
-        decision: signOff.decision,
-        comment: signOff.comment || undefined,
+        decision: decision.decision,
+        comment: decision.comment || undefined,
       }),
     );
     if (after !== null) {
-      const isOpen = after.stages.find((one) => OPEN_STATES.includes(one.status));
-      setElegida(isOpen === undefined ? null : isOpen.id);
+      const stillOpen = latestAttempts(after.stages).find((one) => OPEN_STATES.includes(one.status));
+      setSelected(stillOpen === undefined ? null : stillOpen.id);
     }
   }
 
@@ -993,388 +1115,163 @@ function ProjectDetail({
     }
   }
 
-  const phases = phasesOf(detail.stages);
-  const openStages = detail.stages.filter((stage) => OPEN_STATES.includes(stage.status));
-
   let missing = null;
   let nextPhase = null;
+  let history = [];
   if (selectedStage !== null) {
-    const pending = selectedStage.outputs.find(
-      (key) => !hasValue(detail.fieldValues, key),
-    );
+    const pending = selectedStage.outputs.find((key) => !hasValue(detail.fieldValues, key));
     missing = pending === undefined ? null : nameOfKey(vocabulary, pending);
-
     const index = phases.findIndex((phase) => phase.seq === selectedStage.seq);
     nextPhase = phases[index + 1] ?? null;
+    history = detail.stages
+      .filter((one) => one.flowStageId === selectedStage.flowStageId)
+      .sort((a, b) => b.attempt - a.attempt);
   }
 
-  const keys = Object.keys(draft.values);
-  const toAdd = [...vocabulary.entries()].filter(([key]) => !keys.includes(key));
-
-  let projectFlow = "sin flujo";
-  if (phases.length > 0) {
-    projectFlow = `${phases.length} ${phases.length === 1 ? "fase" : "fases"}`;
-  }
-
-  let state = "abierto";
-  if (detail.archivedAt !== null) {
-    state = "archivado";
-  } else if (detail.closedAt !== null) {
-    state = "concluido";
-  }
+  const counts = { stages: stages.length, data: detail.fieldValues.length, requests: detail.requests.length };
 
   return (
     <section className="project-full">
-      <header className="project-bar">
-        <button
-          className="project-close"
-          type="button"
-          onClick={onClose}
-          aria-label="Volver a la lista"
-        >
-          ✕
-        </button>
+      <ProjectHead
+        detail={detail}
+        statuses={statuses}
+        stages={stages}
+        busy={busy}
+        place={place}
+        onPrevious={onPrevious}
+        onNext={onNext}
+        onClose={onClose}
+        onStatus={(value) => run(() => api.setProjectStatus(detail.id, Number(value)))}
+        onSaveHeader={saveHeader}
+        onArchive={() => run(() => api.archiveProject(detail.id))}
+        key={`head-${version}`}
+      />
 
-        <div className="project-bar-text">
-          <span className="project-bar-eyebrow">
-            {detail.key} · {detail.requests.length === 0 ? "captura directa" : "de una solicitud"}{" "}
-            · {projectFlow} · {state}
-          </span>
-          <h2>{detail.title}</h2>
-          {detail.inClosure ? (
-            <span className="project-closure">Con costo y en ventana de cierre de semestre</span>
-          ) : null}
-        </div>
-
-        {place === null ? null : (
-          <div className="project-bar-move">
-            <span>
-              {place.position} de {place.total}
-            </span>
-            <button
-              className="project-quiet"
-              type="button"
-              onClick={onPrevious}
-              disabled={onPrevious === null}
-              aria-label="Anterior"
-            >
-              ‹
-            </button>
-            <button
-              className="project-quiet"
-              type="button"
-              onClick={onNext}
-              disabled={onNext === null}
-              aria-label="Siguiente"
-            >
-              ›
-            </button>
-          </div>
-        )}
-      </header>
+      <nav className="project-tabs" role="tablist">
+        {TABS.map((one) => (
+          <button
+            className={one.key === tab ? "project-tab is-active" : "project-tab"}
+            type="button"
+            role="tab"
+            aria-selected={one.key === tab}
+            onClick={() => setTab(one.key)}
+            key={one.key}
+          >
+            {one.label}
+            {counts[one.key] ? <span className="project-tab-count">{counts[one.key]}</span> : null}
+          </button>
+        ))}
+      </nav>
 
       <div className="project-body">
         {error !== null ? <p className="project-error">{error}</p> : null}
 
-        <HowItIs
-          detail={detail}
-          statuses={statuses}
-          busy={busy}
-          onStatus={(value) => run(() => api.setProjectStatus(detail.id, Number(value)))}
-        />
+        {tab === "stages" ? (
+          <div className="project-split">
+            <StageList
+              detail={detail}
+              phases={phases}
+              openStages={openStages}
+              selected={selectedStage?.id ?? null}
+              busy={busy}
+              onSelect={setSelected}
+              onAdd={() =>
+                setNewStage({
+                  areaId: areas.length === 0 ? "" : areas[0].id,
+                  title: "",
+                  seq: phases.length === 0 ? 1 : phases[phases.length - 1].seq + 1,
+                  status: "pending",
+                  defaultAssigneeId: "",
+                  inputs: [],
+                  outputs: [],
+                  inputNote: "",
+                  outputNote: "",
+                  estimatedDays: 1,
+                })
+              }
+              onConclude={conclude}
+              onArchiveClosed={() => run(() => api.archiveProject(detail.id))}
+            />
 
-        <section className="project-sec">
-          <h3>Flujo</h3>
-          <LiveFlow
-            detail={detail}
-            phases={phases}
-            vocabulary={vocabulary}
-            selected={selected}
-            busy={busy}
-            openStages={openStages}
-            onSelect={(id) => setElegida(id === selected ? null : id)}
-            onAdd={() =>
-              setNewStage({
-                areaId: areas.length === 0 ? "" : areas[0].id,
-                title: "",
-                seq: phases.length === 0 ? 1 : phases[phases.length - 1].seq + 1,
-                status: "pending",
-                defaultAssigneeId: "",
-                inputs: [],
-                outputs: [],
-                inputNote: "",
-                outputNote: "",
-                estimatedDays: 1,
-              })
-            }
-            onConclude={conclude}
-            onArchiveClosed={() => run(() => api.archiveProject(detail.id))}
-          />
-        </section>
-
-        {newStage !== null ? (
-          <StageModal
-            etapa={newStage}
-            areas={areas}
-            miembros={newStageMembers}
-            vocabulario={[...vocabulary.entries()].map(([key, field]) => ({
-              key,
-              name: field.name,
-              type: field.type,
-            }))}
-            etiquetaPersona="Persona responsable"
-            sinPersona="Sin responsable todavía"
-            onCambiar={changeNewStage}
-            onClose={() => setNewStage(null)}
-            onSubmit={addStage}
-          >
-            <StageExtras draft={newStage} phases={phases} onChange={changeNewStage} />
-          </StageModal>
+            {selectedStage === null ? (
+              <p className="project-stage is-empty">Agrega una etapa para empezar el flujo.</p>
+            ) : (
+              <StagePanel
+                stage={selectedStage}
+                history={history}
+                detail={detail}
+                phases={phases}
+                vocabulary={vocabulary}
+                user={user}
+                people={people}
+                busy={busy}
+                missing={missing}
+                nextPhase={nextPhase}
+                onAssignee={(stage, value) =>
+                  run(() => api.updateProjectStage(detail.id, stage.id, { assignedTo: value === "" ? null : Number(value) }))
+                }
+                onStart={(stage) => run(() => api.updateProjectStage(detail.id, stage.id, { status: "active" }))}
+                onHold={(stage, reason) =>
+                  run(() =>
+                    api.updateProjectStage(detail.id, stage.id, { status: "waiting_external", blockedReason: reason }),
+                  )
+                }
+                onResume={(stage) => run(() => api.updateProjectStage(detail.id, stage.id, { status: "active" }))}
+                onSignOff={signOff}
+                onDeliver={deliver}
+                key={selectedStage.id}
+              />
+            )}
+          </div>
         ) : null}
 
-        {selectedStage === null ? null : (
-          <StagePanel
-            stage={selectedStage}
-            detail={detail}
-            phases={phases}
-            vocabulary={vocabulary}
-            user={user}
-            people={people}
-            busy={busy}
-            missing={missing}
-            nextPhase={nextPhase}
-            onAssignee={(stage, value) =>
-              run(() =>
-                api.updateProjectStage(detail.id, stage.id, {
-                  assignedTo: value === "" ? null : Number(value),
-                }),
-              )
-            }
-            onStart={(stage) =>
-              run(() => api.updateProjectStage(detail.id, stage.id, { status: "active" }))
-            }
-            onHold={(stage, reason) =>
-              run(() =>
-                api.updateProjectStage(detail.id, stage.id, {
-                  status: "waiting_external",
-                  blockedReason: reason,
-                }),
-              )
-            }
-            onResume={(stage) =>
-              run(() => api.updateProjectStage(detail.id, stage.id, { status: "active" }))
-            }
-            onSignOff={signOff}
-            onDeliver={deliver}
-          />
-        )}
+        {tab === "data" ? (
+          <ProjectData detail={detail} vocabulary={vocabulary} busy={busy} onSave={saveValues} key={`data-${version}`} />
+        ) : null}
 
-        <div className="project-columns">
+        {tab === "files" ? (
           <section className="project-sec">
-            <h3>Proyecto</h3>
-            <div className="project-grid">
-              <label className={mark("title", "project-field")}>
-                <span className="project-label">Título</span>
-                <input
-                  value={draft.title}
-                  onChange={(event) => write("title", event.target.value)}
-                />
-              </label>
-
-              <label className={mark("requester", "project-field")}>
-                <span className="project-label">Entidad solicitante</span>
-                <input
-                  value={draft.requester}
-                  onChange={(event) => write("requester", event.target.value)}
-                />
-              </label>
-
-              <label className={mark("priority", "project-field")}>
-                <span className="project-label">
-                  Urgencia
-                  <Help text="Un número: mayor es más urgente. La imprenta y la producción priorizan por urgencia, nunca por orden de llegada (RF-FLW-08)." />
-                </span>
-                <input
-                  type="number"
-                  value={draft.priority}
-                  onChange={(event) => write("priority", event.target.value)}
-                />
-              </label>
-
-              <label className={mark("startsOn", "project-field")}>
-                <span className="project-label">Empieza</span>
-                <input
-                  type="date"
-                  value={draft.startsOn}
-                  onChange={(event) => write("startsOn", event.target.value)}
-                />
-              </label>
-
-              <label className={mark("dueOn", "project-field")}>
-                <span className="project-label">Entrega</span>
-                <input
-                  type="date"
-                  value={draft.dueOn}
-                  onChange={(event) => write("dueOn", event.target.value)}
-                />
-              </label>
-
-              <label className={mark("hasCost", "project-check")}>
-                <input
-                  type="checkbox"
-                  checked={draft.hasCost}
-                  onChange={(event) => write("hasCost", event.target.checked)}
-                />
-                Con costo
-              </label>
-            </div>
+            <ProjectFiles projectId={detail.id} areas={areas} />
           </section>
+        ) : null}
 
+        {tab === "requests" ? (
           <section className="project-sec">
-            <h3>
-              Valores del proyecto
-              <Help text="Lo que una etapa produce y otra lee sin recapturar (RF-FLW-06): el número de orden, el folio del SIN, el pantone." />
-            </h3>
-
-            {keys.length === 0 ? (
-              <p className="project-note">Todavía ninguno.</p>
+            {detail.requests.length === 0 ? (
+              <p className="project-note">Ninguna: este proyecto se capturó directo, no salió de una solicitud.</p>
             ) : (
-              <div className="project-grid">
-                {keys.map((key) => {
-                  const field = fieldOfKey(vocabulary, key);
-                  const savedHere = detail.fieldValues.find((one) => one.key === key);
-
-                  let origin = "nuevo, sin guardar";
-                  if (savedHere !== undefined) {
-                    const stage = detail.stages.find(
-                      (one) => one.id === savedHere.producedByStageId,
-                    );
-                    origin =
-                      savedHere.producedByStageId === null
-                        ? "de la solicitud"
-                        : `lo produjo ${stage?.title ?? "one stage"}`;
-                  }
-
-                  return (
-                    <div className={mark(key, "project-typed")} key={key}>
-                      <FieldInput
-                        field={field}
-                        value={draft.values[key]}
-                        onChange={(value) => writeValue(key, value)}
-                      />
-                      <span className="project-origin">{origin}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            <div className="project-add-value">
-              <select value={newKey} onChange={(event) => addKey(event.target.value)}>
-                <option value="">Agregar un dato…</option>
-                {toAdd.map(([key, field]) => (
-                  <option value={key} key={key}>
-                    {field.name}
-                  </option>
+              <ul className="project-requests">
+                {detail.requests.map((request) => (
+                  <li key={request.id}>
+                    <span className="project-label">{request.folio}</span>
+                    {request.title}
+                  </li>
                 ))}
-                {Object.keys(FINANCE_KEYS)
-                  .filter((key) => !keys.includes(key))
-                  .map((key) => (
-                    <option value={key} key={key}>
-                      {FINANCE_KEYS[key].name}
-                    </option>
-                  ))}
-              </select>
-            </div>
+              </ul>
+            )}
           </section>
-        </div>
-
-        <section className="project-sec">
-          <h3>Archivos</h3>
-          <ProjectFiles projectId={detail.id} areas={areas} />
-        </section>
-
-        <section className="project-sec">
-          <h3>Solicitudes que contesta</h3>
-          {detail.requests.length === 0 ? (
-            <p className="project-note">
-              Ninguna: este proyecto se capturó directo, no salió de una solicitud.
-            </p>
-          ) : (
-            <ul className="project-requests">
-              {detail.requests.map((solicitud) => (
-                <li key={solicitud.id}>
-                  <span className="project-label">{solicitud.folio}</span>
-                  {solicitud.title}
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+        ) : null}
       </div>
 
-      <footer className="project-foot">
-        {detail.archivedAt !== null ? (
-          <p className="project-note">Archivado el {shortDate(detail.archivedAt)}.</p>
-        ) : confirmingArchive ? (
-          <div className="project-action-row">
-            <span className="project-confirm">
-              Se quita de en medio. No dice nada del work y se puede volver a ver en
-              «Archivados».
-            </span>
-            <button
-              className="project-btn"
-              type="button"
-              onClick={() => run(() => api.archiveProject(detail.id))}
-              disabled={busy}
-            >
-              Archivar
-            </button>
-            <button
-              className="project-quiet"
-              type="button"
-              onClick={() => setConfirmandoArchivo(false)}
-            >
-              Dejarlo
-            </button>
-          </div>
-        ) : (
-          <button
-            className="project-quiet"
-            type="button"
-            onClick={() => setConfirmandoArchivo(true)}
-            disabled={busy}
-          >
-            Archivar
-          </button>
-        )}
-
-        <div className="project-foot-right">
-          {dirty ? (
-            <>
-              <span className="project-dirty">
-                {changed.length} {changed.length === 1 ? "cambio" : "cambios"} sin save
-              </span>
-              <button
-                className="project-btn"
-                type="button"
-                onClick={() => setBorrador(draftFrom(detail))}
-                disabled={busy}
-              >
-                Descartar
-              </button>
-            </>
-          ) : null}
-          <button
-            className="project-btn is-primary"
-            type="button"
-            onClick={save}
-            disabled={busy || !dirty}
-          >
-            {busy ? "Guardando…" : "Guardar cambios"}
-          </button>
-        </div>
-      </footer>
+      {newStage !== null ? (
+        <StageModal
+          etapa={newStage}
+          areas={areas}
+          miembros={newStageMembers}
+          vocabulario={[...vocabulary.entries()].map(([key, field]) => ({
+            key,
+            name: field.name,
+            type: field.type,
+          }))}
+          etiquetaPersona="Persona responsable"
+          sinPersona="Sin responsable todavía"
+          onCambiar={changeNewStage}
+          onClose={() => setNewStage(null)}
+          onSubmit={addStage}
+        >
+          <StageExtras draft={newStage} phases={phases} onChange={changeNewStage} />
+        </StageModal>
+      ) : null}
     </section>
   );
 }

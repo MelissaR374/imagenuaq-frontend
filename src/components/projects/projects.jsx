@@ -16,7 +16,7 @@
 import { useEffect, useState } from "react";
 
 import * as api from "../../api/client.js";
-import { shortDate, daysUntil } from "../shared/format.js";
+import { dayDate, daysUntil } from "../shared/format.js";
 import { vocabularyOf } from "../shared/vocabulary.js";
 import ProjectDetail from "./projectDetail.jsx";
 import ProjectForm from "./projectForm.jsx";
@@ -39,7 +39,7 @@ const TABS = [
   {
     key: "archived",
     label: "Archivados",
-    rule: "Archivados",
+    rule: "Guardados fuera de la vista; no dicen nada del trabajo.",
   },
   { key: "all", label: "Todos", rule: "Todo lo que existe." },
 ];
@@ -76,7 +76,7 @@ function DueDate({ dueOn, closed }) {
 
   return (
     <>
-      {shortDate(dueOn)}
+      {dayDate(dueOn)}
       {due === "" ? null : <span className={className}>{due}</span>}
     </>
   );
@@ -543,7 +543,7 @@ function Projects({ user, openId = null }) {
       {total > PER_PAGE ? (
         <div className="projects-pages">
           <p className="projects-range">
-            {first}–{last} of {total}
+            {first}–{last} de {total}
           </p>
           <div className="projects-page-actions">
             <button

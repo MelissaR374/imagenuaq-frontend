@@ -6,6 +6,8 @@ export const STAGE_STATUS_LABELS = {
   pending: "Pendiente",
   active: "Activa",
   waiting_external: "En espera",
+  done: "Concluida",
+  cancelled: "Cancelada",
 };
 
 /** Today and six days on, as YYYY-MM-DD: the week the load panel counts absences over. */
