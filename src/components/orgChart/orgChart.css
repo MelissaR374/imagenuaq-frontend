@@ -1,0 +1,357 @@
+/* «Organigrama». Styled after the «Lienzo» screens (areas.css, projects.css) with the tokens from App.css. */
+.org-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.org-tree {
+  overflow-x: auto;
+  padding: 8px 4px 24px;
+  scrollbar-color: var(--border) transparent;
+}
+
+.org-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: -24px;
+}
+
+.org-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+
+  border: 1px solid var(--border);
+  border-radius: 6px;
+
+  background: var(--surface);
+  color: var(--text);
+
+  font: inherit;
+  font-size: var(--size-small);
+
+  cursor: pointer;
+}
+
+.org-btn:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+}
+
+/* ---------- Caja de área ---------- */
+
+.org-area {
+  display: inline-flex;
+  flex-direction: column;
+  min-width: 150px;
+  max-width: 190px;
+
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--accent-line);
+  border-radius: 10px;
+
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(15, 30, 50, 0.06);
+  text-align: left;
+
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.org-area:hover {
+  box-shadow: 0 6px 18px rgba(15, 30, 50, 0.1);
+  transform: translateY(-1px);
+}
+
+.org-area-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.org-area-name {
+  color: var(--text);
+  font-size: var(--size-body);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.org-area-count {
+  flex-shrink: 0;
+  min-width: 20px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--surface-secondary);
+  color: var(--text-secondary);
+  font-size: var(--size-caps);
+  font-weight: 600;
+  text-align: center;
+}
+
+.org-area.is-root {
+  border-top-color: var(--accent);
+  min-width: 210px;
+}
+
+.org-area.is-root .org-area-header {
+  background: var(--accent-soft);
+  border-radius: 7px 7px 0 0;
+}
+
+.org-area.is-root .org-area-name {
+  color: var(--accent);
+  font-size: 14px;
+}
+
+.org-empty {
+  margin: 0;
+  padding: 10px 12px 12px;
+  color: var(--text-muted);
+  font-size: var(--size-small);
+  font-style: italic;
+}
+
+/* ---------- Personas ---------- */
+
+.org-people {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+}
+
+.org-person-button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 5px 6px;
+
+  border: none;
+  border-radius: 7px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--size-body);
+  text-align: left;
+  cursor: pointer;
+
+  transition: background-color 0.12s ease;
+}
+
+.org-person-button:hover,
+.org-person-button:focus-visible {
+  background: var(--accent-soft);
+}
+
+.org-person-button:focus-visible {
+  outline: 2px solid var(--accent-line);
+  outline-offset: 1px;
+}
+
+.org-who {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.org-name {
+  overflow-wrap: anywhere;
+}
+
+.org-tag {
+  color: var(--accent-line);
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+.org-photo,
+.org-initials {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--border);
+  object-fit: cover;
+}
+
+.org-initials,
+.org-card-initials {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-secondary);
+  color: var(--text-secondary);
+  font-size: var(--size-caps);
+  font-weight: 600;
+}
+
+.org-person.is-lead .org-photo,
+.org-person.is-lead .org-initials {
+  width: 36px;
+  height: 36px;
+  box-shadow: 0 0 0 2px var(--accent-line);
+}
+
+.org-person.is-lead .org-initials {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+/* ---------- Sin área ---------- */
+
+.org-unassigned {
+  padding: 14px 16px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.org-unassigned-title {
+  margin: 0 0 8px;
+  color: var(--text-secondary);
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+
+.org-unassigned .org-people {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  padding: 0;
+}
+
+.org-unassigned .org-person-button {
+  width: auto;
+}
+
+/* ---------- Tarjeta de la persona ---------- */
+
+.org-card:popover-open {
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 240px;
+  padding: 0 16px 16px;
+
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 12px 32px rgba(15, 30, 50, 0.18);
+  color: var(--text);
+  text-align: center;
+}
+
+.org-card::before {
+  content: "";
+  align-self: stretch;
+  height: 44px;
+  margin: 0 -16px -36px;
+  border-radius: 11px 11px 0 0;
+  background: var(--accent-soft);
+}
+
+.org-card-photo,
+.org-card-initials {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  margin-bottom: 6px;
+  border: 3px solid var(--surface);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--border);
+  object-fit: cover;
+}
+
+.org-card-initials {
+  font-size: 20px;
+}
+
+.org-card-name {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.org-card-email {
+  color: var(--accent-line);
+  font-size: var(--size-small);
+  overflow-wrap: anywhere;
+  text-decoration: none;
+}
+
+.org-card-email:hover {
+  text-decoration: underline;
+}
+
+.org-card-role {
+  color: var(--text-secondary);
+  font-size: var(--size-small);
+}
+
+.org-card-close {
+  margin-top: 10px;
+  padding: 6px 16px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface-secondary);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--size-small);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.org-card-close:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+}
+
+/* Bajo la persona que lo abrió donde el navegador sabe anclar; si no, centrado. */
+@supports (position-area: bottom) {
+  .org-card:popover-open {
+    inset: auto;
+    margin: 6px 0 0;
+    position-area: bottom span-right;
+    position-try-fallbacks: flip-block, flip-inline;
+  }
+}
+
+@media print {
+  .org-tree {
+    overflow: visible;
+    padding: 0;
+    /* shortcut: a fixed scale fits about eight areas side by side on landscape; measure and scale if the chart grows wider. */
+    zoom: 0.75;
+  }
+
+  .org-area {
+    box-shadow: none;
+    transform: none;
+    break-inside: avoid;
+  }
+
+  .org-card {
+    display: none !important;
+  }
+
+  .org-chart,
+  .org-chart * {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}

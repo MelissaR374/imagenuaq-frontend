@@ -30,6 +30,7 @@ import Team from "./components/tasks/team.jsx";
 import Overview from "./components/tasks/overview.jsx";
 import Calendar from "./components/calendar/calendar.jsx";
 import Timeline from "./components/timeline/timeline.jsx";
+import OrgChart from "./components/orgChart/orgChart.jsx";
 
 import * as api from "./api/client.js";
 import { MICROSOFT_PARAM, SHARED_PARAM } from "./config.js";
@@ -40,6 +41,7 @@ import "./App.css";
  * sitúa en el proceso, sin instrucciones ni controles.
  */
 const DESCRIPCIONES = {
+  Organigrama: "Las áreas de la coordinación y quién está en cada una.",
   Notificaciones: "Lo que pasó en tus solicitudes, proyectos y etapas.",
   "Mi perfil": "Tus datos de cuenta y tu foto.",
   Empleados: "Las personas registradas y el rol de cada una.",
@@ -245,7 +247,9 @@ function Aplicacion() {
           </div>
         </header>
 
-        {!canSee(activa, rol, permisos) ? null : activa === "Notificaciones" ? (
+        {!canSee(activa, rol, permisos) ? null : activa === "Organigrama" ? (
+          <OrgChart />
+        ) : activa === "Notificaciones" ? (
           <Notifications />
         ) : activa === "Mi perfil" ? (
           <Profile
