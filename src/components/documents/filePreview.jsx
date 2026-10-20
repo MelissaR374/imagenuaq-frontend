@@ -1,7 +1,8 @@
 // A full-screen preview after Google Drive's: the name and actions along the top, arrows to the
-// neighbouring files. The bytes are fetched with the session token and shown through an object
-// URL, revoked when the file changes or the preview closes. Images go in an `<img>`, PDFs in an
-// `<iframe>`; the caller only passes files of those kinds.
+// neighbouring files. The bytes are fetched with the session token, or through a share link
+// when given its token, and shown through an object URL, revoked when the file changes or the
+// preview closes. Images go in an `<img>`, PDFs in an `<iframe>`; the caller only passes files
+// of those kinds.
 import { useEffect, useState } from "react";
 import { MdChevronLeft, MdChevronRight, MdClose, MdDownload } from "react-icons/md";
 
@@ -15,9 +16,10 @@ import FileIcon from "../shared/fileIcon.jsx";
  *   index: number,
  *   onIndex: (index: number) => void,
  *   onClose: () => void,
- * }} props
+ *   shareToken?: string | null,
+ * }} props `shareToken` fetches through that read-only link instead of the session.
  */
-function FilePreview({ files, index, onIndex, onClose }) {
+function FilePreview({ files, index, onIndex, onClose, shareToken = null }) {
   const [loaded, setLoaded] = useState(null);
   const [failed, setFailed] = useState(null);
 
@@ -28,8 +30,9 @@ function FilePreview({ files, index, onIndex, onClose }) {
   useEffect(() => {
     let cancelled = false;
     let url = null;
-    api
-      .downloadFile(file.id)
+    const load =
+      shareToken === null ? api.downloadFile(file.id) : api.downloadSharedFile(shareToken, file.id);
+    load
       .then((blob) => {
         if (cancelled) return;
         url = URL.createObjectURL(blob);
@@ -42,7 +45,7 @@ function FilePreview({ files, index, onIndex, onClose }) {
       cancelled = true;
       if (url !== null) URL.revokeObjectURL(url);
     };
-  }, [file.id]);
+  }, [file.id, shareToken]);
 
   function keyDown(event) {
     if (event.key === "ArrowLeft" && index > 0) onIndex(index - 1);

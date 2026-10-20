@@ -555,6 +555,15 @@ export const getSharedFolder = (token, folderId = null) =>
 export const sharedFileUrl = (token, fileId) =>
   `${API_URL}/shared/${encodeURIComponent(token)}/files/${fileId}/content`;
 
+/** El contenido de un archivo bajo un enlace, como Blob, para la vista previa. Sin sesión. */
+export async function downloadSharedFile(token, fileId) {
+  const response = await fetch(sharedFileUrl(token, fileId));
+  if (!response.ok) {
+    throw await toError(response);
+  }
+  return response.blob();
+}
+
 /** Las etapas abiertas a cargo del usuario, con lo que ya entregó en cada una. */
 export const listMyTasks = () => request("/tasks/mine");
 

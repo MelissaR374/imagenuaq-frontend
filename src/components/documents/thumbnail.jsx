@@ -1,13 +1,17 @@
 // A file card's picture, as Google Drive shows it: the image itself for an image file, else the
 // big symbol of its kind. The bytes are fetched with the session token, since an `<img src>`
-// cannot send it, and the object URL is revoked when the card goes away.
+// cannot send it, or through a share link when given its token; the object URL is revoked when
+// the card goes away.
 import { useEffect, useState } from "react";
 
 import * as api from "../../api/client.js";
 import FileIcon from "../shared/fileIcon.jsx";
 
-/** @param {{ file: { id: number, name: string, mime: string | null } }} props */
-function Thumbnail({ file }) {
+/**
+ * @param {{ file: { id: number, name: string, mime: string | null }, shareToken?: string | null }}
+ *   props `shareToken` fetches through that read-only link instead of the session.
+ */
+function Thumbnail({ file, shareToken = null }) {
   const [url, setUrl] = useState(null);
   const isImage = file.mime?.startsWith("image/") ?? false;
 
@@ -15,8 +19,9 @@ function Thumbnail({ file }) {
     if (!isImage) return;
     let cancelled = false;
     let made = null;
-    api
-      .downloadFile(file.id)
+    const load =
+      shareToken === null ? api.downloadFile(file.id) : api.downloadSharedFile(shareToken, file.id);
+    load
       .then((blob) => {
         if (cancelled) return;
         made = URL.createObjectURL(blob);
@@ -27,7 +32,7 @@ function Thumbnail({ file }) {
       cancelled = true;
       if (made !== null) URL.revokeObjectURL(made);
     };
-  }, [file.id, isImage]);
+  }, [file.id, isImage, shareToken]);
 
   return (
     <span className="drive-thumb">

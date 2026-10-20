@@ -86,7 +86,7 @@ body {
    cerrado = 70px
 */
 
-#root> :not(.sidebar):not(.login-page){
+#root> :not(.sidebar):not(.login-page):not(.shared-page){
   width: calc(100% - var(--sidebar-open));
   margin-left: var(--sidebar-open);
 
@@ -102,7 +102,7 @@ body {
    CONTENIDO CUANDO SIDEBAR ESTÁ CERRADO
 ========================================================= */
 
-#root:has(.sidebar.closed)> :not(.sidebar):not(.login-page) {
+#root:has(.sidebar.closed)> :not(.sidebar):not(.login-page):not(.shared-page) {
   width: calc(100% - var(--sidebar-closed));
   margin-left: var(--sidebar-closed);
 }
@@ -187,7 +187,7 @@ textarea {
 
 @media (max-width: 1100px) {
 
-  #root> :not(.sidebar):not(.login-page) {
+  #root> :not(.sidebar):not(.login-page):not(.shared-page) {
     padding-left: 0;
     padding-right: 0;
   }
@@ -201,11 +201,11 @@ textarea {
 
 @media (max-width: 768px) {
 
-  #root> :not(.sidebar):not(.login-page) {
+  #root> :not(.sidebar):not(.login-page):not(.shared-page) {
     width: calc(100% - var(--sidebar-open));
   }
 
-  #root:has(.sidebar.closed)> :not(.sidebar):not(.login-page) {
+  #root:has(.sidebar.closed)> :not(.sidebar):not(.login-page):not(.shared-page) {
     width: calc(100% - var(--sidebar-closed));
   }
 
@@ -217,11 +217,11 @@ textarea {
 
 @media (max-width: 600px) {
 
-  #root> :not(.sidebar):not(.login-page) {
+  #root> :not(.sidebar):not(.login-page):not(.shared-page) {
     width: calc(100% - var(--sidebar-open));
   }
 
-  #root:has(.sidebar.closed)> :not(.sidebar):not(.login-page) {
+  #root:has(.sidebar.closed)> :not(.sidebar):not(.login-page):not(.shared-page) {
     width: calc(100% - var(--sidebar-closed));
   }
 
@@ -234,7 +234,7 @@ DEVICE MUY PEQUEÑO
 
 @media (max-width: 480px) {
 
-  #root> :not(.sidebar):not(.login-page) {
+  #root> :not(.sidebar):not(.login-page):not(.shared-page) {
     min-width: 0;
   }
 
