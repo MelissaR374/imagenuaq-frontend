@@ -275,7 +275,7 @@ function Aplicacion() {
         ) : activa === "Diseñador de flujos" ? (
           <FlowDesigner />
         ) : activa === "Archivos" ? (
-          <Documents />
+          <Documents canShare={permisos.includes("document.share")} />
         ) : activa === "Retención de archivos" ? (
           <Retention />
         ) : activa === "Mis tareas" ? (

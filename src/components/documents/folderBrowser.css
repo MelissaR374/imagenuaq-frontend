@@ -1,78 +1,723 @@
-/* The folder browser, inside a project's detail and in «Archivos». Styled after the «Lienzo»
-   screens (projectDetail.css, projects.css) with the tokens from App.css. */
-.folder-browser {
+/* The file browser after Google Drive, inside a project's detail and in «Archivos». Layout first,
+   with the tokens from App.css; the polish is for whoever owns the CSS. */
+.drive {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 
   min-width: 0;
+  padding-bottom: 30px;
 }
 
-/* =========================================================
-   PATH
-========================================================= */
-
-.folder-path {
+.drive-top {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 2px;
+  gap: 16px;
 }
 
-.folder-path-step {
-  padding: 2px 6px;
+.drive-new {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  height: 48px;
+  padding: 0 20px 0 14px;
 
   border: 0;
-  border-radius: 4px;
+  border-radius: 16px;
 
-  background: transparent;
-  color: var(--accent-line);
+  background: var(--surface);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+  color: var(--text);
 
   font: inherit;
-  font-size: var(--size-small);
+  font-weight: 600;
 
   cursor: pointer;
 }
 
-.folder-path-step:hover {
+.drive-new:hover:not(:disabled) {
   background: var(--accent-soft);
 }
 
-.folder-path-step[aria-current="page"] {
-  color: var(--text);
-
-  font-weight: 600;
-
+.drive-new:disabled {
+  opacity: 0.5;
   cursor: default;
 }
 
-.folder-path-step[aria-current="page"]:hover {
-  background: transparent;
+.drive-new-icon {
+  font-size: 24px;
 }
 
-.folder-path-step + .folder-path-step::before {
-  content: "/";
+.drive-search-box {
+  position: relative;
 
-  margin-right: 8px;
+  flex: 1;
+  max-width: 720px;
+}
+
+.drive-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  height: 46px;
+  padding: 0 16px;
+
+  border-radius: 24px;
+
+  background: var(--surface-secondary);
+  color: var(--text-secondary);
+}
+
+.drive-search:focus-within {
+  background: var(--surface);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+}
+
+.drive-search-icon {
+  flex-shrink: 0;
+
+  font-size: 22px;
+}
+
+.drive-search input {
+  flex: 1;
+  min-width: 0;
+
+  border: 0;
+
+  background: transparent;
+  color: var(--text);
+
+  font: inherit;
+  outline: none;
+}
+
+.drive-results {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  left: 0;
+  z-index: 30;
+
+  max-height: 60vh;
+  padding: 8px 0;
+  overflow-y: auto;
+
+  border-radius: 12px;
+
+  background: var(--surface);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+}
+
+.drive-results > .drive-note,
+.drive-results > .drive-error {
+  margin: 0 12px;
+  padding: 8px 4px;
+}
+
+.drive-results-list {
+  margin: 0;
+  padding: 0;
+
+  list-style: none;
+}
+
+.drive-result {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  width: 100%;
+  padding: 8px 18px;
+
+  border: 0;
+
+  background: transparent;
+  color: var(--text);
+
+  font: inherit;
+  text-align: left;
+
+  cursor: pointer;
+}
+
+.drive-result:hover,
+.drive-result:focus-visible {
+  background: var(--surface-secondary);
+  outline: none;
+}
+
+.drive-result-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+
+  min-width: 0;
+}
+
+.drive-result-path {
+  overflow: hidden;
 
   color: var(--text-muted);
 
-  font-weight: 400;
+  font-size: var(--size-small);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-/* =========================================================
-   MESSAGES
-========================================================= */
+.drive-chip {
+  flex-shrink: 0;
 
-.folder-note {
-  margin: 0;
+  height: 32px;
+  margin-left: auto;
+  padding: 0 14px;
 
+  border: 1px solid var(--border);
+  border-radius: 8px;
+
+  background: transparent;
   color: var(--text-secondary);
+
+  font: inherit;
+  font-size: var(--size-small);
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.drive-chip + .drive-chip {
+  margin-left: 0;
+}
+
+.drive-chip-icon {
+  margin-right: 6px;
+
+  font-size: 16px;
+  vertical-align: -3px;
+}
+
+.drive-chip.is-on {
+  border-color: transparent;
+
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.drive-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  min-height: 44px;
+}
+
+.drive-path {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+
+  min-width: 0;
+}
+
+.drive-path-part {
+  display: inline-flex;
+  align-items: center;
+}
+
+.drive-path-sep {
+  color: var(--text-muted);
+
+  font-size: 20px;
+}
+
+.drive-path-step {
+  display: inline-flex;
+  align-items: center;
+
+  padding: 4px 10px;
+
+  border: 0;
+  border-radius: 18px;
+
+  background: transparent;
+  color: var(--text-secondary);
+
+  font: inherit;
+  font-size: 18px;
+
+  cursor: pointer;
+}
+
+.drive-path-step:hover {
+  background: var(--surface-secondary);
+}
+
+.drive-path-step.is-current {
+  color: var(--text);
+}
+
+.drive-path-step.is-drop {
+  outline: 2px solid var(--accent-line);
+}
+
+.drive-view {
+  display: inline-flex;
+  flex-shrink: 0;
+
+  border: 1px solid var(--border);
+  border-radius: 18px;
+
+  overflow: hidden;
+}
+
+.drive-view .drive-icon-btn {
+  border-radius: 0;
+}
+
+.drive-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 36px;
+  height: 36px;
+  padding: 0;
+
+  border: 0;
+  border-radius: 50%;
+
+  background: transparent;
+  color: var(--text-secondary);
+
+  font-size: 20px;
+
+  cursor: pointer;
+}
+
+.drive-icon-btn:hover:not(:disabled) {
+  background: var(--surface-secondary);
+}
+
+.drive-icon-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.drive-icon-btn.is-on {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.drive-selection {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  min-height: 40px;
+  padding: 0 8px;
+
+  border-radius: 20px;
+
+  background: var(--surface-secondary);
+}
+
+.drive-selection.is-empty {
+  background: transparent;
+}
+
+.drive-selection-count {
+  margin-right: 12px;
+
+  font-size: var(--size-body);
+}
+
+.drive-body {
+  position: relative;
+
+  min-height: 50vh;
+  padding: 4px;
+
+  border-radius: 12px;
+}
+
+.drive-body.is-drop {
+  outline: 2px solid var(--accent-line);
+  background: var(--accent-soft);
+}
+
+.drive-drop-hint {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+
+  margin: 0;
+  padding: 10px 18px;
+
+  border-radius: 8px;
+
+  background: var(--accent);
+  color: #ffffff;
+
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.drive-section + .drive-section {
+  margin-top: 18px;
+}
+
+.drive-section-title {
+  margin: 0 0 10px;
+
+  color: var(--text);
+
+  font-size: var(--size-body);
+  font-weight: 600;
+}
+
+.drive-folders,
+.drive-files {
+  display: grid;
+  gap: 12px;
+
+  margin: 0;
+  padding: 0;
+
+  list-style: none;
+}
+
+.drive-folders {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+
+.drive-files {
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}
+
+.drive-item {
+  cursor: default;
+  user-select: none;
+}
+
+.drive-item:focus-visible {
+  outline: 2px solid var(--accent-line);
+  outline-offset: 1px;
+}
+
+.drive-folders .drive-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  min-height: 48px;
+  padding: 6px 4px 6px 14px;
+
+  border-radius: 12px;
+
+  background: var(--surface-secondary);
+}
+
+.drive-card {
+  display: flex;
+  flex-direction: column;
+
+  padding: 0 8px 8px;
+
+  border-radius: 12px;
+
+  background: var(--surface-secondary);
+}
+
+.drive-folders .drive-item:hover,
+.drive-card:hover {
+  background: var(--border-light);
+}
+
+.drive-item.is-selected,
+.drive-item.is-selected:hover {
+  background: var(--accent-soft);
+}
+
+.drive-item.is-drop {
+  outline: 2px solid var(--accent-line);
+}
+
+.drive-card-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  order: -1;
+  height: 48px;
+  padding-left: 6px;
+}
+
+.drive-thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  height: 140px;
+
+  border-radius: 8px;
+
+  background: var(--surface);
+}
+
+.drive .drive-thumb .file-icon {
+  font-size: 64px;
+}
+
+.drive-thumb {
+  overflow: hidden;
+}
+
+.drive-thumb-image {
+  width: 100%;
+  height: 100%;
+
+  object-fit: cover;
+}
+
+.drive-name {
+  flex: 1;
+  min-width: 0;
+
+  overflow: hidden;
+
+  font-size: var(--size-body);
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.drive-item-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+
+  min-width: 0;
+}
+
+.drive-item-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  min-width: 0;
+}
+
+.drive-item-title .drive-name {
+  flex: 0 1 auto;
+}
+
+.drive-link-icon {
+  flex-shrink: 0;
+
+  color: var(--accent);
+
+  font-size: 16px;
+}
+
+.drive-links {
+  width: min(680px, 94vw);
+}
+
+.drive-links-list {
+  max-height: 60vh;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+
+  list-style: none;
+}
+
+.drive-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  padding: 10px 0;
+
+  border-bottom: 1px solid var(--border-light);
+}
+
+.drive-link-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+
+  min-width: 0;
+}
+
+.drive-link-actions {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+
+.drive-item-sub {
+  overflow: hidden;
+
+  color: var(--text-muted);
+
+  font-size: var(--size-small);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.drive-badge {
+  align-self: flex-start;
+
+  padding: 1px 8px;
+
+  border-radius: 10px;
+
+  background: var(--warning-soft);
+  color: var(--warning);
+
+  font-size: var(--size-caps);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.drive-notice {
+  margin: 0;
+  padding: 9px 12px;
+
+  border-left: 3px solid var(--warning);
+  border-radius: 0 6px 6px 0;
+
+  background: var(--warning-soft);
+  color: var(--text);
 
   font-size: var(--size-small);
 }
 
-.folder-error {
+.drive-more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  width: 32px;
+  height: 32px;
+  padding: 0;
+
+  border: 0;
+  border-radius: 50%;
+
+  background: transparent;
+  color: var(--text-secondary);
+
+  font-size: 20px;
+
+  cursor: pointer;
+}
+
+.drive-more:hover {
+  background: var(--border);
+}
+
+.drive .file-icon {
+  flex-shrink: 0;
+
+  color: var(--text-muted);
+
+  font-size: 22px;
+}
+
+.drive .file-icon.is-folder {
+  color: var(--text-secondary);
+}
+
+.drive .file-icon.is-pdf {
+  color: var(--danger);
+}
+
+.drive .file-icon.is-image,
+.drive .file-icon.is-sheet {
+  color: var(--success);
+}
+
+.drive .file-icon.is-video,
+.drive .file-icon.is-slides {
+  color: var(--warning);
+}
+
+.drive-table {
+  width: 100%;
+
+  border-collapse: collapse;
+}
+
+.drive-table th {
+  padding: 8px 10px;
+
+  border-bottom: 1px solid var(--border);
+
+  color: var(--text-secondary);
+
+  font-size: var(--size-small);
+  font-weight: 600;
+  text-align: left;
+}
+
+.drive-table td {
+  height: 48px;
+  padding: 0 10px;
+
+  border-bottom: 1px solid var(--border-light);
+
+  color: var(--text-secondary);
+
+  font-size: var(--size-small);
+  white-space: nowrap;
+}
+
+.drive-table tr.drive-item:hover {
+  background: var(--surface-secondary);
+}
+
+.drive-table td:first-child {
+  width: 100%;
+  max-width: 0;
+
+  color: var(--text);
+}
+
+.drive-cell-name {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.drive-cell-more {
+  text-align: right;
+}
+
+.drive-empty,
+.drive-note {
+  margin: 0;
+
+  color: var(--text-muted);
+
+  font-size: var(--size-small);
+}
+
+.drive-empty {
+  padding: 60px 12px;
+
+  text-align: center;
+}
+
+.drive-error {
   margin: 0;
   padding: 9px 12px;
 
@@ -85,23 +730,239 @@
   font-size: var(--size-small);
 }
 
-/* =========================================================
-   ACTIONS
-========================================================= */
-
-.folder-actions,
-.folder-new,
-.folder-link-new {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
+.drive-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
 }
 
-.folder-new input,
-.folder-link-new input,
-.folder-grants select,
-.folder-issued input {
+.drive-menu {
+  position: fixed;
+
+  min-width: 220px;
+  margin: 0;
+  padding: 6px 0;
+
+  border-radius: 6px;
+
+  background: var(--surface);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+
+  list-style: none;
+}
+
+.drive-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  width: 100%;
+  padding: 8px 16px;
+
+  border: 0;
+
+  background: transparent;
+  color: var(--text);
+
+  font: inherit;
+  font-size: var(--size-body);
+  text-align: left;
+
+  cursor: pointer;
+}
+
+.drive-menu-item:hover,
+.drive-menu-item:focus-visible {
+  background: var(--surface-secondary);
+  outline: none;
+}
+
+.drive-menu-icon {
+  color: var(--text-secondary);
+
+  font-size: 20px;
+}
+
+.drive-dialog {
+  width: min(440px, 92vw);
+  margin: auto;
+  padding: 24px;
+
+  border: 0;
+  border-radius: 12px;
+
+  background: var(--surface);
+  color: var(--text);
+}
+
+.drive-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.drive-dialog-title {
+  margin: 0 0 16px;
+
+  font-size: 20px;
+  font-weight: 500;
+}
+
+.drive-dialog-input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+
+  border: 1px solid var(--border);
+  border-radius: 6px;
+
+  background: var(--field);
+  color: var(--text);
+
+  font: inherit;
+}
+
+.drive-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+
+  margin-top: 20px;
+}
+
+.drive-text-btn {
+  height: 36px;
+  padding: 0 16px;
+
+  border: 0;
+  border-radius: 18px;
+
+  background: transparent;
+  color: var(--accent);
+
+  font: inherit;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.drive-text-btn:hover:not(:disabled) {
+  background: var(--accent-soft);
+}
+
+.drive-text-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.drive-text-btn.is-primary {
+  background: var(--accent);
+  color: #ffffff;
+}
+
+.drive-text-btn.is-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.drive-move {
+  width: min(520px, 92vw);
+}
+
+.drive-move-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  margin-bottom: 8px;
+}
+
+.drive-move-here {
+  font-weight: 600;
+}
+
+.drive-move-list {
+  max-height: 50vh;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+
+  list-style: none;
+}
+
+.drive-move-folder {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  width: 100%;
+  padding: 10px 8px;
+
+  border: 0;
+  border-radius: 6px;
+
+  background: transparent;
+  color: var(--text);
+
+  font: inherit;
+  text-align: left;
+
+  cursor: pointer;
+}
+
+.drive-move-folder:hover:not(:disabled) {
+  background: var(--surface-secondary);
+}
+
+.drive-move-folder:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.drive-move-icon {
+  color: var(--text-secondary);
+
+  font-size: 20px;
+}
+
+.drive-share {
+  width: min(560px, 92vw);
+}
+
+.drive-share-section + .drive-share-section {
+  margin-top: 18px;
+  padding-top: 14px;
+
+  border-top: 1px solid var(--border-light);
+}
+
+.drive-share-heading {
+  margin: 0 0 8px;
+
+  font-size: var(--size-body);
+  font-weight: 600;
+}
+
+.drive-share-areas,
+.drive-share-links {
+  margin: 0 0 8px;
+  padding: 0;
+
+  list-style: none;
+}
+
+.drive-share-areas li,
+.drive-share-links li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  padding: 6px 0;
+
+  font-size: var(--size-body);
+}
+
+.drive-share select,
+.drive-share input {
   height: 32px;
   padding: 0 8px;
 
@@ -112,357 +973,167 @@
   color: var(--text);
 
   font: inherit;
-  font-size: var(--size-small);
 }
 
-.folder-new input {
-  width: 180px;
-}
-
-.folder-new input:focus,
-.folder-link-new input:focus,
-.folder-grants select:focus,
-.folder-issued input:focus {
-  border-color: var(--accent-line);
-  outline: none;
-}
-
-.folder-link-new label {
+.drive-share-new,
+.drive-share-issued {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
-
-  color: var(--text-secondary);
-
-  font-size: var(--size-small);
-}
-
-.folder-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-
-  height: 32px;
-  padding: 0 12px;
-
-  border: 1px solid var(--border);
-  border-radius: 6px;
-
-  background: var(--surface);
-  color: var(--text);
-
-  font: inherit;
-  font-size: var(--size-small);
-
-  cursor: pointer;
-}
-
-.folder-btn:hover:not(:disabled) {
-  border-color: var(--accent-line);
-}
-
-.folder-btn:disabled {
-  color: var(--text-muted);
-  cursor: default;
-}
-
-.folder-btn.is-primary {
-  border-color: var(--accent);
-
-  background: var(--accent);
-  color: #ffffff;
-
-  font-weight: 600;
-}
-
-.folder-btn.is-primary:hover {
-  border-color: var(--accent-hover);
-  background: var(--accent-hover);
-}
-
-.folder-btn.is-on {
-  border-color: var(--accent-line);
-  background: var(--accent-soft);
-}
-
-/* The file input is the label's: the label is what shows, as a button. */
-.folder-upload input {
-  position: absolute;
-
-  width: 1px;
-  height: 1px;
-
-  opacity: 0;
-}
-
-.folder-upload:focus-within {
-  outline: 2px solid var(--accent-line);
-  outline-offset: 2px;
-}
-
-.folder-quiet {
-  padding: 2px 8px;
-
-  border: 1px solid transparent;
-  border-radius: 4px;
-
-  background: transparent;
-  color: var(--accent-line);
-
-  font: inherit;
-  font-size: var(--size-small);
-  white-space: nowrap;
-
-  cursor: pointer;
-}
-
-.folder-quiet:hover:not(:disabled) {
-  background: var(--accent-soft);
-}
-
-.folder-quiet:disabled {
-  color: var(--text-muted);
-  cursor: default;
-}
-
-.folder-quiet.is-danger {
-  color: var(--danger);
-}
-
-.folder-quiet.is-danger:hover:not(:disabled) {
-  background: var(--danger-soft);
-}
-
-.folder-readonly {
-  padding: 3px 9px;
-
-  border: 1px solid var(--border);
-  border-radius: 999px;
-
-  color: var(--text-secondary);
-
-  font-size: var(--size-small);
-}
-
-/* =========================================================
-   PANELS: LINKS AND AREA ACCESS
-========================================================= */
-
-.folder-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-
-  padding: 12px 14px;
-
-  border: 1px solid var(--border);
-  border-radius: 8px;
-
-  background: var(--surface-secondary);
-}
-
-.folder-panel h4 {
-  margin: 0;
-
-  color: var(--text-muted);
-
-  font-size: var(--size-caps);
-  font-weight: 600;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-}
-
-.folder-issued {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-
-  margin: 0;
-  padding: 9px 12px;
-
-  border-left: 3px solid var(--success);
-  border-radius: 0 6px 6px 0;
-
-  background: var(--success-soft);
-  color: var(--text);
-
-  font-size: var(--size-small);
-}
-
-.folder-issued input {
-  width: 100%;
-
-  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
-}
-
-.folder-links,
-.folder-grants {
-  display: flex;
-  flex-direction: column;
-  margin: 0;
-  padding: 0;
-
-  list-style: none;
-}
-
-.folder-links li,
-.folder-grants li {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   gap: 8px;
 
-  padding: 7px 0;
-
-  border-top: 1px solid var(--border-light);
-
-  color: var(--text);
-
-  font-size: var(--size-small);
+  margin-bottom: 8px;
 }
 
-.folder-links li:first-child,
-.folder-grants li:first-child {
-  border-top: 0;
-}
-
-.folder-grants select {
-  min-width: 140px;
-}
-
-.folder-panel-actions {
-  display: flex;
-  justify-content: flex-end;
-}
-
-/* =========================================================
-   CONTENTS
-========================================================= */
-
-.folder-table-wrap {
-  overflow-x: auto;
-
-  border: 1px solid var(--border);
-  border-radius: 8px;
-
-  background: var(--surface);
-}
-
-.folder-table {
-  width: 100%;
-
-  border-collapse: collapse;
+.drive-share-new label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 
   font-size: var(--size-body);
 }
 
-.folder-table th {
-  padding: 9px 12px;
-
-  border-bottom: 1px solid var(--border);
-
-  color: var(--text-muted);
-
-  font-size: var(--size-caps);
-  font-weight: 600;
-  letter-spacing: 0.6px;
-  text-align: left;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.folder-table td {
-  padding: 8px 12px;
-
-  border-bottom: 1px solid var(--border-light);
-
-  color: var(--text);
-
-  vertical-align: middle;
-}
-
-.folder-table tr:last-child td {
-  border-bottom: 0;
-}
-
-.folder-row:hover {
-  background: var(--surface-secondary);
-}
-
-.folder-row td:nth-child(2),
-.folder-row td:nth-child(3) {
-  color: var(--text-secondary);
-
-  font-size: var(--size-small);
-  white-space: nowrap;
-}
-
-.folder-name {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-
+.drive-share-issued input {
+  flex: 1;
   min-width: 0;
-
-  word-break: break-word;
 }
 
-.folder-name .file-icon {
-  flex-shrink: 0;
-
-  color: var(--text-muted);
-
-  font-size: 18px;
+.drive-share-issued .drive-note {
+  flex-basis: 100%;
 }
 
-.folder-name .file-icon.is-folder {
-  color: var(--accent-line);
-}
-
-.folder-name .file-icon.is-pdf {
-  color: var(--danger);
-}
-
-.folder-name .file-icon.is-image {
-  color: var(--success);
-}
-
-.folder-name .file-icon.is-sheet {
-  color: var(--success);
-}
-
-.folder-name .file-icon.is-video,
-.folder-name .file-icon.is-slides {
-  color: var(--warning);
-}
-
-.folder-open {
+.drive-preview {
+  width: 100vw;
+  max-width: none;
+  height: 100vh;
+  max-height: none;
+  margin: 0;
   padding: 0;
 
   border: 0;
 
-  background: transparent;
-  color: var(--text);
+  background: rgba(0, 0, 0, 0.85);
+  color: #ffffff;
+}
 
-  font: inherit;
-  font-weight: 600;
-  text-align: left;
+.drive-preview::backdrop {
+  background: transparent;
+}
+
+.drive-preview-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  height: 56px;
+  padding: 0 16px;
+}
+
+.drive-preview-name {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 12px;
+
+  min-width: 0;
+
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.drive-preview .drive-icon-btn,
+.drive-preview .file-icon {
+  color: #ffffff;
+}
+
+.drive-preview .drive-icon-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.drive-preview-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+
+  box-sizing: border-box;
+  height: calc(100vh - 56px);
+  padding: 0 16px 16px;
+}
+
+.drive-preview-nav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  width: 48px;
+  height: 48px;
+
+  border: 0;
+  border-radius: 50%;
+
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+
+  font-size: 32px;
 
   cursor: pointer;
 }
 
-.folder-open:hover {
-  color: var(--accent-line);
-  text-decoration: underline;
-  text-underline-offset: 2px;
+.drive-preview-nav:disabled {
+  visibility: hidden;
 }
 
-.folder-row-actions {
-  text-align: right;
-  white-space: nowrap;
+.drive-preview-body {
+  flex: 1;
+  min-width: 0;
+  max-width: 1100px;
+  height: 100%;
+
+  border: 0;
+
+  object-fit: contain;
 }
 
-.folder-hidden {
+iframe.drive-preview-body {
+  background: #ffffff;
+}
+
+.drive-preview-note {
+  flex: 1;
+
+  text-align: center;
+}
+
+.drive-toast {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 40;
+
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  padding: 6px 6px 6px 18px;
+
+  border-radius: 8px;
+
+  background: #26364d;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+  color: #ffffff;
+
+  font-size: var(--size-body);
+}
+
+.drive-toast .drive-icon-btn {
+  color: #ffffff;
+}
+
+.drive-hidden {
   position: absolute;
 
   width: 1px;
@@ -472,29 +1143,17 @@
   clip: rect(0 0 0 0);
 }
 
-.folder-empty {
-  padding: 22px 12px;
-
-  border: 1px dashed var(--border);
-  border-radius: 8px;
-
-  color: var(--text-muted);
-
-  font-size: var(--size-small);
-  text-align: center;
-}
-
 @media (max-width: 640px) {
-  .folder-table th:nth-child(3),
-  .folder-table td:nth-child(3) {
+  .drive-top {
+    flex-wrap: wrap;
+  }
+
+  .drive-search-box {
+    flex-basis: 100%;
+  }
+
+  .drive-table th:nth-child(2),
+  .drive-table td:nth-child(2) {
     display: none;
-  }
-
-  .folder-new input {
-    width: 100%;
-  }
-
-  .folder-new {
-    flex: 1 1 100%;
   }
 }

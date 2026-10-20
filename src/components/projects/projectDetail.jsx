@@ -895,10 +895,10 @@ function ProjectData({ detail, stages, vocabulary, busy, onSave }) {
 }
 
 /**
- * The project's folder (RF-ARC-01). The server creates it on first use and answers 404 when the
- * viewer's areas have no part in the project, which reads here as no access rather than an error.
+ * The project's folder (RF-ARC-01), created by the server on first use. Everyone reads it; the
+ * areas with a stage in the project are the ones that upload and delete.
  */
-function ProjectFiles({ projectId, areas }) {
+function ProjectFiles({ projectId }) {
   const [folder, setFolder] = useState(null);
   const [error, setError] = useState(null);
 
@@ -910,8 +910,7 @@ function ProjectFiles({ projectId, areas }) {
         if (!cancelled) setFolder(data.folder);
       })
       .catch((err) => {
-        if (cancelled) return;
-        setError(err.status === 404 ? "Sin acceso a los archivos de este proyecto." : err.message);
+        if (!cancelled) setError(err.message);
       });
     return () => {
       cancelled = true;
@@ -920,7 +919,7 @@ function ProjectFiles({ projectId, areas }) {
 
   if (error !== null) return <p className="project-note">{error}</p>;
   if (folder === null) return <p className="project-note">Cargando…</p>;
-  return <FolderBrowser key={folder.id} root={folder} areas={areas} />;
+  return <FolderBrowser key={folder.id} root={folder} />;
 }
 
 function ProjectDetail({
@@ -1294,7 +1293,7 @@ function ProjectDetail({
 
         {tab === "files" ? (
           <section className="project-sec">
-            <ProjectFiles projectId={detail.id} areas={areas} />
+            <ProjectFiles projectId={detail.id} />
           </section>
         ) : null}
 

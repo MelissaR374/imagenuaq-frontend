@@ -102,7 +102,7 @@ export const menuSections = [
       {
         label: "Archivos",
         icon: MdAttachFile,
-        permission: "document.browse",
+        permission: "document.read",
       },
       {
         label: "Empleados",

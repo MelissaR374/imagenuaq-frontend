@@ -467,6 +467,19 @@ export const listTopFolders = () => request("/documents/folders");
 
 export const getFolder = (id) => request(`/documents/folders/${id}`);
 
+/** Todos los enlaces vigentes, con la carpeta y la ruta hasta ella. Requiere `document.share`. */
+export const listLinks = () => request("/documents/links");
+
+/**
+ * Archivos cuyo nombre contiene `q` y, sin `folderId`, carpetas de proyecto por clave o título;
+ * cada uno con la ruta de carpetas hasta él. `folderId` acota la búsqueda.
+ */
+export function searchFiles(q, folderId = null) {
+  const params = new URLSearchParams({ q });
+  if (folderId !== null) params.set("folderId", folderId);
+  return request(`/documents/search?${params}`);
+}
+
 export const createFolder = (parentId, name) =>
   request("/documents/folders", { method: "POST", body: { parentId, name } });
 
