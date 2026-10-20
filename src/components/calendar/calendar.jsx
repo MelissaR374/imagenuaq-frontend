@@ -3,7 +3,7 @@
 // one bar. Stages and absences are drawn as the server keeps them; notes are post-its anyone sticks on
 // a day; global events and closure windows are written by whoever holds `calendar.write`, by form or by
 // dragging them to another day.
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { MdPrint } from "react-icons/md";
 import FullCalendar from "@fullcalendar/react";
@@ -68,6 +68,7 @@ function Calendar({ isAdmin, canWrite, onOpenProject = null }) {
     }
   });
   const [printing, setPrinting] = useState(false);
+  const calendarRef = useRef(null);
   const [data, setData] = useState(null);
   const [people, setPeople] = useState(new Map());
   const [areas, setAreas] = useState({ mine: [], all: [] });
@@ -132,10 +133,17 @@ function Calendar({ isAdmin, canWrite, onOpenProject = null }) {
     }
   }
 
-  /** Prints the month with every event unfolded, then folds it back as it was. */
+  /**
+   * Prints the month with every event unfolded, then folds it back as it was. FullCalendar's
+   * `_beforeprint` lays the bars out per day instead of in the screen's pixels, which the narrower
+   * page would cut off; nothing in its free plugins fires it, so the button does.
+   */
   function print() {
+    const calendar = calendarRef.current.getApi();
     flushSync(() => setPrinting(true));
+    calendar.trigger("_beforeprint");
     window.print();
+    calendar.trigger("_afterprint");
     setPrinting(false);
   }
 
@@ -337,6 +345,7 @@ function Calendar({ isAdmin, canWrite, onOpenProject = null }) {
 
       <div className="calendar-month">
         <FullCalendar
+          ref={calendarRef}
           plugins={[dayGridPlugin, interactionPlugin]}
           initialView="dayGridMonth"
           locale={esLocale}
