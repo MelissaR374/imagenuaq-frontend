@@ -609,6 +609,7 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
                     areas={areas}
                     miembros={miembrosDelArea}
                     vocabulario={vocabulario}
+                    onDatoNuevo={(dato) => setVocabulario((actual) => [...actual, dato])}
                     etiquetaPersona={deSolicitud ? "Persona responsable" : "Persona sugerida"}
                     sinPersona={deSolicitud ? "Sin responsable todavía" : "Sin persona sugerida"}
                     onCambiar={cambiarEtapa}

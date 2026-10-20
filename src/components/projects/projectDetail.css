@@ -1218,3 +1218,77 @@
     grid-column: auto;
   }
 }
+
+/* =========================================================
+   VALUES: what a stage receives and delivers, and the Datos tab
+========================================================= */
+
+.project-stage-brief {
+  margin: 0 0 8px;
+  padding: 8px 10px;
+
+  border-left: 3px solid var(--accent-line);
+  border-radius: 0 6px 6px 0;
+
+  background: var(--surface-secondary);
+  color: var(--text);
+
+  font-size: var(--size-small);
+  line-height: 1.5;
+  white-space: pre-line;
+}
+
+.project-handover {
+  margin-top: 16px;
+  padding: 12px 14px;
+
+  border: 1px solid var(--border);
+  border-radius: 8px;
+
+  background: var(--surface);
+}
+
+.project-handover h4 {
+  margin-top: 0;
+}
+
+.project-outputs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.project-outputs .project-action-row {
+  justify-content: flex-end;
+}
+
+.project-data {
+  display: flex;
+  flex-direction: column;
+}
+
+.project-data-group + .project-data-group {
+  margin-top: 14px;
+}
+
+.project-data-group h4 {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+
+  margin: 0 0 8px;
+
+  color: var(--text);
+
+  font-size: var(--size-body);
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.project-data-who {
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
+  font-weight: 500;
+}

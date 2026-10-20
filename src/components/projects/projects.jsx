@@ -160,20 +160,20 @@ function ProjectRow({ project, onOpen }) {
  *   as when «Mis tareas» sends someone to one.
  */
 function Projects({ user, openId = null }) {
-  const [projects, setProyectos] = useState([]);
+  const [projects, setProjects] = useState([]);
   const [areas, setAreas] = useState([]);
-  const [statuses, setEstatus] = useState([]);
-  const [vocabulary, setVocabulario] = useState(new Map());
-  const [tab, setPestana] = useState("open");
-  const [onlyMine, setSoloMios] = useState(true);
-  const [counts, setCuentas] = useState({});
-  const [filters, setFiltros] = useState(NO_FILTERS);
-  const [page, setPagina] = useState(0);
+  const [statuses, setStatuses] = useState([]);
+  const [vocabulary, setVocabulary] = useState(new Map());
+  const [tab, setTab] = useState("open");
+  const [onlyMine, setOnlyMine] = useState(true);
+  const [counts, setCounts] = useState({});
+  const [filters, setFilters] = useState(NO_FILTERS);
+  const [page, setPage] = useState(0);
   const [total, setTotal] = useState(0);
-  const [loading, setCargando] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [opened, setAbierto] = useState(openId === null ? null : { id: openId });
-  const [capturing, setCapturando] = useState(false);
+  const [opened, setOpened] = useState(openId === null ? null : { id: openId });
+  const [capturing, setCapturing] = useState(false);
   const [version, setVersion] = useState(0);
 
   const activeTab = TABS.find((one) => one.key === tab) ?? TABS[0];
@@ -193,17 +193,17 @@ function Projects({ user, openId = null }) {
 
     async function loadCatalogs() {
       try {
-        const [respuestaAreas, respuestaEstatus, respuestaFormatos] = await Promise.all([
+        const [areaList, statusList, keyList] = await Promise.all([
           api.listAreas(),
           api.listStatuses(),
-          api.listSchemas(),
+          api.listFieldKeys(),
         ]);
         if (cancelled) {
           return;
         }
-        setAreas(respuestaAreas.areas);
-        setEstatus(respuestaEstatus.statuses);
-        setVocabulario(vocabularyOf(respuestaFormatos.schemas));
+        setAreas(areaList.areas);
+        setStatuses(statusList.statuses);
+        setVocabulary(vocabularyOf(keyList.fieldKeys));
       } catch (failure) {
         if (!cancelled) {
           setError(failure.message);
@@ -221,7 +221,7 @@ function Projects({ user, openId = null }) {
     let cancelled = false;
 
     async function loadProjects() {
-      setCargando(true);
+      setLoading(true);
       try {
         const response = await api.listProjects({
           ...JSON.parse(filterSignature),
@@ -231,7 +231,7 @@ function Projects({ user, openId = null }) {
           offset: page * PER_PAGE,
         });
         if (!cancelled) {
-          setProyectos(response.projects);
+          setProjects(response.projects);
           setTotal(response.total);
         }
       } catch (failure) {
@@ -240,7 +240,7 @@ function Projects({ user, openId = null }) {
         }
       } finally {
         if (!cancelled) {
-          setCargando(false);
+          setLoading(false);
         }
       }
     }
@@ -267,7 +267,7 @@ function Projects({ user, openId = null }) {
         TABS.forEach((one, index) => {
           fresh[one.key] = responses[index].total;
         });
-        setCuentas(fresh);
+        setCounts(fresh);
       } catch (failure) {
         if (!cancelled) {
           setError(failure.message);
@@ -282,33 +282,33 @@ function Projects({ user, openId = null }) {
   }, [filterSignature, version]);
 
   function changeFilter(key, value) {
-    setFiltros((actual) => ({ ...actual, [key]: value }));
-    setPagina(0);
+    setFilters((current) => ({ ...current, [key]: value }));
+    setPage(0);
   }
 
   function changeTab(key) {
-    setPestana(key);
-    setPagina(0);
+    setTab(key);
+    setPage(0);
   }
 
-  function changeScope(mios) {
-    setSoloMios(mios);
-    setPagina(0);
+  function changeScope(mine) {
+    setOnlyMine(mine);
+    setPage(0);
   }
 
   function clearFilters() {
-    setFiltros(NO_FILTERS);
-    setPagina(0);
+    setFilters(NO_FILTERS);
+    setPage(0);
   }
 
   function reload() {
-    setVersion((actual) => actual + 1);
+    setVersion((current) => current + 1);
   }
 
   function finishCapture(project) {
-    setCapturando(false);
+    setCapturing(false);
     reload();
-    setAbierto(project);
+    setOpened(project);
   }
 
   /** Step to the neighbour in the list without closing: the ‹ › in the project's bar. */
@@ -316,7 +316,7 @@ function Projects({ user, openId = null }) {
     const index = projects.findIndex((one) => one.id === opened.id);
     const target = projects[index + offset];
     if (target !== undefined) {
-      setAbierto(target);
+      setOpened(target);
     }
   }
 
@@ -345,7 +345,7 @@ function Projects({ user, openId = null }) {
           openIndex !== -1 && openIndex < projects.length - 1 ? () => moveTo(1) : null
         }
         onClose={() => {
-          setAbierto(null);
+          setOpened(null);
           reload();
         }}
         onChanged={reload}
@@ -395,7 +395,7 @@ function Projects({ user, openId = null }) {
         <button
           className="projects-btn projects-btn-primary"
           type="button"
-          onClick={() => setCapturando(true)}
+          onClick={() => setCapturing(true)}
         >
           Nuevo proyecto
         </button>
@@ -506,14 +506,14 @@ function Projects({ user, openId = null }) {
                 <td colSpan={6}>
                   <ProjectForm
                     onCreated={finishCapture}
-                    onCancel={() => setCapturando(false)}
+                    onCancel={() => setCapturing(false)}
                   />
                 </td>
               </tr>
             ) : null}
 
             {projects.map((project) => (
-              <ProjectRow project={project} onOpen={setAbierto} key={project.id} />
+              <ProjectRow project={project} onOpen={setOpened} key={project.id} />
             ))}
 
             {!loading && projects.length === 0 && !capturing ? (
@@ -549,7 +549,7 @@ function Projects({ user, openId = null }) {
             <button
               className="projects-btn"
               type="button"
-              onClick={() => setPagina(page - 1)}
+              onClick={() => setPage(page - 1)}
               disabled={page === 0 || loading}
             >
               Anteriores
@@ -557,7 +557,7 @@ function Projects({ user, openId = null }) {
             <button
               className="projects-btn"
               type="button"
-              onClick={() => setPagina(page + 1)}
+              onClick={() => setPage(page + 1)}
               disabled={last >= total || loading}
             >
               Siguientes

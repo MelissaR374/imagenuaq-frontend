@@ -3,8 +3,23 @@
 // forms with paragraphs nobody reads.
 //
 // It is a <button> and not a <span> on purpose: that puts it in the tab order, so the explanation
-// also appears for somebody using the keyboard.
+// also appears for somebody using the keyboard. The text opens above the (?) unless the panel that
+// holds it would cut it off there, as at the top of a scrolling tab; then it opens below.
+import { useState } from "react";
+
 import "./help.css";
+
+/** Room the text needs above the (?), in pixels: a few lines of a 34-character column. */
+const ROOM_ABOVE = 140;
+
+/** The nearest ancestor that clips what overflows it, or null when only the window does. */
+function clippingParent(node) {
+  for (let parent = node.parentElement; parent !== null; parent = parent.parentElement) {
+    const { overflowY } = getComputedStyle(parent);
+    if (overflowY === "auto" || overflowY === "scroll" || overflowY === "hidden") return parent;
+  }
+  return null;
+}
 
 /**
  * The (?) of a field.
@@ -13,8 +28,23 @@ import "./help.css";
  *   everything the user reads is.
  */
 function Help({ text }) {
+  const [below, setBelow] = useState(false);
+
+  function place(event) {
+    const top = event.currentTarget.getBoundingClientRect().top;
+    const parent = clippingParent(event.currentTarget);
+    const ceiling = parent === null ? 0 : parent.getBoundingClientRect().top;
+    setBelow(top - ceiling < ROOM_ABOVE);
+  }
+
   return (
-    <button className="help" type="button" aria-label="Qué es este campo">
+    <button
+      className={below ? "help is-below" : "help"}
+      type="button"
+      aria-label="Qué es este campo"
+      onMouseEnter={place}
+      onFocus={place}
+    >
       <span className="help-mark" aria-hidden="true">
         ?
       </span>

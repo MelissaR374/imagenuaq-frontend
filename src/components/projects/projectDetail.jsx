@@ -39,15 +39,6 @@ const REASONS = [
   "Pago o anticipo",
 ];
 
-/**
- * Two keys that come from no format: finance asks for them through its own endpoint, and here they
- * read like any other value of the project.
- */
-const FINANCE_KEYS = {
-  requiere_factura: { name: "Requiere factura", type: "boolean" },
-  requiere_cotizacion: { name: "Requiere cotización", type: "boolean" },
-};
-
 const TABS = [
   { key: "stages", label: "Etapas" },
   { key: "data", label: "Datos" },
@@ -58,17 +49,18 @@ const TABS = [
 /** The header fields «Editar» changes, as the draft keeps them. */
 const HEADER_KEYS = ["title", "requester", "priority", "startsOn", "dueOn", "hasCost"];
 
-/** A key's name and type, looking at the vocabulary and at the two finance ones. */
+/** A key as `FieldInput` draws it: its name, type and note from the vocabulary. */
 function fieldOfKey(vocabulary, key) {
-  const financeKey = FINANCE_KEYS[key];
-  if (financeKey !== undefined) {
-    return { code: key, ...financeKey };
+  const known = vocabulary.get(key);
+  if (known === undefined) {
+    return { code: key, name: key, type: "text", note: null };
   }
-  const fromVocabulary = vocabulary.get(key);
-  if (fromVocabulary === undefined) {
-    return { code: key, name: key, type: "text" };
-  }
-  return { code: key, name: fromVocabulary.name, type: fromVocabulary.type };
+  return { code: key, name: known.name, type: known.type, note: known.note };
+}
+
+/** Whether a stage can still be delivered: open, so its values can still change. */
+function isOpen(stage) {
+  return OPEN_STATES.includes(stage.status);
 }
 
 /** Each stage definition's latest attempt: what the list shows. Earlier attempts are history. */
@@ -460,12 +452,67 @@ function StageList({ detail, phases, openStages, selected, busy, onSelect, onAdd
 }
 
 /**
+ * The values a stage delivers (RF-FLW-06), written where the stage is delivered and saved as
+ * produced by it. While the stage is open they can be changed; once it is signed they only read.
+ */
+function StageOutputs({ stage, detail, vocabulary, busy, onSave }) {
+  const saved = valuesFrom(detail);
+  const [values, setValues] = useState(() =>
+    Object.fromEntries(stage.outputs.map((key) => [key, saved[key] ?? ""])),
+  );
+  const changed = stage.outputs.filter((key) => String(values[key] ?? "") !== String(saved[key] ?? ""));
+
+  if (!isOpen(stage)) {
+    return (
+      <ul className="project-io">
+        {stage.outputs.map((key) => (
+          <li key={key}>
+            <span className="project-label">{nameOfKey(vocabulary, key)}</span>
+            {hasValue(detail.fieldValues, key) ? (
+              <span className="project-value">{saved[key]}</span>
+            ) : (
+              <span className="project-missing">sin escribir</span>
+            )}
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
+  return (
+    <div className="project-outputs">
+      <div className="project-grid">
+        {stage.outputs.map((key) => (
+          <div className={changed.includes(key) ? "project-typed is-changed" : "project-typed"} key={key}>
+            <FieldInput
+              field={fieldOfKey(vocabulary, key)}
+              value={values[key]}
+              onChange={(value) => setValues({ ...values, [key]: value })}
+            />
+          </div>
+        ))}
+      </div>
+      {changed.length === 0 ? null : (
+        <div className="project-action-row">
+          <button className="project-quiet" type="button" onClick={() => setValues(Object.fromEntries(stage.outputs.map((key) => [key, saved[key] ?? ""])))}>
+            Descartar
+          </button>
+          <button className="project-btn is-primary" type="button" disabled={busy} onClick={() => onSave(stage, values, saved)}>
+            {busy ? "Guardando…" : "Guardar datos"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
  * The selected stage: what it asks for, what it owes and what can be done with it. What can be
  * done depends on the stage's state and on who is looking at it.
  */
 function StagePanel({
   stage, history, detail, phases, vocabulary, user, people, busy, missing, nextPhase,
-  onAssignee, onHold, onResume, onStart, onSignOff, onDeliver,
+  onAssignee, onHold, onResume, onStart, onSignOff, onDeliver, onSaveOutputs,
 }) {
   const [reason, setReason] = useState("");
   const [waiting, setWaiting] = useState(false);
@@ -484,7 +531,7 @@ function StagePanel({
         } (${nextPhase.stages.map((one) => one.areaName).join(", ")}).`
   } Rechazar: la etapa vuelve como intento ${stage.attempt + 1}.`;
   if (missing !== null) {
-    signOffEffect = `No disponible: falta ${missing}.`;
+    signOffEffect = `Para dar el visto bueno falta escribir «${missing}» en «Para entregar».`;
   }
 
   return (
@@ -651,8 +698,9 @@ function StagePanel({
       )}
 
       <h4>Necesita</h4>
+      {stage.inputNote ? <p className="project-stage-brief">{stage.inputNote}</p> : null}
       {stage.inputs.length === 0 ? (
-        <p className="project-note">Nada de otra etapa.</p>
+        stage.inputNote ? null : <p className="project-note">Nada de otra etapa.</p>
       ) : (
         <ul className="project-io">
           {stage.inputs.map((key) => {
@@ -661,7 +709,7 @@ function StagePanel({
               <li key={key}>
                 <span className="project-label">{nameOfKey(vocabulary, key)}</span>
                 {value === undefined || value.value === "" ? (
-                  <span className="project-missing">sin valor todavía</span>
+                  <span className="project-missing">todavía nadie lo escribe</span>
                 ) : (
                   <span className="project-value">{value.value}</span>
                 )}
@@ -671,41 +719,24 @@ function StagePanel({
         </ul>
       )}
 
-      <h4>
-        Entrega
-        {stage.outputs.length === 0
-          ? ""
-          : ` · ${stage.outputs.filter((key) => hasValue(detail.fieldValues, key)).length} de ${stage.outputs.length}`}
-      </h4>
-      {stage.outputs.length === 0 ? (
-        <p className="project-note">Nada que otra etapa espere.</p>
-      ) : (
-        <>
-          <ul className="project-io">
-            {stage.outputs.map((key) => {
-              const value = detail.fieldValues.find((one) => one.key === key);
-              return (
-                <li key={key}>
-                  <span className="project-label">{nameOfKey(vocabulary, key)}</span>
-                  {value === undefined || value.value === "" ? (
-                    <span className="project-missing">sin valor todavía</span>
-                  ) : (
-                    <span className="project-value">{value.value}</span>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-          <p className="project-note">Los valores se capturan en la pestaña «Datos».</p>
-        </>
-      )}
-
-      <StageDelivery
-        key={stage.id}
-        stage={stage}
-        busy={busy}
-        onDeliver={(note, file) => onDeliver(stage, note, file)}
-      />
+      <section className="project-handover">
+        <h4>
+          Para entregar
+          {stage.outputs.length === 0
+            ? ""
+            : ` · ${stage.outputs.filter((key) => hasValue(detail.fieldValues, key)).length} de ${stage.outputs.length} datos`}
+        </h4>
+        {stage.outputNote ? <p className="project-stage-brief">{stage.outputNote}</p> : null}
+        {stage.outputs.length === 0 ? null : (
+          <StageOutputs stage={stage} detail={detail} vocabulary={vocabulary} busy={busy} onSave={onSaveOutputs} />
+        )}
+        <StageDelivery
+          key={stage.id}
+          stage={stage}
+          busy={busy}
+          onDeliver={(note, file) => onDeliver(stage, note, file)}
+        />
+      </section>
 
       <h4>Vistos buenos</h4>
       {approvals.length === 0 ? (
@@ -764,86 +795,102 @@ function StageExtras({ draft, phases, onChange }) {
 }
 
 /**
- * The project's values (RF-FLW-06): what one stage produces and another reads without capturing it
- * again. Saved from this tab, apart from the header.
+ * The project's values (RF-FLW-06), grouped by where they come from: what each stage delivers, and
+ * what the request said. Nothing here asks the reader to pick a key; a value appears because a
+ * stage declares it or the request brought it. Saved from this tab, apart from the header.
  */
-function ProjectData({ detail, vocabulary, busy, onSave }) {
-  const [values, setValues] = useState(() => valuesFrom(detail));
-  const [newKey, setNewKey] = useState("");
-
+function ProjectData({ detail, stages, vocabulary, busy, onSave }) {
   const saved = valuesFrom(detail);
-  const keys = Object.keys(values);
-  const changed = keys.filter((key) => String(values[key] ?? "") !== String(saved[key] ?? ""));
-  const toAdd = [...vocabulary.entries()].filter(([key]) => !keys.includes(key));
+  const delivering = stages.filter((stage) => stage.outputs.length > 0);
+  const declared = new Set(delivering.flatMap((stage) => stage.outputs));
+  const fromRequest = detail.fieldValues
+    .filter((value) => !declared.has(value.key) && value.producedByStageId === null)
+    .map((value) => value.key);
+  const others = detail.fieldValues
+    .filter((value) => !declared.has(value.key) && value.producedByStageId !== null)
+    .map((value) => value.key);
 
-  function addKey(key) {
-    if (key === "") return;
-    setValues({ ...values, [key]: "" });
-    setNewKey("");
+  const [values, setValues] = useState(() => {
+    const draft = { ...saved };
+    for (const key of declared) draft[key] = saved[key] ?? "";
+    return draft;
+  });
+  const changed = Object.keys(values).filter((key) => String(values[key] ?? "") !== String(saved[key] ?? ""));
+
+  /** Which stage a key belongs to, so saving it records the stage as its source. */
+  const producers = {};
+  for (const stage of delivering) {
+    for (const key of stage.outputs) producers[key] ??= stage.id;
+  }
+
+  function input(key) {
+    return (
+      <div className={changed.includes(key) ? "project-typed is-changed" : "project-typed"} key={key}>
+        <FieldInput field={fieldOfKey(vocabulary, key)} value={values[key]} onChange={(value) => setValues({ ...values, [key]: value })} />
+      </div>
+    );
   }
 
   return (
-    <section className="project-sec">
-      <h3>
-        Valores del proyecto
-        <Help text="Lo que una etapa produce y otra lee sin recapturar (RF-FLW-06): el número de orden, el folio del SIN, el pantone." />
-      </h3>
+    <div className="project-data">
+      <section className="project-sec">
+        <h3>
+          Lo que entregan las etapas
+          <Help text="Cada etapa declara qué datos deja escritos al terminar, como el número de orden o el costo total. Se escriben al entregarla; aquí se ven todos juntos y se pueden corregir." />
+        </h3>
+        {delivering.length === 0 ? (
+          <p className="project-note">Ninguna etapa de este flujo pide escribir datos.</p>
+        ) : (
+          delivering.map((stage) => (
+            <div className="project-data-group" key={stage.id}>
+              <h4>
+                {stage.title}
+                <span className="project-data-who">
+                  {stage.areaName}
+                  {stage.status === "done" ? " · concluida" : ""}
+                </span>
+              </h4>
+              <div className="project-grid">{stage.outputs.map(input)}</div>
+            </div>
+          ))
+        )}
+      </section>
 
-      {keys.length === 0 ? (
-        <p className="project-note">Todavía ninguno.</p>
-      ) : (
-        <div className="project-grid">
-          {keys.map((key) => {
-            const field = fieldOfKey(vocabulary, key);
-            const savedHere = detail.fieldValues.find((one) => one.key === key);
-            let origin = "nuevo, sin guardar";
-            if (savedHere !== undefined) {
-              const stage = detail.stages.find((one) => one.id === savedHere.producedByStageId);
-              origin =
-                savedHere.producedByStageId === null ? "de la solicitud" : `lo produjo ${stage?.title ?? "una etapa"}`;
-            }
-            return (
-              <div className={changed.includes(key) ? "project-typed is-changed" : "project-typed"} key={key}>
-                <FieldInput field={field} value={values[key]} onChange={(value) => setValues({ ...values, [key]: value })} />
-                <span className="project-origin">{origin}</span>
-              </div>
-            );
-          })}
-        </div>
+      <section className="project-sec">
+        <h3>
+          De la solicitud
+          <Help text="Lo que la entidad capturó al pedir el trabajo. Se copió al convertir la solicitud en proyecto." />
+        </h3>
+        {fromRequest.length === 0 ? (
+          <p className="project-note">
+            {detail.requests.length === 0 ? "Este proyecto se capturó directo, sin solicitud." : "La solicitud no traía datos."}
+          </p>
+        ) : (
+          <div className="project-grid">{fromRequest.map(input)}</div>
+        )}
+      </section>
+
+      {others.length === 0 ? null : (
+        <section className="project-sec">
+          <h3>Otros datos</h3>
+          <div className="project-grid">{others.map(input)}</div>
+        </section>
       )}
-
-      <div className="project-add-value">
-        <select value={newKey} onChange={(event) => addKey(event.target.value)}>
-          <option value="">Agregar un dato…</option>
-          {toAdd.map(([key, field]) => (
-            <option value={key} key={key}>
-              {field.name}
-            </option>
-          ))}
-          {Object.keys(FINANCE_KEYS)
-            .filter((key) => !keys.includes(key))
-            .map((key) => (
-              <option value={key} key={key}>
-                {FINANCE_KEYS[key].name}
-              </option>
-            ))}
-        </select>
-      </div>
 
       {changed.length === 0 ? null : (
         <div className="project-save-bar">
           <span className="project-dirty">
             {changed.length} {changed.length === 1 ? "cambio" : "cambios"} sin guardar
           </span>
-          <button className="project-btn" type="button" onClick={() => setValues(valuesFrom(detail))} disabled={busy}>
+          <button className="project-btn" type="button" onClick={() => setValues({ ...saved })} disabled={busy}>
             Descartar
           </button>
-          <button className="project-btn is-primary" type="button" onClick={() => onSave(values, saved)} disabled={busy}>
-            {busy ? "Guardando…" : "Guardar valores"}
+          <button className="project-btn is-primary" type="button" onClick={() => onSave(values, saved, producers)} disabled={busy}>
+            {busy ? "Guardando…" : "Guardar"}
           </button>
         </div>
       )}
-    </section>
+    </div>
   );
 }
 
@@ -890,6 +937,7 @@ function ProjectDetail({
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
   const [version, setVersion] = useState(0);
+  const [registered, setRegistered] = useState([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -942,6 +990,8 @@ function ProjectDetail({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onClose, newStage]);
 
+  const known = new Map(vocabulary);
+  for (const one of registered) known.set(one.key, { name: one.name, type: one.type, note: one.note || null });
   const stages = detail === null ? [] : latestAttempts(detail.stages);
   const phases = phasesOf(stages);
   const openStages = stages.filter((stage) => OPEN_STATES.includes(stage.status));
@@ -1038,7 +1088,8 @@ function ProjectDetail({
     return (await run(() => api.updateProject(detail.id, changes))) !== null;
   }
 
-  async function saveValues(values, saved) {
+  /** Writes the values that changed, each one recorded as produced by its stage when it has one. */
+  async function saveValues(values, saved, producers = {}) {
     await run(async () => {
       for (const key of Object.keys(values)) {
         const before = saved[key];
@@ -1052,9 +1103,13 @@ function ProjectDetail({
           }
           continue;
         }
-        await api.setFieldValue(detail.id, key, String(now));
+        await api.setFieldValue(detail.id, key, String(now), producers[key] ?? null);
       }
     });
+  }
+
+  function saveOutputs(stage, values, saved) {
+    return saveValues(values, saved, Object.fromEntries(stage.outputs.map((key) => [key, stage.id])));
   }
 
   async function signOff(stage, decision) {
@@ -1120,7 +1175,7 @@ function ProjectDetail({
   let history = [];
   if (selectedStage !== null) {
     const pending = selectedStage.outputs.find((key) => !hasValue(detail.fieldValues, key));
-    missing = pending === undefined ? null : nameOfKey(vocabulary, pending);
+    missing = pending === undefined ? null : nameOfKey(known, pending);
     const index = phases.findIndex((phase) => phase.seq === selectedStage.seq);
     nextPhase = phases[index + 1] ?? null;
     history = detail.stages
@@ -1201,7 +1256,7 @@ function ProjectDetail({
                 history={history}
                 detail={detail}
                 phases={phases}
-                vocabulary={vocabulary}
+                vocabulary={known}
                 user={user}
                 people={people}
                 busy={busy}
@@ -1219,6 +1274,7 @@ function ProjectDetail({
                 onResume={(stage) => run(() => api.updateProjectStage(detail.id, stage.id, { status: "active" }))}
                 onSignOff={signOff}
                 onDeliver={deliver}
+                onSaveOutputs={saveOutputs}
                 key={selectedStage.id}
               />
             )}
@@ -1226,7 +1282,14 @@ function ProjectDetail({
         ) : null}
 
         {tab === "data" ? (
-          <ProjectData detail={detail} vocabulary={vocabulary} busy={busy} onSave={saveValues} key={`data-${version}`} />
+          <ProjectData
+            detail={detail}
+            stages={stages}
+            vocabulary={known}
+            busy={busy}
+            onSave={saveValues}
+            key={`data-${version}`}
+          />
         ) : null}
 
         {tab === "files" ? (
@@ -1258,7 +1321,7 @@ function ProjectDetail({
           etapa={newStage}
           areas={areas}
           miembros={newStageMembers}
-          vocabulario={[...vocabulary.entries()].map(([key, field]) => ({
+          vocabulario={[...known.entries()].map(([key, field]) => ({
             key,
             name: field.name,
             type: field.type,
@@ -1268,6 +1331,7 @@ function ProjectDetail({
           onCambiar={changeNewStage}
           onClose={() => setNewStage(null)}
           onSubmit={addStage}
+          onDatoNuevo={(one) => setRegistered((current) => [...current, one])}
         >
           <StageExtras draft={newStage} phases={phases} onChange={changeNewStage} />
         </StageModal>

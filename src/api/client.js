@@ -278,6 +278,12 @@ export const deleteSchema = (id) => request(`/schemas/${id}`, { method: "DELETE"
 export const listFieldKeys = () => request("/schemas/field-keys");
 
 /**
+ * Registra un dato que ningún formato pide, con su nombre y su tipo, para que una etapa lo pida o
+ * lo entregue. Sin `key`, la clave sale del nombre; si ya existe con el mismo tipo, la devuelve.
+ */
+export const createFieldKey = (body) => request("/schemas/field-keys", { method: "POST", body });
+
+/**
  * El catálogo de tipos de campo. Es de solo lectura: cada tipo es una regla de conversión
  * que el servidor implementa.
  */

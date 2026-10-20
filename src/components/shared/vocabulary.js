@@ -1,41 +1,26 @@
 // The data vocabulary: a field's key with the name and the type it was registered under.
 //
 // A key is vocabulary shared between formats (DATAMODEL.md §2.13b): reusing one brings its name
-// and its type, and publishing the same key with another type is refused. That is why the active
-// formats are enough to know what `numero_orden` is called and what type it is, and why the
-// screens can stop showing raw keys where a person expects a name.
+// and its type, and publishing the same key with another type is refused. The server's list holds
+// every key a format ever published plus those registered on their own for a stage, which is why
+// the screens can show a name where a person expects one instead of the raw key.
 
 /**
- * The vocabulary the formats declare, as a Map from key to `{ name, type, note }`.
+ * The vocabulary as a Map from key to `{ name, type, note }`.
  *
- * @param {Array<{fields: {deliverables: object[], information: object[]}|null}>} schemas What
- *   `listSchemas()` returns.
+ * @param {Array<{key: string, name: string, type: string, note?: string}>} fieldKeys What
+ *   `listFieldKeys()` returns.
  * @returns {Map<string, {name: string, type: string, note: string|null}>}
  */
-export function vocabularyOf(schemas) {
-  const vocabulary = new Map();
-
-  for (const format of schemas) {
-    if (format.fields === null || format.fields === undefined) {
-      continue;
-    }
-    for (const field of [...format.fields.deliverables, ...format.fields.information]) {
-      if (!vocabulary.has(field.code)) {
-        vocabulary.set(field.code, {
-          name: field.name,
-          type: field.type,
-          note: field.note ?? null,
-        });
-      }
-    }
-  }
-
-  return vocabulary;
+export function vocabularyOf(fieldKeys) {
+  return new Map(
+    fieldKeys.map((one) => [one.key, { name: one.name, type: one.type, note: one.note || null }]),
+  );
 }
 
 /**
  * How a key reads: its name when the vocabulary knows it, and the key itself when it does not,
- * which is the only honest answer when a stage promises a value no format asks for yet.
+ * which is the only honest answer when a stage promises a value nobody registered.
  *
  * @param {Map<string, {name: string}>} vocabulary
  * @param {string} key

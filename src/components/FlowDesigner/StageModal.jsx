@@ -1,34 +1,70 @@
 // La ventana para agregar o editar una etapa: qué área la hace, quién, qué datos necesita y
 // cuáles entrega, sus notas y cuántos días hábiles toma. La usan el diseñador de flujos y la ficha
 // del proyecto; aquí solo se edita la etapa, y quien abre la ventana decide qué hacer al guardar.
-import { useState } from "react";
+//
+// Un dato se busca por su nombre. Si no existe, se registra aquí mismo con su nombre y su tipo
+// (DATAMODEL §2.13b): así el proyecto sabe cómo se llama y qué pedir, en vez de mostrar una clave.
+import { useEffect, useState } from "react";
 
 import {
     MdClose,
 } from "react-icons/md";
 
+import * as api from "../../api/client.js";
 import FlowModal from "./FlowModal.jsx";
 
 /**
- * Una lista de claves de datos: se agregan desde el vocabulario (o escribiendo una nueva) y
- * se quitan una por una.
+ * Una lista de datos: se agregan buscando por nombre entre los que ya existen, o registrando uno
+ * nuevo con su nombre y su tipo, y se quitan uno por uno.
  */
-function ListaDeClaves({ etiqueta, ayuda, claves, vocabulario, onCambiar }) {
+function ListaDeClaves({ id, etiqueta, ayuda, claves, vocabulario, tipos, onCambiar, onCreada }) {
     const [texto, setTexto] = useState("");
-
-    function agregar() {
-        const clave = texto.trim();
-        if (clave && !claves.includes(clave)) onCambiar([...claves, clave]);
-        setTexto("");
-    }
+    const [nuevo, setNuevo] = useState(null);
+    const [error, setError] = useState(null);
+    const [ocupado, setOcupado] = useState(false);
 
     function nombreDe(clave) {
         return vocabulario.find((una) => una.key === clave)?.name ?? clave;
     }
 
+    function poner(clave) {
+        if (!claves.includes(clave)) onCambiar([...claves, clave]);
+        setTexto("");
+        setNuevo(null);
+        setError(null);
+    }
+
+    function agregar() {
+        const buscado = texto.trim();
+        if (buscado === "") return;
+        const minusculas = buscado.toLowerCase();
+        const existente = vocabulario.find(
+            (una) => una.name.toLowerCase() === minusculas || una.key === buscado,
+        );
+        if (existente) {
+            poner(existente.key);
+            return;
+        }
+        setNuevo({ name: buscado, type: "text" });
+    }
+
+    async function crear() {
+        setOcupado(true);
+        setError(null);
+        try {
+            const { fieldKey } = await api.createFieldKey(nuevo);
+            onCreada(fieldKey);
+            poner(fieldKey.key);
+        } catch (falla) {
+            setError(falla.message);
+        } finally {
+            setOcupado(false);
+        }
+    }
+
     return (
         <div className="modal-field flow-key-list">
-            <label>{etiqueta}</label>
+            <label htmlFor={id}>{etiqueta}</label>
             <p className="flow-field-help">{ayuda}</p>
 
             {claves.length > 0 && (
@@ -40,7 +76,7 @@ function ListaDeClaves({ etiqueta, ayuda, claves, vocabulario, onCambiar }) {
                                 type="button"
                                 className="flow-key-remove"
                                 onClick={() => onCambiar(claves.filter((otra) => otra !== clave))}
-                                aria-label={`Quitar ${clave}`}
+                                aria-label={`Quitar ${nombreDe(clave)}`}
                             >
                                 <MdClose />
                             </button>
@@ -51,22 +87,71 @@ function ListaDeClaves({ etiqueta, ayuda, claves, vocabulario, onCambiar }) {
 
             <div className="flow-key-add">
                 <input
+                    id={id}
                     type="text"
                     list="flujo-vocabulario"
                     value={texto}
-                    onChange={(event) => setTexto(event.target.value)}
+                    onChange={(event) => {
+                        setTexto(event.target.value);
+                        setNuevo(null);
+                    }}
                     onKeyDown={(event) => {
                         if (event.key === "Enter") {
                             event.preventDefault();
                             agregar();
                         }
                     }}
-                    placeholder="clave_del_dato"
+                    placeholder="Ej. Número de orden"
                 />
                 <button type="button" className="modal-cancel" onClick={agregar}>
                     Agregar
                 </button>
             </div>
+
+            {nuevo === null ? null : (
+                <div className="flow-key-new">
+                    <p className="flow-field-help">
+                        «{nuevo.name}» todavía no existe. Regístralo para que el proyecto sepa cómo
+                        se llama y qué tipo de valor pedir.
+                    </p>
+                    <div className="flow-key-new-row">
+                        <label>
+                            Nombre
+                            <input
+                                type="text"
+                                value={nuevo.name}
+                                maxLength={200}
+                                onChange={(event) => setNuevo({ ...nuevo, name: event.target.value })}
+                            />
+                        </label>
+                        <label>
+                            Tipo
+                            <select
+                                value={nuevo.type}
+                                onChange={(event) => setNuevo({ ...nuevo, type: event.target.value })}
+                            >
+                                {tipos.map((tipo) => (
+                                    <option key={tipo.code} value={tipo.code}>{tipo.name}</option>
+                                ))}
+                            </select>
+                        </label>
+                    </div>
+                    {error === null ? null : <p className="flow-key-error">{error}</p>}
+                    <div className="flow-key-new-actions">
+                        <button type="button" className="modal-cancel" onClick={() => setNuevo(null)}>
+                            Cancelar
+                        </button>
+                        <button
+                            type="button"
+                            className="modal-primary"
+                            onClick={crear}
+                            disabled={ocupado || nuevo.name.trim() === ""}
+                        >
+                            Registrar y agregar
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
@@ -78,8 +163,9 @@ function ListaDeClaves({ etiqueta, ayuda, claves, vocabulario, onCambiar }) {
  *
  * @param {object} props
  * @param {object[]} props.miembros Las personas del área elegida, `{ id, fullName }`.
- * @param {object[]} props.vocabulario Las claves conocidas, `{ key, name, type }`.
+ * @param {object[]} props.vocabulario Los datos conocidos, `{ key, name, type }`.
  * @param {(() => void)|null} [props.onQuitar] Sin él no se ofrece quitar la etapa.
+ * @param {((dato: object) => void)|null} [props.onDatoNuevo] Avisa del dato que se registró aquí.
  */
 function StageModal({
     etapa,
@@ -93,18 +179,41 @@ function StageModal({
     onClose,
     onSubmit,
     onQuitar = null,
+    onDatoNuevo = null,
     children = null,
 }) {
+    const [tipos, setTipos] = useState([]);
+    const [creados, setCreados] = useState([]);
+
+    useEffect(() => {
+        let cancelado = false;
+        api.listDataTypes()
+            .then((respuesta) => {
+                if (!cancelado) setTipos(respuesta.dataTypes.filter((tipo) => tipo.isActive));
+            })
+            .catch(() => {});
+        return () => {
+            cancelado = true;
+        };
+    }, []);
+
+    const conocidos = [
+        ...vocabulario,
+        ...creados.filter((dato) => !vocabulario.some((una) => una.key === dato.key)),
+    ];
+
+    function registrado(dato) {
+        setCreados([...creados, dato]);
+        if (onDatoNuevo !== null) onDatoNuevo(dato);
+    }
+
     return (
         <>
             <datalist id="flujo-vocabulario">
-                {vocabulario.map((una) => (
-                    <option key={una.key} value={una.key}>
-                        {una.name} ({una.type})
-                    </option>
+                {conocidos.map((una) => (
+                    <option key={una.key} value={una.name} />
                 ))}
             </datalist>
-
             <FlowModal
                 type="area"
                 titulo={editando ? "Editar etapa" : "Agregar etapa"}
@@ -158,21 +267,23 @@ function StageModal({
                 </div>
 
                 <p className="flow-field-help">
-                    Lo que la etapa recibe y entrega se puede anotar de dos formas. Los
-                    <strong> datos</strong> son valores que se capturan en el proyecto, como
-                    el número de orden o el tiraje, y se nombran con una clave (por ejemplo,
-                    numero_orden); elige una de las que ya usan los formatos o escribe una
-                    nueva. Las <strong>notas</strong> describen con tus palabras lo que no es
-                    un dato: una aprobación, un archivo, una muestra física o la evidencia de
-                    entrega.
+                    Lo que la etapa recibe y entrega se anota de dos formas. Los
+                    <strong> datos</strong> son valores que alguien escribe en el proyecto, como
+                    el número de orden o el costo total: búscalos por su nombre o registra uno
+                    nuevo. Las <strong>notas</strong> describen con tus palabras lo que no es un
+                    dato: una aprobación, un archivo, una muestra física. Quien atiende la etapa
+                    las ve junto a lo que tiene que entregar.
                 </p>
 
                 <ListaDeClaves
+                    id="etapa-datos-entrada"
                     etiqueta="Datos que necesita para empezar"
                     ayuda="Solo informan a quien atiende la etapa; que falte uno no detiene el trabajo."
                     claves={etapa.inputs}
-                    vocabulario={vocabulario}
+                    vocabulario={conocidos}
+                    tipos={tipos}
                     onCambiar={(claves) => onCambiar("inputs", claves)}
+                    onCreada={registrado}
                 />
 
                 <div className="modal-field">
@@ -188,11 +299,14 @@ function StageModal({
                 </div>
 
                 <ListaDeClaves
+                    id="etapa-datos-salida"
                     etiqueta="Datos que debe capturar al terminar"
-                    ayuda="El visto bueno de la etapa no se puede dar mientras alguno siga sin valor en el proyecto."
+                    ayuda="Quien atiende la etapa los escribe al entregarla; el visto bueno no se puede dar mientras falte alguno."
                     claves={etapa.outputs}
-                    vocabulario={vocabulario}
+                    vocabulario={conocidos}
+                    tipos={tipos}
                     onCambiar={(claves) => onCambiar("outputs", claves)}
+                    onCreada={registrado}
                 />
 
                 <div className="modal-field">
