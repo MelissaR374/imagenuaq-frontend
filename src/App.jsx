@@ -100,6 +100,13 @@ function App() {
 function Aplicacion() {
   const [usuario, setUsuario] = useState(null);
   const [permisos, setPermisos] = useState([]);
+
+  const [notificationRefreshKey, setNotificationRefreshKey] = useState(0);
+
+  function actualizarContadorNotificaciones() {
+    setNotificationRefreshKey((actual) => actual + 1);
+  }
+
   const [pestana, setPestana] = useState(() =>
     new URLSearchParams(window.location.search).has(MICROSOFT_PARAM)
       ? "Libros de Excel"
@@ -220,6 +227,7 @@ function Aplicacion() {
           setPestana(nombre);
         }}
         onLogout={cerrarSesion}
+        notificationRefreshKey={notificationRefreshKey}
       />
 
       <main className="main-content">
@@ -250,7 +258,7 @@ function Aplicacion() {
         {!canSee(activa, rol, permisos) ? null : activa === "Organigrama" ? (
           <OrgChart />
         ) : activa === "Notificaciones" ? (
-          <Notifications />
+          <Notifications onUnreadChange={actualizarContadorNotificaciones} />
         ) : activa === "Mi perfil" ? (
           <Profile
             usuario={usuario}

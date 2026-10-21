@@ -108,16 +108,17 @@
 .main-content {
   font-family: "Poppins", sans-serif;
   flex: 1;
+  min-width: 0;
   min-height: 100vh;
 
-  padding: 10px;
+  padding: 35px 32px 48px;
 
   overflow-y: auto;
   overflow-x: hidden;
 
   color: var(--text);
-
   background-color: var(--background);
+  box-sizing: border-box;
 
   transition:
     background-color 0.3s ease,

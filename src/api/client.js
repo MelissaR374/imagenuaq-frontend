@@ -639,3 +639,28 @@ export const createNote = (body) => request("/calendar/notes", { method: "POST",
 export const updateNote = (noteId, body) => request(`/calendar/notes/${noteId}`, { method: "PATCH", body });
 
 export const deleteNote = (noteId) => request(`/calendar/notes/${noteId}`, { method: "DELETE" });
+
+/* NOTIFICACIONES*/
+
+//Consulta las notificaciones del usuario autenticado.
+export const listNotifications = (params = {}) =>
+  request(withQuery("/notifications", params));
+
+//Consulta cuántas notificaciones tiene sin leer.
+export const countUnreadNotifications = () =>
+  request("/notifications/unread-count");
+
+/**
+ * Marca una notificación como leída.
+ * Solo permite modificar notificaciones del usuario autenticado.
+*/
+export const markNotificationAsRead = (id) =>
+  request(`/notifications/${id}/read`, {
+    method: "PATCH",
+  });
+
+//Marca todas las notificaciones del usuario como leídas.
+export const markAllNotificationsAsRead = () =>
+  request("/notifications/read-all", {
+    method: "PATCH",
+  });
