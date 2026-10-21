@@ -59,7 +59,7 @@ const TIPOS_NOTIFICACION = {
   },
 };
 
-//Convierte las propiedades q manda Express al formato q utiliza nuestro componente de React. Así permite que conservemos el diseño existente.
+/** Pasa una notificación tal como la manda la API a la forma que usa esta pantalla. */
 function adaptarNotificacion(notification) {
   return {
     id: notification.id,
@@ -149,7 +149,7 @@ function obtenerTiempoRelativo(fecha){
   return `hace ${dias} días`;
 }
 
-//Componente PRINCIPAL
+/** El historial de notificaciones; `onUnreadChange` avisa a la barra lateral que cambió el conteo. */
 function Notifications({onUnreadChange}){
   const [notificaciones, setNotificaciones] = useState([]);
   const [busqueda, setBusqueda] = useState("");
@@ -255,7 +255,6 @@ function Notifications({onUnreadChange}){
     };
   }, []);
 
-  //Contadores
   const totalNotificaciones = notificaciones.length;
   const totalSinLeer = notificaciones.filter((notificacion) => !notificacion.leida,).length;
   const totalAlertas = notificaciones.filter(
@@ -273,7 +272,6 @@ function Notifications({onUnreadChange}){
       obtenerTipoNotificacion(notificacion.tipo) === "proyecto",
   ).length;
   
-  //Filtros y Busqueda
   const notificacionesFiltradas = useMemo(() => {
     return notificaciones.filter((notificacion) => {
       const tipo = obtenerTipoNotificacion(
@@ -464,7 +462,7 @@ function Notifications({onUnreadChange}){
               <div className="notification-group-title">
                 {grupo}
               </div>
-              {items.map((notification)=> {
+              {items.map((notificacion)=> {
                 const tipo = obtenerTipoNotificacion(
                   notificacion.tipo
                 );

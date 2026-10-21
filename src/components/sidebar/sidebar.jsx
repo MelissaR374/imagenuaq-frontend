@@ -10,7 +10,7 @@ import { MdLogout, MdMenu } from "react-icons/md";
  * `foto` es el object URL de la foto de perfil, o null para mostrar las iniciales. Qué elementos
  * se ven lo decide `itemVisible` con el `role` y los `permisos` de la sesión.
  */
-function Sidebar({ usuario, foto = null, role = "admin", permisos = [], activeItem = "Proyectos", onNavigate, onLogout, notificationRefreshKey = 0}) {
+function Sidebar({ usuario, foto = null, role = "admin", permisos = [], activeItem = "Proyectos", onNavigate, onLogout, refrescoNotificaciones = 0}) {
   
   const [isClosed, setIsClosed] = useState(false);
   const [sinLeer, setSinLeer] = useState(0);
@@ -35,7 +35,7 @@ function Sidebar({ usuario, foto = null, role = "admin", permisos = [], activeIt
     return () => {
       cancelado = true;
     };
-  }, [usuario.id, notificationRefreshKey]);
+  }, [usuario.id, refrescoNotificaciones]);
 
   useEffect(() => {
     const token = api.getToken();

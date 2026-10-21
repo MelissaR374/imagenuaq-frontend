@@ -640,26 +640,21 @@ export const updateNote = (noteId, body) => request(`/calendar/notes/${noteId}`,
 
 export const deleteNote = (noteId) => request(`/calendar/notes/${noteId}`, { method: "DELETE" });
 
-/* NOTIFICACIONES*/
-
-//Consulta las notificaciones del usuario autenticado.
+/** Las notificaciones de quien tiene la sesión, de la más reciente a la más antigua; `{ limit, offset }`. */
 export const listNotifications = (params = {}) =>
   request(withQuery("/notifications", params));
 
-//Consulta cuántas notificaciones tiene sin leer.
+/** Cuántas notificaciones sin leer tiene quien tiene la sesión: `{ unreadCount }`. */
 export const countUnreadNotifications = () =>
   request("/notifications/unread-count");
 
-/**
- * Marca una notificación como leída.
- * Solo permite modificar notificaciones del usuario autenticado.
-*/
+/** Marca una notificación propia como leída; 404 si es ajena o ya estaba leída. */
 export const markNotificationAsRead = (id) =>
   request(`/notifications/${id}/read`, {
     method: "PATCH",
   });
 
-//Marca todas las notificaciones del usuario como leídas.
+/** Marca como leídas todas las notificaciones de quien tiene la sesión. */
 export const markAllNotificationsAsRead = () =>
   request("/notifications/read-all", {
     method: "PATCH",

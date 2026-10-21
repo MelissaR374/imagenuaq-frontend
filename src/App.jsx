@@ -101,10 +101,10 @@ function Aplicacion() {
   const [usuario, setUsuario] = useState(null);
   const [permisos, setPermisos] = useState([]);
 
-  const [notificationRefreshKey, setNotificationRefreshKey] = useState(0);
+  const [refrescoNotificaciones, setRefrescoNotificaciones] = useState(0);
 
   function actualizarContadorNotificaciones() {
-    setNotificationRefreshKey((actual) => actual + 1);
+    setRefrescoNotificaciones((actual) => actual + 1);
   }
 
   const [pestana, setPestana] = useState(() =>
@@ -227,7 +227,7 @@ function Aplicacion() {
           setPestana(nombre);
         }}
         onLogout={cerrarSesion}
-        notificationRefreshKey={notificationRefreshKey}
+        refrescoNotificaciones={refrescoNotificaciones}
       />
 
       <main className="main-content">
