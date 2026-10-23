@@ -31,6 +31,7 @@ import Overview from "./components/tasks/overview.jsx";
 import Calendar from "./components/calendar/calendar.jsx";
 import Timeline from "./components/timeline/timeline.jsx";
 import OrgChart from "./components/orgChart/orgChart.jsx";
+import Billing from "./components/billing/billing.jsx"
 
 import * as api from "./api/client.js";
 import { MICROSOFT_PARAM, SHARED_PARAM } from "./config.js";
@@ -68,6 +69,7 @@ const DESCRIPCIONES = {
   "Panorama de áreas": "Lo que cada área tiene por asignar y la carga de su gente esta semana.",
   Calendario: "Las etapas, ausencias y fechas institucionales del mes, y las ventanas de cierre de semestre.",
   Cronograma: "Qué tan ocupada está cada área día por día, contando a quién le falta gente.",
+  Facturación: "Consulta los proyectos y da seguimiento a los documentos importantes",
 };
 
 /** El token de un enlace de solo lectura, si la página se abrió con uno. */
@@ -113,6 +115,10 @@ function Aplicacion() {
       : null,
   );
   const [proyectoPorAbrir, setProyectoPorAbrir] = useState(null);
+  
+  const [pestanaProyectoPorAbrir, setPestanaProyectoPorAbrir] =
+  useState("stages");
+  
   const [areaPorAbrir, setAreaPorAbrir] = useState(null);
 
   const [modoOscuro, setModoOscuro] = useState(() => {
@@ -198,8 +204,9 @@ function Aplicacion() {
   const puedeAbrirProyectos = canSee("Proyectos", rol, permisos);
 
   /** Lleva a «Proyectos» con ese proyecto ya abierto, desde una tarea o una etapa. */
-  function abrirProyecto(id) {
+  function abrirProyecto(id, initialTab = "stages") {
     setProyectoPorAbrir(id);
+    setPestanaProyectoPorAbrir(initialTab);
     setPestana("Proyectos");
   }
 
@@ -281,7 +288,7 @@ function Aplicacion() {
         ) : activa === "Bandeja de solicitudes" ? (
           <Inbox />
         ) : activa === "Proyectos" ? (
-          <Projects user={usuario} openId={proyectoPorAbrir} />
+          <Projects user={usuario} openId={proyectoPorAbrir} initialTab={pestanaProyectoPorAbrir}/>
         ) : activa === "Catálogo de estatus" ? (
           <StatusCatalog />
         ) : activa === "Diseñador de flujos" ? (
@@ -310,6 +317,14 @@ function Aplicacion() {
           />
         ) : activa === "Cronograma" ? (
           <Timeline isAdmin={usuario.role === "admin"} onOpenProject={puedeAbrirProyectos ? abrirProyecto : null} />
+        ) : activa === "Facturación" ? (
+          <Billing 
+            onOpenRecord={(record) => {
+              if(!puedeAbrirProyectos) return;
+              if(record.projectId == null) return;
+              abrirProyecto(record.projectId, "billing");
+            }}
+          />
         ) : activa === "Calendario" ? (
           <Calendar
             isAdmin={usuario.role === "admin"}

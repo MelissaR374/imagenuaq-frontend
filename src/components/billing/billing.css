@@ -1,0 +1,778 @@
+/* =========================================================
+   PÁGINA PRINCIPAL
+   ========================================================= */
+
+.billing-page {
+    width: 100%;
+    min-height: 100%;
+    padding: 0;
+
+    background: var(--background);
+    color: var(--text);
+
+    font-family: "Poppins", sans-serif;
+    box-sizing: border-box;
+
+    transition:
+        background-color 0.3s ease,
+        color 0.3s ease;
+}
+
+.billing-page *,
+.billing-page *::before,
+.billing-page *::after {
+    box-sizing: border-box;
+}
+
+/* =========================================================
+   ENCABEZADO
+   ========================================================= */
+
+.billing-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+
+    gap: 20px;
+    margin-bottom: 22px;
+}
+
+.billing-header h1 {
+    margin: 0 0 5px;
+
+    color: var(--text);
+    font-size: 24px;
+    font-weight: 700;
+}
+
+.billing-header p {
+    margin: 0;
+
+    color: var(--text-secondary);
+    font-size: var(--size-small);
+}
+
+.billing-header-role {
+    display: flex;
+    flex-direction: column;
+
+    padding: 8px 12px;
+    min-width: 150px;
+
+    border: 1px solid var(--border);
+    border-radius: 6px;
+
+    background: var(--surface);
+}
+
+.billing-header-role strong {
+    color: var(--text);
+
+    font-size: var(--size-caps);
+    font-weight: 600;
+}
+
+.billing-header-role span {
+    color: var(--text-muted);
+    font-size: var(--size-caps);
+}
+
+/* =========================================================
+   TARJETAS DE INDICADORES
+   ========================================================= */
+
+.billing-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.billing-stat-card {
+    min-height: 112px;
+    padding: 16px;
+
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+
+    border: 1px solid var(--border-light);
+    border-radius: 10px;
+
+    background: var(--surface);
+}
+
+.billing-stat-content {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.billing-stat-title {
+    color: var(--text-secondary);
+
+    font-size: var(--size-caps);
+    font-weight: 500;
+}
+
+.billing-stat-value {
+    margin: 4px 0;
+
+    color: var(--text);
+    font-size: 29px;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.billing-stat-description {
+    color: var(--text-muted);
+
+    font-size: var(--size-caps);
+    line-height: 1.5;
+}
+
+.billing-stat-icon {
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 50%;
+
+    background: var(--accent-soft);
+    color: var(--accent);
+
+    font-size: 16px;
+}
+
+/* =========================================================
+   BÚSQUEDA Y FILTROS
+   ========================================================= */
+
+.billing-toolbar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+
+    gap: 9px;
+    margin-bottom: 18px;
+}
+
+.billing-search {
+    flex: 1 1 240px;
+    min-width: 180px;
+    height: 38px;
+
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    padding: 0 11px;
+
+    border: 1px solid var(--border);
+    border-radius: 6px;
+
+    background: var(--field);
+}
+
+.billing-search:focus-within {
+    border-color: var(--accent-line);
+    box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.billing-search svg {
+    flex-shrink: 0;
+
+    color: var(--text-muted);
+    font-size: 17px;
+}
+
+.billing-search input {
+    width: 100%;
+    min-width: 0;
+
+    border: none;
+    outline: none;
+
+    background: transparent;
+    color: var(--text);
+
+    font-family: inherit;
+    font-size: var(--size-small);
+}
+
+.billing-search input::placeholder {
+    color: var(--text-muted);
+}
+
+.billing-toolbar select {
+    height: 38px;
+    max-width: 190px;
+
+    padding: 0 10px;
+
+    border: 1px solid var(--border);
+    border-radius: 6px;
+
+    background: var(--field);
+    color: var(--text-secondary);
+
+    font-family: inherit;
+    font-size: var(--size-small);
+
+    cursor: pointer;
+}
+
+.billing-toolbar select:focus-visible {
+    outline: 2px solid var(--accent-line);
+    outline-offset: 2px;
+}
+
+.billing-export {
+    height: 38px;
+    margin-left: auto;
+    padding: 0 15px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+
+    border: none;
+    border-radius: 6px;
+
+    background: var(--accent);
+    color: #ffffff;
+
+    font-family: inherit;
+    font-size: var(--size-small);
+    font-weight: 600;
+
+    white-space: nowrap;
+    cursor: pointer;
+
+    transition: background-color 0.2s ease;
+}
+
+.billing-export:hover {
+    background: var(--accent-hover);
+}
+
+.billing-export svg {
+    font-size: 15px;
+}
+
+/* =========================================================
+   FILTROS RÁPIDOS
+   ========================================================= */
+
+.billing-filter-tabs {
+    display: flex;
+    flex-wrap: wrap;
+
+    gap: 8px;
+    margin-bottom: 18px;
+}
+
+.billing-filter-tab {
+    min-height: 34px;
+    padding: 0 13px;
+
+    border: 1px solid var(--border);
+    border-radius: 18px;
+
+    background: var(--surface);
+    color: var(--text-secondary);
+
+    font-family: inherit;
+    font-size: var(--size-caps);
+    font-weight: 500;
+
+    cursor: pointer;
+
+    transition:
+        background-color 0.2s ease,
+        border-color 0.2s ease,
+        color 0.2s ease;
+}
+
+.billing-filter-tab:hover {
+    border-color: var(--accent-line);
+    color: var(--accent);
+}
+
+.billing-filter-tab.active {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: #ffffff;
+}
+
+/* =========================================================
+   SECCIONES DE TABLA
+   ========================================================= */
+
+.billing-table-section {
+    margin-bottom: 20px;
+    padding: 18px 18px 12px;
+
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+
+    background: var(--surface);
+}
+
+.billing-table-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 15px;
+    margin-bottom: 14px;
+}
+
+.billing-table-heading h2 {
+    margin: 0;
+    color: var(--text);
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.billing-table-heading>span {
+    color: var(--text-muted);
+    font-size: var(--size-caps);
+}
+
+.billing-table-scroll {
+    width: 100%;
+    overflow-x: auto;
+}
+
+/* =========================================================
+   TABLA
+   ========================================================= */
+
+.billing-table {
+    width: 100%;
+    min-width: 850px;
+
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.billing-table th {
+    padding: 11px 10px;
+
+    background: var(--surface-secondary);
+    color: var(--text-muted);
+
+    font-size: var(--size-caps);
+    font-weight: 600;
+    text-align: left;
+}
+
+.billing-table th:first-child {
+    width: 34%;
+}
+
+.billing-table th:nth-child(2) {
+    width: 9%;
+}
+
+.billing-table th:nth-child(3) {
+    width: 17%;
+}
+
+.billing-table th:nth-child(4) {
+    width: 17%;
+}
+
+.billing-table th:nth-child(5) {
+    width: 18%;
+}
+
+.billing-table th:last-child {
+    width: 5%;
+    text-align: center;
+}
+
+.billing-table td {
+    padding: 13px 10px;
+
+    border-bottom: 1px solid var(--border-light);
+
+    vertical-align: middle;
+
+    color: var(--text-secondary);
+    font-size: var(--size-small);
+}
+
+.billing-table tbody tr:hover {
+    background: var(--surface-secondary);
+}
+
+.billing-project-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+
+    gap: 3px;
+    line-height: 1.4;
+}
+
+.billing-project-code {
+    color: var(--accent);
+    font-size: var(--size-caps);
+    font-weight: 600;
+}
+
+.billing-project-info strong {
+    color: var(--text);
+
+    font-size: var(--size-small);
+    font-weight: 600;
+}
+
+.billing-project-info>span:not(.billing-project-code) {
+    color: var(--text-secondary);
+    font-size: var(--size-caps);
+}
+
+/*Enlace del proyecto*/
+.billing-project-link {
+    display: block;
+    width: fit-content;
+    max-width: 100%;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-size: var(--size-body);
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+}
+
+.billing-project-link:hover:not(:disabled) {
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.billing-project-link:disabled {
+    color: var(--text);
+    cursor: default;
+}
+
+.billing-open-button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.billing-amount {
+    color: var(--text) !important;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.billing-empty {
+    padding: 25px !important;
+
+    color: var(--text-muted) !important;
+    text-align: center;
+}
+
+/* =========================================================
+   DESCARGA DE COTIZACIONES Y FACTURAS
+   ========================================================= */
+
+.billing-file-download {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+
+    max-width: 100%;
+
+    color: var(--accent);
+    font-size: var(--size-caps);
+    font-weight: 500;
+
+    text-decoration: none;
+    overflow-wrap: anywhere;
+
+    cursor: pointer;
+
+    transition: color 0.2s ease;
+}
+
+.billing-file-download svg {
+    flex-shrink: 0;
+    font-size: 15px;
+}
+
+.billing-file-download span {
+    overflow-wrap: anywhere;
+}
+
+.billing-file-download:hover {
+    color: var(--accent-hover);
+    text-decoration: underline;
+}
+
+.billing-file-download:focus-visible {
+    outline: 2px solid var(--accent-line);
+    outline-offset: 3px;
+    border-radius: 3px;
+}
+
+/* =========================================================
+   ESTADOS DOCUMENTALES
+   ========================================================= */
+
+.billing-status-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+
+    gap: 4px;
+}
+
+.billing-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+
+    max-width: 100%;
+    padding: 4px 6px;
+
+    border-radius: 4px;
+
+    font-size: var(--size-caps);
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.billing-status svg {
+    flex-shrink: 0;
+    font-size: 13px;
+}
+
+/* Documento disponible */
+
+.billing-status.success {
+    background: var(--success-soft);
+    color: var(--success);
+}
+
+/* Documento faltante */
+
+.billing-status.danger {
+    background: var(--danger-soft);
+    color: var(--danger);
+}
+
+/* Documento pendiente */
+
+.billing-status.warning {
+    background: var(--warning-soft);
+    color: var(--warning);
+}
+
+/* Estado neutro */
+
+.billing-status.neutral {
+    background: var(--surface-secondary);
+    color: var(--text-secondary);
+}
+
+.billing-file-name {
+    color: var(--accent);
+
+    font-size: var(--size-caps);
+    overflow-wrap: anywhere;
+}
+
+.billing-muted {
+    color: var(--text-muted);
+    font-size: var(--size-caps);
+}
+
+.billing-receipt-folio {
+    color: var(--text);
+
+    font-size: var(--size-caps);
+    font-weight: 500;
+}
+
+/* =========================================================
+   BOTÓN VER
+   ========================================================= */
+
+.billing-open-button {
+    width: 30px;
+    height: 30px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    margin: auto;
+
+    border: none;
+    border-radius: 5px;
+
+    background: transparent;
+    color: var(--accent);
+
+    font-size: 17px;
+    cursor: pointer;
+}
+
+.billing-open-button:hover {
+    background: var(--accent-soft);
+}
+
+/* =========================================================
+   PIES DE TABLAS
+   ========================================================= */
+
+.billing-table-footer {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+
+    gap: 10px;
+    padding-top: 12px;
+
+    color: var(--text-muted);
+    font-size: var(--size-caps);
+}
+
+.billing-table-footer strong {
+    color: var(--text);
+}
+
+/* =========================================================
+   FOOTER GENERAL
+   ========================================================= */
+
+.billing-footer {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+
+    gap: 12px;
+    margin-top: 6px;
+
+    color: var(--text-muted);
+    font-size: var(--size-caps);
+}
+
+.billing-footer strong {
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+/* =========================================================
+   ACCESIBILIDAD
+   ========================================================= */
+
+.billing-page button:focus-visible,
+.billing-page input:focus-visible {
+    outline: 2px solid var(--accent-line);
+    outline-offset: 2px;
+}
+
+/* =========================================================
+   RESPONSIVE — TABLET
+   ========================================================= */
+
+@media (max-width: 1100px) {
+
+    .billing-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .billing-export {
+        margin-left: 0;
+    }
+}
+
+/* =========================================================
+   RESPONSIVE — MÓVIL
+   ========================================================= */
+
+@media (max-width: 600px) {
+
+    .billing-header {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .billing-header h1 {
+        font-size: 22px;
+    }
+
+    .billing-header-role {
+        width: 100%;
+    }
+
+    .billing-stats {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .billing-stat-card {
+        min-height: 90px;
+    }
+
+    .billing-stat-value {
+        font-size: 25px;
+    }
+
+    .billing-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .billing-search {
+        flex: none;
+        width: 100%;
+    }
+
+    .billing-toolbar select {
+        width: 100%;
+        max-width: none;
+    }
+
+    .billing-export {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .billing-filter-tabs {
+        gap: 6px;
+    }
+
+    .billing-filter-tab {
+        font-size: var(--size-caps);
+    }
+
+    .billing-table-section {
+        padding: 14px 10px;
+    }
+
+    .billing-table-heading h2 {
+        font-size: 13px;
+    }
+
+    .billing-table-footer,
+    .billing-footer {
+        flex-direction: column;
+    }
+}

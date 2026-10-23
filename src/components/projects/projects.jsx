@@ -159,7 +159,7 @@ function ProjectRow({ project, onOpen }) {
  * @param {{ user: object, openId?: number|null }} props `openId` opens that project on arrival,
  *   as when «Mis tareas» sends someone to one.
  */
-function Projects({ user, openId = null }) {
+function Projects({ user, openId = null, initialTab = "stages" }) {
   const [projects, setProjects] = useState([]);
   const [areas, setAreas] = useState([]);
   const [statuses, setStatuses] = useState([]);
@@ -335,6 +335,7 @@ function Projects({ user, openId = null }) {
     return (
       <ProjectDetail
         project={opened}
+        initialTab={initialTab}
         areas={areas}
         statuses={statuses}
         vocabulary={vocabulary}

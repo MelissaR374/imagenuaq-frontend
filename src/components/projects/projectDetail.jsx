@@ -1,3 +1,4 @@
+
 // A project at full screen, over the list and over the sidebar. A header says everything about the
 // project at a glance and edits it in place; below it, tabs split the rest: the stages, the values,
 // the files and the requests it answers. In «Etapas» the flow is a list of phases on the left and
@@ -28,6 +29,7 @@ import StageModal from "../FlowDesigner/StageModal.jsx";
 import { STAGE_STATUS_LABELS } from "../tasks/taskText.js";
 import StageDelivery from "./stageDelivery.jsx";
 import "./projectDetail.css";
+import ProjectBilling from "./projectBilling/projectBilling.jsx";
 
 const OPEN_STATES = ["active", "waiting_external"];
 
@@ -44,6 +46,7 @@ const TABS = [
   { key: "data", label: "Datos" },
   { key: "files", label: "Archivos" },
   { key: "requests", label: "Solicitudes" },
+  {key: "billing", label: "Cotizaciones y facturas"},
 ];
 
 /** The header fields «Editar» changes, as the draft keeps them. */
@@ -924,13 +927,13 @@ function ProjectFiles({ projectId }) {
 
 function ProjectDetail({
   project, areas, statuses: initialStatuses, vocabulary, user,
-  place, onPrevious, onNext, onClose, onChanged,
+  place, onPrevious, onNext, onClose, onChanged, initialTab = "stages",
 }) {
   const [detail, setDetail] = useState(null);
   const [statuses, setStatuses] = useState(initialStatuses ?? []);
   const [people, setPeople] = useState([]);
   const [selected, setSelected] = useState(null);
-  const [tab, setTab] = useState("stages");
+  const [tab, setTab] = useState(initialTab);
   const [newStage, setNewStage] = useState(null);
   const [newStageMembers, setNewStageMembers] = useState([]);
   const [error, setError] = useState(null);
@@ -1312,6 +1315,12 @@ function ProjectDetail({
               </ul>
             )}
           </section>
+        ) : null}
+        {tab === "billing" ? (
+          <ProjectBilling 
+            key={detail.id}
+            projectId={detail.id} 
+          />
         ) : null}
       </div>
 
