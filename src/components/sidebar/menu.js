@@ -28,6 +28,7 @@ import {
   MdSchema,
   MdViewQuilt,
   MdCalendarMonth,
+  MdWork,
 } from "react-icons/md";
 
 export const menuSections = [
@@ -130,6 +131,14 @@ export const menuSections = [
         icon: MdAdminPanelSettings,
         roles: ["admin"],
       },
+
+      //todo: CAMBIAR ROLES POR PERMISSION CUANDO SE AGREGUE EL PERMISO 
+      {
+        label: "Tipos de contrato",
+        icon: MdWork,
+        roles: ["admin"],
+      },
+
       {
         label: "Catálogo de estatus",
         icon: MdLabel,

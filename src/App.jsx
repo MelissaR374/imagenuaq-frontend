@@ -31,7 +31,9 @@ import Overview from "./components/tasks/overview.jsx";
 import Calendar from "./components/calendar/calendar.jsx";
 import Timeline from "./components/timeline/timeline.jsx";
 import OrgChart from "./components/orgChart/orgChart.jsx";
-import Billing from "./components/billing/billing.jsx"
+import Billing from "./components/billing/billing.jsx";
+import ContractTypes from "./components/contractTypes/contractTypes.jsx";
+
 
 import * as api from "./api/client.js";
 import { MICROSOFT_PARAM, SHARED_PARAM } from "./config.js";
@@ -49,6 +51,7 @@ const DESCRIPCIONES = {
   "Áreas y usuarios":
     "El organigrama de la coordinación y quién está en cada área.",
   "Roles y permisos": "Lo que puede hacer cada rol.",
+  "Tipos de contrato": "Configura los tipos de contrato y los beneficios que se asignan a los empleados.",
   "Formatos de solicitud":
     "Los formatos con que se capturan las solicitudes y sus versiones.",
   "Libros de Excel": "Los libros de Excel registrados y la conexión con Microsoft.",
@@ -279,6 +282,8 @@ function Aplicacion() {
           <Areas />
         ) : activa === "Roles y permisos" ? (
           <Roles />
+        ) : activa === "Tipos de contrato" ? (
+          <ContractTypes />
         ) : activa === "Formatos de solicitud" ? (
           <Schemas />
         ) : activa === "Libros de Excel" ? (
