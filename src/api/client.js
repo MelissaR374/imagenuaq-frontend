@@ -640,6 +640,36 @@ export const updateNote = (noteId, body) => request(`/calendar/notes/${noteId}`,
 
 export const deleteNote = (noteId) => request(`/calendar/notes/${noteId}`, { method: "DELETE" });
 
+/** Projects with their finance standing, the most missing invoices first; `flag` filters by flag. */
+export const listFinanceProjects = (params = {}) => request(withQuery("/finance/projects", params));
+
+/** The full finance summary for one project: standing plus quotes, invoices, oficios, payments, receipts. */
+export const getFinanceSummary = (projectId) => request(`/finance/projects/${projectId}`);
+
+export const listProviders = (params = {}) => request(withQuery("/finance/providers", params));
+
+export const getProvider = (id) => request(`/finance/providers/${id}`);
+
+export const listQuotes = (params = {}) => request(withQuery("/finance/quotes", params));
+
+export const getQuote = (id) => request(`/finance/quotes/${id}`);
+
+export const listInvoices = (params = {}) => request(withQuery("/finance/invoices", params));
+
+export const getInvoice = (id) => request(`/finance/invoices/${id}`);
+
+export const listOficios = (params = {}) => request(withQuery("/finance/oficios", params));
+
+export const getOficio = (id) => request(`/finance/oficios/${id}`);
+
+export const listPayments = (params = {}) => request(withQuery("/finance/payments", params));
+
+export const getPayment = (id) => request(`/finance/payments/${id}`);
+
+export const listReceipts = (params = {}) => request(withQuery("/finance/receipts", params));
+
+export const getReceipt = (id) => request(`/finance/receipts/${id}`);
+
 /** Las notificaciones de quien tiene la sesión, de la más reciente a la más antigua; `{ limit, offset }`. */
 export const listNotifications = (params = {}) =>
   request(withQuery("/notifications", params));
