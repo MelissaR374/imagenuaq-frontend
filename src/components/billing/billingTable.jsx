@@ -1,209 +1,105 @@
-//Tabla reutilizable
-//Esta tabla sirve tanto para proyectos identificados como para registros sin proyectos
-import {
-  MdOpenInNew,
-  MdDescription,
-  MdCheckCircle,
-  MdWarningAmber,
-  MdFileDownload,
-} from "react-icons/md";
+// Finance project table: one row per project with counts and flags from shapeStanding.
+import { MdOpenInNew, MdWarningAmber } from "react-icons/md";
 
-function BillingStatus({ data, type }) {
-  if (!data) {
-    return <span className="billing-muted">Sin información</span>;
-  }
+const MXN = new Intl.NumberFormat("es-MX", {
+  style: "currency",
+  currency: "MXN",
+  maximumFractionDigits: 0,
+});
 
-  const isAvailable = data.status === "available";
-  const isMissing = data.status === "missing";
-  const isPending = data.status === "pending";
+const FLAG_LABELS = {
+  missing_invoices: "Faltan facturas",
+  costed_no_quote: "Sin cotización",
+  delivered_no_invoice: "Entregado sin factura",
+  invoice_not_in_oficio: "Factura sin oficio",
+  oficio_unanswered: "Oficio sin respuesta",
+  payment_no_folio: "Pago sin folio",
+  no_finance_records: "Sin registros",
+};
 
-  return (
-    <div className="billing-status-cell">
-      <span
-        className={`billing-status ${
-          isAvailable
-            ? "success"
-            : isMissing
-              ? "danger"
-              : isPending
-                ? "warning"
-                : "neutral"
-        }`}
-      >
-        {isAvailable ? (
-          <MdCheckCircle />
-        ) : isPending ? (
-          <MdWarningAmber />
-        ) : (
-          <MdDescription />
-        )}
-
-        {data.label}
-      </span>
-
-      {(type === "quotation" || type === "invoice") && data.fileName && (
-        data.downloadUrl ? (
-            <a 
-                className="billing-file-download"
-                href={data.downloadUrl}
-                download={data.fileName}
-                title={`Descargar ${data.fileName}`}
-            >
-                <MdFileDownload />
-                <span>{data.fileName}</span>
-            </a>
-        ):(
-            <span className="billing-file-name">{data.fileName}</span>
-        )
-      )}
-
-      {type === "invoice" && isMissing && (
-        <span className="billing-muted">
-          No figura en el reporte
-        </span>
-      )}
-
-      {type === "receipt" && (
-        <>
-          <span className="billing-receipt-folio">
-            Folio {data.folio || "Sin folio"}
-          </span>
-          <span className="billing-muted">{data.date}</span>
-        </>
-      )}
-    </div>
-  );
-}
-
-function BillingTable({
-  title,
-  records = [],
-  identified = true,
-  totalCount,
-  onOpenRecord,
-}) {
-  const formatMoney = (amount) => {
-    if (amount == null) return "Sin dato";
-
-    return new Intl.NumberFormat("es-MX", {
-      style: "currency",
-      currency: "MXN",
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
-
-  const knownTotal = records.reduce(
-    (total, record) => total + (Number(record.amount) || 0),
-    0
-  );
+function BillingTable({ records = [], totalCount, loading, onOpenRecord }) {
+  const knownTotal = records.reduce((sum, p) => sum + Number(p.invoiced ?? 0), 0);
 
   return (
     <section className="billing-table-section">
       <div className="billing-table-heading">
-        <h2>{title}</h2>
+        <h2>Proyectos</h2>
         <span>{totalCount ?? records.length} registros</span>
       </div>
-
-      {!identified && (
-        <div className="billing-warning">
-          <MdWarningAmber />
-          <span>
-            Sin título, responsable, entidad ni monto en el Excel.
-            El código en la columna Cotización es un identificador,
-            no un archivo adjunto; por eso se marca “Falta cotización”.
-          </span>
-        </div>
-      )}
 
       <div className="billing-table-scroll">
         <table className="billing-table">
           <thead>
             <tr>
-              <th>
-                {identified
-                  ? "PROYECTO / RESPONSABLE"
-                  : "REGISTRO / RESPONSABLE"}
-              </th>
-              <th>MONTO</th>
-              <th>COTIZACIÓN</th>
-              <th>FACTURA</th>
-              <th>RECIBO / VENCIMIENTO</th>
+              <th>PROYECTO</th>
+              <th>SOLICITANTE</th>
+              <th>COTIZACIONES</th>
+              <th>FACTURAS</th>
+              <th>OFICIOS</th>
+              <th>MONTO FACTURADO</th>
+              <th>ALERTAS</th>
               <th>VER</th>
             </tr>
           </thead>
 
           <tbody>
-            {records.length === 0 ? (
+            {loading ? (
               <tr>
-                <td colSpan={6} className="billing-empty">
-                  No se encontraron registros.
-                </td>
+                <td colSpan={8} className="billing-empty">Cargando…</td>
+              </tr>
+            ) : records.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="billing-empty">No se encontraron registros.</td>
               </tr>
             ) : (
-              records.map((record) => (
-                <tr key={record.id}>
+              records.map((p) => (
+                <tr key={p.projectId}>
                   <td>
                     <div className="billing-project-info">
-                      <span className="billing-project-code">
-                        {record.code}
-                      </span>
-
-                      {identified ? (
-                        <>
-                          <button
-                            type="button"
-                            className="billing-project-link"
-                            disabled= {!onOpenRecord || record.projectId == null}
-                            onClick={() => onOpenRecord?.(record)}
-                            title="Abrir detalle del proyecto"
-                          >
-                            {record.name}
-                          </button>
-                          <span>{record.responsible}</span>
-                          <span>{record.entity}</span>
-                        </>
-                      ) : (
-                        <span>{record.description}</span>
-                      )}
+                      <span className="billing-project-code">{p.key}</span>
+                      <button
+                        type="button"
+                        className="billing-project-link"
+                        disabled={!onOpenRecord}
+                        onClick={() => onOpenRecord?.({ projectId: p.projectId })}
+                        title="Abrir detalle del proyecto"
+                      >
+                        {p.title ?? "—"}
+                      </button>
                     </div>
                   </td>
 
+                  <td>{p.requester ?? "—"}</td>
+
+                  <td className="billing-amount">{p.quotes}</td>
+
                   <td className="billing-amount">
-                    {formatMoney(record.amount)}
+                    {p.uploadedInvoices}
+                    {p.expectedInvoices != null && ` / ${p.expectedInvoices}`}
                   </td>
 
-                  <td>
-                    <BillingStatus
-                      data={record.quotation}
-                      type="quotation"
-                    />
-                  </td>
+                  <td className="billing-amount">{p.oficios}</td>
+
+                  <td className="billing-amount">{MXN.format(p.invoiced ?? 0)}</td>
 
                   <td>
-                    <BillingStatus
-                      data={record.invoice}
-                      type="invoice"
-                    />
-                  </td>
-
-                  <td>
-                    <BillingStatus
-                      data={record.receipt}
-                      type="receipt"
-                    />
+                    <div className="billing-flags">
+                      {(p.flags ?? []).map((flag) => (
+                        <span key={flag} className="billing-flag">
+                          <MdWarningAmber />
+                          {FLAG_LABELS[flag] ?? flag}
+                        </span>
+                      ))}
+                    </div>
                   </td>
 
                   <td>
                     <button
                       type="button"
                       className="billing-open-button"
-                      aria-label={`Ver registro ${record.code}`}
-                      disabled = {
-                        !identified ||
-                        !onOpenRecord ||
-                        record.projectId == null
-                      }
-                      onClick={() => onOpenRecord?.(record)}
+                      aria-label={`Ver proyecto ${p.key}`}
+                      disabled={!onOpenRecord}
+                      onClick={() => onOpenRecord?.({ projectId: p.projectId })}
                     >
                       <MdOpenInNew />
                     </button>
@@ -216,15 +112,8 @@ function BillingTable({
       </div>
 
       <div className="billing-table-footer">
-        <span>
-          {records.length} de {totalCount ?? records.length} registros visibles
-        </span>
-
-        {identified && (
-          <span>
-            Montos conocidos: <strong>{formatMoney(knownTotal)}</strong>
-          </span>
-        )}
+        <span>{records.length} de {totalCount ?? records.length} registros visibles</span>
+        <span>Monto facturado: <strong>{MXN.format(knownTotal)}</strong></span>
       </div>
     </section>
   );
