@@ -9,14 +9,12 @@ import {
   MdInfoOutline,
   MdCalendarMonth,
   MdWorkOutline,
-  MdDescription,
 } from "react-icons/md";
 
 import * as api from "../../api/client.js";
 import "./contractTypes.css";
 
-// configuración inicial para la demostración.
-// Los beneficios comienzan sin configurar; no son datos oficiales.
+/** Valores por defecto para la configuración de un contrato. No son datos oficiales. */
 const CONFIGURACION_INICIAL = {
   description: "",
   vacationDays: "",
@@ -50,7 +48,6 @@ function ContractTypes() {
   const [confirmandoEliminar, setConfirmandoEliminar] = useState(false);
   const [eliminados, setEliminados] = useState([]);
 
-  // carga los tipos de contrato reales
   useEffect(() => {
     let cancelado = false;
 
@@ -122,8 +119,7 @@ function ContractTypes() {
     setMensaje("");
   }
 
-  //ELIMINACIÓN TEMPORAL de la interfaz
-  //Esto únicamente quitará el contrato de la lista visible. No lo eliminará del servidor, y volverá a aparecer al recargar la página.
+  /** Quita el contrato de la lista visible. shortcut: solo en cliente, conectar DELETE cuando exista. */
   function eliminarContrato() {
     if (!form) return;
 
@@ -167,8 +163,6 @@ function ContractTypes() {
 
     setGuardando(true);
 
-    // guarda datos temporal en React.
-    // todo: Aquí conectaremos el endpoint de actualización posteriormente.
     setConfiguraciones((actual) => ({
       ...actual,
       [form.id]: {
@@ -505,7 +499,6 @@ function ContractTypes() {
                           </div>
 
                           <div className="contract-types-editor-footer">
-                            {/*eliminar contrato */}
                             <div className="contract-types-delete-area">
                               {!confirmandoEliminar ? (
                                 <button

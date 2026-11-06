@@ -132,7 +132,6 @@ export const menuSections = [
         roles: ["admin"],
       },
 
-      //todo: CAMBIAR ROLES POR PERMISSION CUANDO SE AGREGUE EL PERMISO 
       {
         label: "Tipos de contrato",
         icon: MdWork,
