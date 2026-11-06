@@ -358,7 +358,7 @@
 
 .billing-table {
     width: 100%;
-    min-width: 850px;
+    min-width: 900px;
 
     border-collapse: collapse;
     table-layout: fixed;
@@ -375,30 +375,14 @@
     text-align: left;
 }
 
-.billing-table th:first-child {
-    width: 34%;
-}
-
-.billing-table th:nth-child(2) {
-    width: 9%;
-}
-
-.billing-table th:nth-child(3) {
-    width: 17%;
-}
-
-.billing-table th:nth-child(4) {
-    width: 17%;
-}
-
-.billing-table th:nth-child(5) {
-    width: 18%;
-}
-
-.billing-table th:last-child {
-    width: 5%;
-    text-align: center;
-}
+.billing-table th:nth-child(1) { width: 20%; }
+.billing-table th:nth-child(2) { width: 14%; }
+.billing-table th:nth-child(3) { width: 8%; }
+.billing-table th:nth-child(4) { width: 8%; }
+.billing-table th:nth-child(5) { width: 7%; }
+.billing-table th:nth-child(6) { width: 12%; }
+.billing-table th:nth-child(7) { width: 26%; }
+.billing-table th:nth-child(8) { width: 5%; text-align: center; }
 
 .billing-table td {
     padding: 13px 10px;
