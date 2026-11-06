@@ -512,6 +512,69 @@ export async function uploadFile(folderId, file) {
   return response.json();
 }
 
+const CHUNK_SIZE = 50 * 1024 * 1024;
+
+/**
+ * Sube un archivo en partes para sortear el límite de 100 MB de Cloudflare Tunnel.
+ * Cada parte se envía como un PUT independiente. Al terminar se ensambla en el servidor.
+ *
+ * @param {number} folderId
+ * @param {File} file
+ * @param {{chunkSize?: number, onProgress?: function}} options
+ */
+export async function uploadFileChunked(folderId, file, { chunkSize = CHUNK_SIZE, onProgress } = {}) {
+  const token = getToken();
+  const auth = { Authorization: `Bearer ${token}` };
+
+  const initRes = await fetch(`${API_URL}/documents/folders/${folderId}/uploads`, {
+    method: "POST",
+    headers: { ...auth, "Content-Type": "application/json" },
+    body: JSON.stringify({ name: file.name, mime: file.type || "application/octet-stream" }),
+  });
+  if (!initRes.ok) throw await toError(initRes);
+  const { uploadId } = await initRes.json();
+
+  const totalParts = Math.ceil(file.size / chunkSize);
+  let loaded = 0;
+
+  try {
+    for (let i = 0; i < totalParts; i++) {
+      const start = i * chunkSize;
+      const blob = file.slice(start, start + chunkSize);
+      const partRes = await fetch(`${API_URL}/documents/uploads/${uploadId}/${i + 1}`, {
+        method: "PUT",
+        headers: { ...auth, "Content-Type": "application/octet-stream" },
+        body: blob,
+      });
+      if (!partRes.ok) throw await toError(partRes);
+      loaded += blob.size;
+      onProgress?.({ loaded, total: file.size });
+    }
+
+    const completeRes = await fetch(`${API_URL}/documents/uploads/${uploadId}/complete`, {
+      method: "POST",
+      headers: auth,
+    });
+    if (!completeRes.ok) throw await toError(completeRes);
+    return completeRes.json();
+  } catch (err) {
+    fetch(`${API_URL}/documents/uploads/${uploadId}`, { method: "DELETE", headers: auth }).catch(() => {});
+    throw err;
+  }
+}
+
+/**
+ * Elige la subida normal para archivos chicos y la de partes para los grandes.
+ *
+ * @param {number} folderId
+ * @param {File} file
+ * @param {{onProgress?: function}} options
+ */
+export async function smartUpload(folderId, file, { onProgress } = {}) {
+  if (file.size <= CHUNK_SIZE) return uploadFile(folderId, file);
+  return uploadFileChunked(folderId, file, { onProgress });
+}
+
 /** El contenido de un archivo como Blob; se pide con fetch porque un enlace no manda el token. */
 export async function downloadFile(id) {
   const response = await fetch(`${API_URL}/documents/${id}/content`, {
