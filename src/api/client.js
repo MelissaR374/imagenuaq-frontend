@@ -733,6 +733,85 @@ export const listReceipts = (params = {}) => request(withQuery("/finance/receipt
 
 export const getReceipt = (id) => request(`/finance/receipts/${id}`);
 
+/** Registra un proveedor. */
+export const createProvider = (input) => request("/finance/providers", { method: "POST", body: input });
+
+/** Corrige un proveedor existente. */
+export const updateProvider = (id, changes) => request(`/finance/providers/${id}`, { method: "PATCH", body: changes });
+
+/** Baja lógica de un proveedor. */
+export const deleteProvider = (id) => request(`/finance/providers/${id}`, { method: "DELETE" });
+
+/** Registra una cotización en un proyecto. */
+export const createQuote = (projectId, input) =>
+  request(`/finance/projects/${projectId}/quotes`, { method: "POST", body: input });
+
+/** Corrige una cotización pendiente de decisión. */
+export const updateQuote = (id, changes) => request(`/finance/quotes/${id}`, { method: "PATCH", body: changes });
+
+/** Mueve una cotización a in_review, approved o rejected. */
+export const decideQuote = (id, input) =>
+  request(`/finance/quotes/${id}/decision`, { method: "POST", body: input });
+
+/** Elimina una cotización aún sin decidir. */
+export const deleteQuote = (id) => request(`/finance/quotes/${id}`, { method: "DELETE" });
+
+/** Sube una factura a un proyecto. */
+export const createInvoice = (projectId, input) =>
+  request(`/finance/projects/${projectId}/invoices`, { method: "POST", body: input });
+
+/** Corrige una factura aún no enviada. */
+export const updateInvoice = (id, changes) => request(`/finance/invoices/${id}`, { method: "PATCH", body: changes });
+
+/** Mueve una factura a in_payment (con folio) o a paid. */
+export const setInvoiceStatus = (id, input) =>
+  request(`/finance/invoices/${id}/status`, { method: "POST", body: input });
+
+/** Elimina una factura aún no enviada. */
+export const deleteInvoice = (id) => request(`/finance/invoices/${id}`, { method: "DELETE" });
+
+/** Emite un oficio de cobro para un proyecto. */
+export const createOficio = (projectId, input) =>
+  request(`/finance/projects/${projectId}/oficios`, { method: "POST", body: input });
+
+/** Corrige un oficio (campos en cualquier paso, facturas solo si issued). */
+export const updateOficio = (id, changes) => request(`/finance/oficios/${id}`, { method: "PATCH", body: changes });
+
+/** Avanza el estatus de un oficio (sent, signed, answered, paid). */
+export const advanceOficio = (id, input) =>
+  request(`/finance/oficios/${id}/status`, { method: "POST", body: input });
+
+/** Elimina un oficio aún en issued. */
+export const deleteOficio = (id) => request(`/finance/oficios/${id}`, { method: "DELETE" });
+
+/** Registra un pago (incoming a un oficio, outgoing a una factura). */
+export const createPayment = (projectId, input) =>
+  request(`/finance/projects/${projectId}/payments`, { method: "POST", body: input });
+
+/** Corrige un pago (típicamente para agregar el folio de seguimiento). */
+export const updatePayment = (id, changes) => request(`/finance/payments/${id}`, { method: "PATCH", body: changes });
+
+/** Elimina un pago. */
+export const deletePayment = (id) => request(`/finance/payments/${id}`, { method: "DELETE" });
+
+/** Crea un borrador de recibo referenciado en un proyecto. */
+export const createReceipt = (projectId, input) =>
+  request(`/finance/projects/${projectId}/receipts`, { method: "POST", body: input });
+
+/** Corrige un recibo en borrador. */
+export const updateReceipt = (id, changes) => request(`/finance/receipts/${id}`, { method: "PATCH", body: changes });
+
+/** Envía un borrador a validación. */
+export const submitReceipt = (id) => request(`/finance/receipts/${id}/submit`, { method: "POST" });
+
+/** Aprueba o rechaza un recibo pendiente de validación. */
+export const validateReceipt = (id, input) =>
+  request(`/finance/receipts/${id}/validation`, { method: "POST", body: input });
+
+/** Mueve un recibo a issued, paid o cancelled. */
+export const setReceiptStatus = (id, input) =>
+  request(`/finance/receipts/${id}/status`, { method: "POST", body: input });
+
 /** Las notificaciones de quien tiene la sesión, de la más reciente a la más antigua; `{ limit, offset }`. */
 export const listNotifications = (params = {}) =>
   request(withQuery("/notifications", params));
