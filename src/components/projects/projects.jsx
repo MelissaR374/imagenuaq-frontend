@@ -156,10 +156,10 @@ function ProjectRow({ project, onOpen }) {
 }
 
 /**
- * @param {{ user: object, openId?: number|null }} props `openId` opens that project on arrival,
- *   as when «Mis tareas» sends someone to one.
+ * @param {{ user: object, permissions?: string[], openId?: number|null }} props `openId` opens
+ *   that project on arrival, as when «Mis tareas» sends someone to one.
  */
-function Projects({ user, openId = null, initialTab = "stages" }) {
+function Projects({ user, permissions = [], openId = null, initialTab = "stages" }) {
   const [projects, setProjects] = useState([]);
   const [areas, setAreas] = useState([]);
   const [statuses, setStatuses] = useState([]);
@@ -340,6 +340,7 @@ function Projects({ user, openId = null, initialTab = "stages" }) {
         statuses={statuses}
         vocabulary={vocabulary}
         user={user}
+        permissions={permissions}
         place={openIndex === -1 ? null : { position: openIndex + 1, total: projects.length }}
         onPrevious={openIndex > 0 ? () => moveTo(-1) : null}
         onNext={

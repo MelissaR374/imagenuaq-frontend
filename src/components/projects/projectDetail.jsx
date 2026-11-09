@@ -926,7 +926,7 @@ function ProjectFiles({ projectId }) {
 }
 
 function ProjectDetail({
-  project, areas, statuses: initialStatuses, vocabulary, user,
+  project, areas, statuses: initialStatuses, vocabulary, user, permissions = [],
   place, onPrevious, onNext, onClose, onChanged, initialTab = "stages",
 }) {
   const [detail, setDetail] = useState(null);
@@ -1317,9 +1317,10 @@ function ProjectDetail({
           </section>
         ) : null}
         {tab === "billing" ? (
-          <ProjectBilling 
+          <ProjectBilling
             key={detail.id}
-            projectId={detail.id} 
+            projectId={detail.id}
+            permissions={permissions}
           />
         ) : null}
       </div>

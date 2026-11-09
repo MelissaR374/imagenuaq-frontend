@@ -32,6 +32,7 @@ import Calendar from "./components/calendar/calendar.jsx";
 import Timeline from "./components/timeline/timeline.jsx";
 import OrgChart from "./components/orgChart/orgChart.jsx";
 import Billing from "./components/billing/billing.jsx";
+import FinanceQuotes from "./components/finance/financeQuotes.jsx";
 import ContractTypes from "./components/contractTypes/contractTypes.jsx";
 
 
@@ -73,6 +74,7 @@ const DESCRIPCIONES = {
   Calendario: "Las etapas, ausencias y fechas institucionales del mes, y las ventanas de cierre de semestre.",
   Cronograma: "Qué tan ocupada está cada área día por día, contando a quién le falta gente.",
   Facturación: "Consulta los proyectos y da seguimiento a los documentos importantes",
+  Cotizaciones: "Las cotizaciones de los proyectos y su estatus de revisión.",
 };
 
 /** El token de un enlace de solo lectura, si la página se abrió con uno. */
@@ -293,7 +295,7 @@ function Aplicacion() {
         ) : activa === "Bandeja de solicitudes" ? (
           <Inbox />
         ) : activa === "Proyectos" ? (
-          <Projects user={usuario} openId={proyectoPorAbrir} initialTab={pestanaProyectoPorAbrir}/>
+          <Projects user={usuario} permissions={permisos} openId={proyectoPorAbrir} initialTab={pestanaProyectoPorAbrir}/>
         ) : activa === "Catálogo de estatus" ? (
           <StatusCatalog />
         ) : activa === "Diseñador de flujos" ? (
@@ -330,6 +332,8 @@ function Aplicacion() {
               abrirProyecto(record.projectId, "billing");
             }}
           />
+        ) : activa === "Cotizaciones" ? (
+          <FinanceQuotes onOpenProject={puedeAbrirProyectos ? abrirProyecto : null} />
         ) : activa === "Calendario" ? (
           <Calendar
             isAdmin={usuario.role === "admin"}

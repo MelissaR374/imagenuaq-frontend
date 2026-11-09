@@ -1,25 +1,20 @@
-// Las pestañas del menú lateral y quién ve cada una. Las que tienen pantalla se piden por permiso,
-// porque los roles se crean y se editan en «Roles y permisos» (RF-USR-02, RF-USR-05); las que todavía
-// no tienen pantalla, y las que el servidor reserva a admin, siguen por nombre de rol.
+// Las pestañas del menú lateral y las reglas para mostrarlas:
+// - Las pestañas generales (Organigrama, Notificaciones) se muestran a cualquier usuario autenticado.
+// - Las pantallas operativas se gestionan dinámicamente mediante el catálogo de permisos por rol (RF-USR-02, RF-USR-05).
+// - Únicamente las funciones reservadas por seguridad a la coordinación (Empleados, Roles y permisos, Tipos de contrato) se restringen a admin.
 import {
   MdNotificationsNone,
-  MdDashboard,
   MdInbox,
   MdFolder,
   MdPeople,
   MdSchedule,
-  MdCalendarToday,
   MdAccountTree,
   MdBusiness,
   MdDescription,
   MdReceipt,
-  MdAssessment,
-  MdChatBubbleOutline,
   MdCheckBox,
   MdAttachFile,
-  MdCurrencyExchange,
   MdAttachMoney,
-  MdAssignmentInd,
   MdBadge,
   MdContacts,
   MdAdminPanelSettings,
@@ -38,12 +33,10 @@ export const menuSections = [
       {
         label: "Organigrama",
         icon: MdContacts,
-        roles: ["admin", "lider","finanzas","trabajador"]
       },
       {
         label: "Notificaciones",
         icon: MdNotificationsNone,
-        roles: ["admin", "lider","finanzas","trabajador"]
       },
       {
         label: "Cronograma",
@@ -51,45 +44,21 @@ export const menuSections = [
         permission: "calendar.read",
       },
       {
-        label: "Mensajes",
-        icon: MdChatBubbleOutline,
-        roles: ["admin", "lider","finanzas","trabajador"]
-      },
-      
-
-      {
         label: "Calendario",
         icon: MdCalendarMonth,
         permission: "calendar.read",
       },
       {
         label: "Mis tareas",
-        icon:MdCheckBox,
+        icon: MdCheckBox,
         permission: "task.read",
       },
-      {
-        label: "Mi semana",
-        icon: MdCalendarToday,
-        roles: ["trabajador", "finanzas"]
-      },
-      {
-        label: "Mis proyectos",
-        icon: MdFolder,
-        roles: ["trabajador", "finanzas"]
-      },
-
-            
     ],
   },
-  
+
   {
     title: "ADMINISTRAR",
     items: [
-      {
-        label: "Panel general",
-        icon: MdDashboard,
-        roles: ["admin"],
-      },
       {
         label: "Bandeja de solicitudes",
         icon: MdInbox,
@@ -131,13 +100,11 @@ export const menuSections = [
         icon: MdAdminPanelSettings,
         roles: ["admin"],
       },
-
       {
         label: "Tipos de contrato",
         icon: MdWork,
         roles: ["admin"],
       },
-
       {
         label: "Catálogo de estatus",
         icon: MdLabel,
@@ -156,12 +123,12 @@ export const menuSections = [
       {
         label: "Libros de Excel",
         icon: MdSchema,
-        roles: ["admin"],
+        permission: "spreadsheet.read",
       },
       {
         label: "Importar de Excel",
         icon: MdSwapHoriz,
-        roles: ["admin"],
+        permission: "spreadsheet.write",
       },
     ],
   },
@@ -172,12 +139,7 @@ export const menuSections = [
       {
         label: "Facturación",
         icon: MdReceipt,
-        roles: ["admin"],
-      },
-      {
-        label: "Reportes",
-        icon: MdAssessment,
-        roles: ["admin"],
+        permission: "finance.read",
       },
     ],
   },
@@ -186,28 +148,16 @@ export const menuSections = [
     title: "COBRO",
     items: [
       {
-        label: "Facturas",
-        icon: MdCurrencyExchange,
-        roles: ["finanzas"],
-      },
-      {
         label: "Cotizaciones",
         icon: MdAttachMoney,
-        roles: ["finanzas"],
-        badge: 12,
+        permission: "finance.read",
       },
     ],
   },
 
-
   {
     title: "LÍDER",
     items: [
-      {
-        label: "Panel de área",
-        icon: MdDashboard,
-        roles: ["lider"],
-      },
       {
         label: "Panorama de áreas",
         icon: MdViewQuilt,
@@ -219,40 +169,28 @@ export const menuSections = [
         permission: "task.write",
       },
       {
-        label: "Proyectos del área",
-        icon: MdFolder,
-        roles: ["lider"],
-      },
-      {
         label: "Equipo",
         icon: MdPeople,
         permission: "task.write",
       },
     ],
   },
-
-  {
-    title: "ÁREA",
-    items: [
-      {
-        label: "Flujos aplicables",
-        icon: MdAccountTree,
-        roles: ["lider"],
-      },
-      {
-        label: "Capacidad y turnos",
-        icon: MdAssignmentInd,
-        roles: ["lider"],
-      },
-    ],
-  },
 ];
 
-/** Si el elemento del menú se ve: con su `permission` si la pide y, si no, por `roles`. */
+/**
+ * Si el elemento del menú se ve:
+ * - Por `permission` si la define (gestión por catálogo de permisos de roles).
+ * - Por `roles` si la define (exclusivo para admin).
+ * - Si no define ninguna (pestañas generales), visible para cualquier usuario autenticado.
+ */
 export function itemVisible(item, role, permissions) {
-  return item.permission
-    ? permissions.includes(item.permission)
-    : item.roles.includes(role);
+  if (item.permission) {
+    return permissions.includes(item.permission);
+  }
+  if (item.roles) {
+    return item.roles.includes(role);
+  }
+  return true;
 }
 
 /** Las pestañas que abre el permiso `code`, para decirlo en «Roles y permisos». */
