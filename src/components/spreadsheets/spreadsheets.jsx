@@ -834,6 +834,46 @@ function Spreadsheets({ onGo = null, canWrite = false }) {
                             {book.registeredByName ?? "alguien que ya no está"} el{" "}
                             {shortDate(book.createdAt)}
                           </div>
+                          {!canWrite ? (
+                            <div className="books-fact">
+                              <span className="books-label">Sincronización automática</span>
+                              {book.syncIntervalMinutes === null
+                                ? "Manual"
+                                : book.syncIntervalMinutes < 60
+                                  ? `Cada ${book.syncIntervalMinutes} minutos`
+                                  : book.syncIntervalMinutes < 1440
+                                    ? `Cada ${book.syncIntervalMinutes / 60} horas`
+                                    : "Cada día"}
+                            </div>
+                          ) : (
+                            <label className="books-fact">
+                              <span className="books-label">Sincronización automática</span>
+                              <select
+                                value={book.syncIntervalMinutes ?? ""}
+                                onChange={async (e) => {
+                                  const raw = e.target.value;
+                                  const minutes = raw === "" ? null : Number(raw);
+                                  try {
+                                    const { sheet } = await api.setSpreadsheetSync(book.id, {
+                                      intervalMinutes: minutes,
+                                    });
+                                    setLibros((prev) =>
+                                      prev.map((b) => (b.id === sheet.id ? sheet : b)),
+                                    );
+                                  } catch (err) {
+                                    setError(err.message);
+                                  }
+                                }}
+                              >
+                                <option value="">Manual</option>
+                                <option value="15">Cada 15 minutos</option>
+                                <option value="30">Cada 30 minutos</option>
+                                <option value="60">Cada hora</option>
+                                <option value="360">Cada 6 horas</option>
+                                <option value="1440">Cada día</option>
+                              </select>
+                            </label>
+                          )}
                           {book.webUrl === null ? null : (
                             <a
                               className="books-quiet"

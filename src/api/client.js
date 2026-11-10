@@ -461,6 +461,9 @@ export const markSpreadsheetRows = (id, input = {}) =>
 export const clearSpreadsheetMarks = (id) =>
   request(`/spreadsheets/${id}/baseline`, { method: "DELETE" });
 
+export const setSpreadsheetSync = (id, input) =>
+  request(`/spreadsheets/${id}/sync`, { method: "PUT", body: input });
+
 export const getProjectFolder = (projectId) => request(`/projects/${projectId}/folder`);
 
 export const listTopFolders = () => request("/documents/folders");
