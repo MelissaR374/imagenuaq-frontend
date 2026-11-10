@@ -52,7 +52,7 @@ const TABS = [
   },
   {
     key: "convertidas",
-    label: "Convertidas",
+    label: "Aceptadas",
     rule: "Ya son proyecto: desde aquí no se editan, salvo el solicitante.",
     filters: { converted: "true" },
   },

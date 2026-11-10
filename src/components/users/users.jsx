@@ -35,7 +35,6 @@ const FORMULARIO_VACIO = {
   contractTypeId: "",
   primaryAreaId: "",
   birthday: "",
-  isAreaLeader: false,
 };
 
 /** `admin` es quien está usando la pantalla, no una de las personas de la lista. */
@@ -126,9 +125,6 @@ function Users({ admin }) {
       contractTypeId: usuario.contractTypeId ? String(usuario.contractTypeId) : "",
       primaryAreaId: usuario.primaryAreaId ? String(usuario.primaryAreaId) : "",
       birthday: usuario.birthday ?? "",
-      isAreaLeader: usuario.areas.some(
-        (area) => area.id === usuario.primaryAreaId && area.isAreaLeader,
-      ),
     });
     formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
@@ -176,7 +172,6 @@ function Users({ admin }) {
         contractTypeId: Number(form.contractTypeId),
         primaryAreaId: form.primaryAreaId ? Number(form.primaryAreaId) : null,
         birthday: form.birthday || null,
-        isAreaLeader: form.primaryAreaId ? form.isAreaLeader : false,
       });
 
       setInvitacion({ nombre: creado.user.fullName, token: creado.inviteToken });
@@ -429,22 +424,6 @@ function Users({ admin }) {
               Las áreas a las que pertenece se cambian en «Áreas y usuarios».
             </p>
           )}
-        </div>
-
-        <div className="user-form-field user-form-field-check">
-          <input
-            className="user-form-check"
-            id="user-area-leader"
-            name="isAreaLeader"
-            type="checkbox"
-            disabled={!form.primaryAreaId || Boolean(editando)}
-            checked={form.isAreaLeader}
-            onChange={handleChange}
-          />
-
-          <label className="user-form-label" htmlFor="user-area-leader">
-            Es responsable del área
-          </label>
         </div>
 
         <div className="user-form-field">

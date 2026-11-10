@@ -54,7 +54,7 @@ const DESCRIPCIONES = {
   "Roles y permisos": "Lo que puede hacer cada rol.",
   "Tipos de contrato": "Configura los tipos de contrato y los beneficios que se asignan a los empleados.",
   "Formatos de solicitud":
-    "Los formatos con que se capturan las solicitudes y sus versiones.",
+    "Los formatos de captura de datos para generar un proyecto.",
   "Libros de Excel": "Los libros de Excel registrados y la conexión con Microsoft.",
   "Importar de Excel":
     "El mapeo de cada libro de Excel y la importación de sus filas.",
@@ -64,7 +64,7 @@ const DESCRIPCIONES = {
   "Catálogo de estatus":
     "Los estatus con que se muestran solicitudes y proyectos, globales y por área.",
   "Diseñador de flujos":
-    "Las plantillas de flujo: sus fases y las etapas de cada una.",
+    "Plantillas para definir como se va a tratar un proyecto, para agilizar la asignación de tareas",
   Archivos: "Todas las carpetas de cada proyecto.",
   "Retención de archivos": "Cuánto tiempo se conservan los archivos.",
   "Mis tareas": "Las etapas de desarrollo de un proyecto a tu cargo",
