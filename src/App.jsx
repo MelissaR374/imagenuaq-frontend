@@ -14,7 +14,6 @@ import Areas from "./components/areas/areas.jsx";
 import Roles from "./components/roles/roles.jsx";
 import Spreadsheets from "./components/spreadsheets/spreadsheets.jsx";
 import Schemas from "./components/schemas/schemas.jsx";
-import ImportConfig from "./components/spreadsheets/importConfig.jsx";
 import Inbox from "./components/requests/inbox.jsx";
 import Projects from "./components/projects/projects.jsx";
 import Profile from "./components/profile/profile.jsx";
@@ -55,9 +54,8 @@ const DESCRIPCIONES = {
   "Tipos de contrato": "Configura los tipos de contrato y los beneficios que se asignan a los empleados.",
   "Formatos de solicitud":
     "Los formatos de captura de datos para generar un proyecto.",
-  "Libros de Excel": "Los libros de Excel registrados y la conexión con Microsoft.",
-  "Importar de Excel":
-    "El mapeo de cada libro de Excel y la importación de sus filas.",
+  "Libros de Excel":
+    "Tus libros de Excel: conéctalos, indica qué columna es cada dato e importa las filas nuevas.",
   "Bandeja de solicitudes":
     "Solicitudes recibidas que todavía no son proyecto.",
   Proyectos: "Los proyectos y el avance de sus etapas.",
@@ -289,9 +287,7 @@ function Aplicacion() {
         ) : activa === "Formatos de solicitud" ? (
           <Schemas />
         ) : activa === "Libros de Excel" ? (
-          <Spreadsheets onGo={setPestana} />
-        ) : activa === "Importar de Excel" ? (
-          <ImportConfig onGo={setPestana} />
+          <Spreadsheets onGo={setPestana} canWrite={permisos.includes("spreadsheet.write")} />
         ) : activa === "Bandeja de solicitudes" ? (
           <Inbox />
         ) : activa === "Proyectos" ? (
