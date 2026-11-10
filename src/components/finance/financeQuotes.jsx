@@ -102,11 +102,6 @@ function FinanceQuotes({ onOpenProject }) {
     return list.filter((q) => q.status === id).length;
   }
 
-  function startDecision(quote) {
-    setDeciding(quote);
-    setComment("");
-  }
-
   async function submitDecision(decision) {
     if (!deciding) return;
     setSaving(true);
@@ -125,30 +120,10 @@ function FinanceQuotes({ onOpenProject }) {
   return (
     <main className="finance-quotes-page">
       <div className="finance-quotes-stats">
-        <BillingStatCard
-          title="Total"
-          value={total}
-          description="Cotizaciones registradas"
-          icon={MdDescription}
-        />
-        <BillingStatCard
-          title="En revisión"
-          value={inReview}
-          description="Pendientes de decisión"
-          icon={MdHourglassEmpty}
-        />
-        <BillingStatCard
-          title="Aprobadas"
-          value={approved}
-          description={`${total > 0 ? Math.round((approved / total) * 100) : 0}% del total`}
-          icon={MdCheckCircle}
-        />
-        <BillingStatCard
-          title="Rechazadas"
-          value={rejected}
-          description={`${total > 0 ? Math.round((rejected / total) * 100) : 0}% del total`}
-          icon={MdCancel}
-        />
+        <BillingStatCard title="Total" value={total} description="Cotizaciones registradas" icon={MdDescription} />
+        <BillingStatCard title="En revisión" value={inReview} description="Pendientes de decisión" icon={MdHourglassEmpty} />
+        <BillingStatCard title="Aprobadas" value={approved} description={`${total > 0 ? Math.round((approved / total) * 100) : 0}% del total`} icon={MdCheckCircle} />
+        <BillingStatCard title="Rechazadas" value={rejected} description={`${total > 0 ? Math.round((rejected / total) * 100) : 0}% del total`} icon={MdCancel} />
       </div>
 
       <div className="finance-quotes-toolbar">
@@ -199,13 +174,9 @@ function FinanceQuotes({ onOpenProject }) {
             </thead>
             <tbody>
               {loading ? (
-                <tr>
-                  <td colSpan={6} className="finance-quotes-empty">Cargando...</td>
-                </tr>
+                <tr><td colSpan={6} className="finance-quotes-empty">Cargando...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="finance-quotes-empty">No se encontraron cotizaciones.</td>
-                </tr>
+                <tr><td colSpan={6} className="finance-quotes-empty">No se encontraron cotizaciones.</td></tr>
               ) : (
                 filtered.map((q) => (
                   <tr key={q.id}>
@@ -237,18 +208,13 @@ function FinanceQuotes({ onOpenProject }) {
                     <td className="finance-quotes-date">{shortDate(q.createdAt)}</td>
                     <td>
                       {q.status === "issued" || q.status === "in_review" ? (
-                        <button
-                          type="button"
-                          className="finance-quotes-action-btn"
-                          onClick={() => startDecision(q)}
-                        >
+                        <button type="button" className="finance-quotes-action-btn" onClick={() => { setDeciding(q); setComment(""); }}>
                           Decidir
                         </button>
                       ) : (
                         <button
                           type="button"
                           className="finance-quotes-view-btn"
-                          aria-label={`Ver proyecto ${q.projectKey}`}
                           disabled={!onOpenProject || q.projectId == null}
                           onClick={() => onOpenProject?.(q.projectId, "billing")}
                         >
@@ -265,9 +231,7 @@ function FinanceQuotes({ onOpenProject }) {
 
         <div className="finance-quotes-table-footer">
           <span>{filtered.length} de {total} cotizaciones</span>
-          <span>
-            Monto total: <strong>{MXN.format(filtered.reduce((s, q) => s + Number(q.amount), 0))}</strong>
-          </span>
+          <span>Monto total: <strong>{MXN.format(filtered.reduce((s, q) => s + Number(q.amount), 0))}</strong></span>
         </div>
       </section>
 
@@ -275,46 +239,16 @@ function FinanceQuotes({ onOpenProject }) {
         <div className="finance-quotes-decision-overlay" onClick={() => setDeciding(null)}>
           <div className="finance-quotes-decision-panel" onClick={(e) => e.stopPropagation()}>
             <h3>Decidir cotización</h3>
-            <p>
-              <strong>{orDash(deciding.providerName)}</strong> — {MXN.format(deciding.amount)}
-            </p>
-            <p className="finance-quotes-decision-project">
-              Proyecto: {orDash(deciding.projectKey)} {orDash(deciding.projectTitle)}
-            </p>
+            <p><strong>{orDash(deciding.providerName)}</strong> — {MXN.format(deciding.amount)}</p>
+            <p className="finance-quotes-decision-project">Proyecto: {orDash(deciding.projectKey)} {orDash(deciding.projectTitle)}</p>
             <label className="finance-quotes-decision-label">
               Comentario (opcional)
-              <textarea
-                className="finance-quotes-decision-comment"
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                rows={3}
-              />
+              <textarea className="finance-quotes-decision-comment" value={comment} onChange={(e) => setComment(e.target.value)} rows={3} />
             </label>
             <div className="finance-quotes-decision-actions">
-              <button
-                type="button"
-                className="finance-quotes-approve-btn"
-                disabled={saving}
-                onClick={() => submitDecision("approved")}
-              >
-                Aprobar
-              </button>
-              <button
-                type="button"
-                className="finance-quotes-reject-btn"
-                disabled={saving}
-                onClick={() => submitDecision("rejected")}
-              >
-                Rechazar
-              </button>
-              <button
-                type="button"
-                className="finance-quotes-cancel-btn"
-                disabled={saving}
-                onClick={() => setDeciding(null)}
-              >
-                Cancelar
-              </button>
+              <button type="button" className="finance-quotes-approve-btn" disabled={saving} onClick={() => submitDecision("approved")}>Aprobar</button>
+              <button type="button" className="finance-quotes-reject-btn" disabled={saving} onClick={() => submitDecision("rejected")}>Rechazar</button>
+              <button type="button" className="finance-quotes-cancel-btn" disabled={saving} onClick={() => setDeciding(null)}>Cancelar</button>
             </div>
           </div>
         </div>

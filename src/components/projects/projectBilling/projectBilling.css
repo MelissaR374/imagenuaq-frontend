@@ -1,4 +1,4 @@
-/* Solo acomodo: el diseño lo revisa quien lleva el CSS. */
+/* Solo acomodo: el diseno lo revisa quien lleva el CSS. */
 
 .project-billing {
     padding: 20px;
@@ -35,6 +35,33 @@
 
 .project-billing-error {
     color: var(--danger, #d32f2f);
+}
+
+.project-billing-retry {
+    display: block;
+    margin: 8px auto;
+    padding: 6px 16px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text-secondary);
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.project-billing-retry:hover {
+    border-color: var(--accent-line);
+}
+
+.project-billing-notice-msg {
+    margin: 0 0 12px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    background: var(--success-soft, #e8f5e9);
+    color: var(--success, #2e7d32);
+    font-size: 12px;
+    font-weight: 600;
 }
 
 .project-billing-flags {
@@ -74,6 +101,42 @@
 
 .project-billing-summary strong {
     color: var(--text);
+}
+
+.project-billing-edit-expected {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 4px;
+    padding: 2px;
+    border: none;
+    border-radius: 3px;
+    background: transparent;
+    color: var(--accent);
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.project-billing-edit-expected:hover {
+    background: var(--accent-soft);
+}
+
+.project-billing-expected-form {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 6px;
+}
+
+.project-billing-expected-input {
+    width: 60px;
+    height: 24px;
+    padding: 0 6px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--field);
+    color: var(--text);
+    font-size: 12px;
+    font-family: inherit;
 }
 
 .project-billing-notice {
@@ -120,6 +183,31 @@
     color: var(--accent);
 }
 
+.project-billing-add-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    margin-left: auto;
+    padding: 4px 10px;
+    border: 1px solid var(--accent);
+    border-radius: 5px;
+    background: transparent;
+    color: var(--accent);
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.project-billing-add-btn:hover {
+    background: var(--accent-soft);
+}
+
+.project-billing-add-btn svg {
+    font-size: 14px;
+}
+
 .project-billing-table {
     width: 100%;
     border-collapse: collapse;
@@ -144,6 +232,13 @@
 
 .project-billing-table tbody tr:last-child td {
     border-bottom: none;
+}
+
+.project-billing-empty {
+    padding: 16px 10px !important;
+    text-align: center;
+    color: var(--text-muted) !important;
+    font-size: 12px !important;
 }
 
 .project-billing-status {
@@ -195,6 +290,279 @@
     background: var(--accent-soft);
 }
 
+.project-billing-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.project-billing-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 15px;
+    cursor: pointer;
+}
+
+.project-billing-icon-btn:hover {
+    background: var(--surface-secondary);
+    color: var(--accent);
+}
+
+.project-billing-icon-btn.danger:hover {
+    color: var(--danger, #d32f2f);
+}
+
+.project-billing-sm-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    height: 24px;
+    padding: 0 8px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--surface);
+    color: var(--text-secondary);
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.project-billing-sm-btn:hover {
+    border-color: var(--accent-line);
+    color: var(--accent);
+}
+
+.project-billing-sm-btn.success {
+    border-color: var(--success, #2e7d32);
+    color: var(--success, #2e7d32);
+}
+
+.project-billing-sm-btn.danger {
+    border-color: var(--danger, #d32f2f);
+    color: var(--danger, #d32f2f);
+}
+
+.project-billing-form-row td {
+    padding: 0 !important;
+    border-bottom: 1px solid var(--accent-line) !important;
+}
+
+.project-billing-inline-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 8px;
+    padding: 12px 10px;
+    background: var(--surface-secondary);
+}
+
+.project-billing-inline-form input,
+.project-billing-inline-form select {
+    height: 30px;
+    min-width: 100px;
+    max-width: 200px;
+    padding: 0 8px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    background: var(--field);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 12px;
+}
+
+.project-billing-inline-form input:focus,
+.project-billing-inline-form select:focus {
+    border-color: var(--accent-line);
+    outline: none;
+    box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.project-billing-inline-form input[type="file"] {
+    height: auto;
+    padding: 4px 8px;
+    max-width: 220px;
+}
+
+.project-billing-form-actions {
+    display: flex;
+    gap: 6px;
+    margin-left: auto;
+}
+
+.project-billing-save-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    height: 28px;
+    padding: 0 10px;
+    border: none;
+    border-radius: 5px;
+    background: var(--accent);
+    color: #ffffff;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.project-billing-save-btn:hover:not(:disabled) {
+    background: var(--accent-hover);
+}
+
+.project-billing-save-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.project-billing-cancel-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    height: 28px;
+    padding: 0 10px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    background: var(--surface);
+    color: var(--text-secondary);
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.project-billing-cancel-btn:hover:not(:disabled) {
+    border-color: var(--accent-line);
+}
+
+.project-billing-danger-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    height: 28px;
+    padding: 0 12px;
+    border: none;
+    border-radius: 5px;
+    background: var(--danger, #d32f2f);
+    color: #ffffff;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.project-billing-danger-btn:hover:not(:disabled) {
+    opacity: 0.85;
+}
+
+.project-billing-danger-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.project-billing-fieldset {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    min-width: 180px;
+    max-width: 280px;
+}
+
+.project-billing-fieldset legend {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    padding: 0 4px;
+}
+
+.project-billing-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: var(--text);
+    cursor: pointer;
+}
+
+.project-billing-checkbox input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    min-width: 14px;
+    max-width: 14px;
+    margin: 0;
+}
+
+.project-billing-status-form {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 6px;
+}
+
+.project-billing-status-form input {
+    width: 120px;
+    height: 24px;
+    padding: 0 6px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--field);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 11px;
+}
+
+.project-billing-warn-row {
+    background: var(--warning-soft, #fff3e0) !important;
+}
+
+.project-billing-confirm-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.35);
+}
+
+.project-billing-confirm-panel {
+    padding: 20px;
+    min-width: 260px;
+    border-radius: 10px;
+    background: var(--surface);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+    text-align: center;
+}
+
+.project-billing-confirm-panel p {
+    margin: 0 0 14px;
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+/* Focus */
+
+.project-billing button:focus-visible,
+.project-billing input:focus-visible,
+.project-billing select:focus-visible {
+    outline: 2px solid var(--accent-line);
+    outline-offset: 2px;
+}
+
 @media (max-width: 800px) {
     .project-billing {
         padding: 14px;
@@ -202,5 +570,18 @@
 
     .project-billing-table {
         font-size: 12px;
+    }
+
+    .project-billing-inline-form {
+        gap: 6px;
+    }
+
+    .project-billing-inline-form input,
+    .project-billing-inline-form select {
+        max-width: 160px;
+    }
+
+    .project-billing-confirm-panel {
+        margin: 0 16px;
     }
 }

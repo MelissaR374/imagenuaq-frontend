@@ -32,6 +32,7 @@ import Timeline from "./components/timeline/timeline.jsx";
 import OrgChart from "./components/orgChart/orgChart.jsx";
 import Billing from "./components/billing/billing.jsx";
 import FinanceQuotes from "./components/finance/financeQuotes.jsx";
+import FinanceInvoices from "./components/finance/financeInvoices.jsx";
 import ContractTypes from "./components/contractTypes/contractTypes.jsx";
 
 
@@ -72,7 +73,8 @@ const DESCRIPCIONES = {
   Calendario: "Las etapas, ausencias y fechas institucionales del mes, y las ventanas de cierre de semestre.",
   Cronograma: "Qué tan ocupada está cada área día por día, contando a quién le falta gente.",
   Facturación: "Consulta los proyectos y da seguimiento a los documentos importantes",
-  Cotizaciones: "Las cotizaciones de los proyectos y su estatus de revisión.",
+  Facturas: "Las facturas de todos los proyectos y su estado de trámite.",
+  Cotizaciones: "Las cotizaciones pendientes de revisión y su decisión.",
 };
 
 /** El token de un enlace de solo lectura, si la página se abrió con uno. */
@@ -328,6 +330,8 @@ function Aplicacion() {
               abrirProyecto(record.projectId, "billing");
             }}
           />
+        ) : activa === "Facturas" ? (
+          <FinanceInvoices onOpenProject={puedeAbrirProyectos ? abrirProyecto : null} />
         ) : activa === "Cotizaciones" ? (
           <FinanceQuotes onOpenProject={puedeAbrirProyectos ? abrirProyecto : null} />
         ) : activa === "Calendario" ? (
