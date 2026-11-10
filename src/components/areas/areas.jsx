@@ -392,7 +392,7 @@ function Areas() {
       </div>
 
       <p className="areas-rule">
-        Cada área depende de otra. Quien es responsable de un área ve el trabajo de ella y de las
+        Cada área puede depender de otra, pero no es obligatorio: hay áreas que no dependen de ninguna. Quien es responsable de un área ve el trabajo de ella y de las
         que dependen de ella.
       </p>
 
@@ -741,10 +741,6 @@ function Areas() {
                                 Agregar
                               </button>
                             </div>
-
-                            <p className="areas-muted areas-hint">
-                              Las personas se dan de alta, y se les cambia el rol, en Empleados.
-                            </p>
                           </section>
                         </div>
 

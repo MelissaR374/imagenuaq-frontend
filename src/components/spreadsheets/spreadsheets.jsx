@@ -4,9 +4,8 @@
 // the account are touched once, and they used to take the whole screen on every visit. Only on the
 // first run, when nothing is connected yet, does that line become two real steps.
 //
-// What is done *with* a book --- mapping it, importing it, looking at its runs --- is not here: it
-// lives in "Importar de Excel". They are two jobs from two moments: registering a book happens
-// once, and the mapping is adjusted every time the sheet changes.
+// A book's columns, test and import open from its row, in `ImportConfig`. Writers get those
+// actions and the connection controls, and readers only see the list and a preview.
 //
 // Books are read with one person's delegated access, so a revoked account stops every book read
 // with it until somebody reconnects: that is why a disconnected account is said in amber on the
@@ -17,6 +16,7 @@ import * as api from "../../api/client.js";
 import { shortDate, columnLetter } from "../shared/format.js";
 import Help from "../shared/help.jsx";
 import { MICROSOFT_PARAM } from "../../config.js";
+import ImportConfig from "./importConfig.jsx";
 import "./spreadsheets.css";
 
 /**
@@ -113,7 +113,7 @@ function SheetPreview({ preview, loading }) {
   );
 }
 
-function Spreadsheets({ onGo = null }) {
+function Spreadsheets({ onGo = null, canWrite = false }) {
   const [accounts, setCuentas] = useState([]);
   const [books, setLibros] = useState([]);
   const [app, setApp] = useState(null);
@@ -137,6 +137,7 @@ function Spreadsheets({ onGo = null }) {
   const [formError, setErrorForm] = useState(null);
 
   const [opened, setAbierto] = useState(null);
+  const [configuring, setConfigurando] = useState(null);
   const [preview, setVista] = useState(null);
   const [loadingPreview, setCargandoVista] = useState(false);
 
@@ -304,6 +305,19 @@ function Spreadsheets({ onGo = null }) {
     }
   }
 
+  if (configuring !== null) {
+    return (
+      <ImportConfig
+        book={configuring}
+        onClose={() => {
+          setConfigurando(null);
+          reload();
+        }}
+        onGo={onGo}
+      />
+    );
+  }
+
   if (loading) {
     return <p className="books-note">Cargando…</p>;
   }
@@ -328,7 +342,7 @@ function Spreadsheets({ onGo = null }) {
 
       {error !== null ? <p className="books-error">{error}</p> : null}
 
-      {firstRun ? (
+      {!canWrite ? null : firstRun ? (
         <div className="books-first">
           <ol>
             <li className={app.source === null ? "is-now" : "is-done"}>
@@ -593,14 +607,16 @@ function Spreadsheets({ onGo = null }) {
         <p className="books-count">
           {books.length} {books.length === 1 ? "libro registrado" : "libros registrados"}
         </p>
-        <button
-          className="books-btn is-primary"
-          type="button"
-          onClick={() => setRegistrando(true)}
-          disabled={live.length === 0}
-        >
-          Registrar libro
-        </button>
+        {canWrite ? (
+          <button
+            className="books-btn is-primary"
+            type="button"
+            onClick={() => setRegistrando(true)}
+            disabled={live.length === 0}
+          >
+            Registrar libro
+          </button>
+        ) : null}
       </div>
 
       <div className="books-table-wrap">
@@ -736,7 +752,7 @@ function Spreadsheets({ onGo = null }) {
 
                         <div className="books-action-row">
                           <span className="books-note">
-                            Registrarlo no importa nada: eso se hace en «Importar de Excel».
+                            Registrarlo no importa nada: las columnas y la importación se configuran después, desde su fila.
                           </span>
                           <button
                             className="books-btn"
@@ -785,7 +801,7 @@ function Spreadsheets({ onGo = null }) {
                     {book.mapped ? (
                       `${book.schemaName} v${book.schemaVersion}`
                     ) : (
-                      <span className="books-off">Sin mapear</span>
+                      <span className="books-off">Columnas sin configurar</span>
                     )}
                   </td>
                   <td>{lastImport(book)}</td>
@@ -802,14 +818,14 @@ function Spreadsheets({ onGo = null }) {
                             <span className="books-label">Formato</span>
                             {book.mapped
                               ? `${book.schemaName} v${book.schemaVersion}`
-                              : "Sin mapear"}
+                              : "Columnas sin configurar"}
                           </div>
                           <div className="books-fact">
                             <span className="books-label">Última importación</span>
                             {lastImport(book)}
                           </div>
                           <div className="books-fact">
-                            <span className="books-label">Se lee con</span>
+                            <span className="books-label">Cuenta de Microsoft</span>
                             {book.accountEmail}
                             {book.accountRevoked ? " (desconectada)" : ""}
                           </div>
@@ -818,6 +834,46 @@ function Spreadsheets({ onGo = null }) {
                             {book.registeredByName ?? "alguien que ya no está"} el{" "}
                             {shortDate(book.createdAt)}
                           </div>
+                          {!canWrite ? (
+                            <div className="books-fact">
+                              <span className="books-label">Sincronización automática</span>
+                              {book.syncIntervalMinutes === null
+                                ? "Manual"
+                                : book.syncIntervalMinutes < 60
+                                  ? `Cada ${book.syncIntervalMinutes} minutos`
+                                  : book.syncIntervalMinutes < 1440
+                                    ? `Cada ${book.syncIntervalMinutes / 60} horas`
+                                    : "Cada día"}
+                            </div>
+                          ) : (
+                            <label className="books-fact">
+                              <span className="books-label">Sincronización automática</span>
+                              <select
+                                value={book.syncIntervalMinutes ?? ""}
+                                onChange={async (e) => {
+                                  const raw = e.target.value;
+                                  const minutes = raw === "" ? null : Number(raw);
+                                  try {
+                                    const { sheet } = await api.setSpreadsheetSync(book.id, {
+                                      intervalMinutes: minutes,
+                                    });
+                                    setLibros((prev) =>
+                                      prev.map((b) => (b.id === sheet.id ? sheet : b)),
+                                    );
+                                  } catch (err) {
+                                    setError(err.message);
+                                  }
+                                }}
+                              >
+                                <option value="">Manual</option>
+                                <option value="15">Cada 15 minutos</option>
+                                <option value="30">Cada 30 minutos</option>
+                                <option value="60">Cada hora</option>
+                                <option value="360">Cada 6 horas</option>
+                                <option value="1440">Cada día</option>
+                              </select>
+                            </label>
+                          )}
                           {book.webUrl === null ? null : (
                             <a
                               className="books-quiet"
@@ -831,7 +887,7 @@ function Spreadsheets({ onGo = null }) {
                         </div>
 
                         <footer className="books-open-foot">
-                          {confirming === `libro-${book.id}` ? (
+                          {!canWrite ? null : confirming === `libro-${book.id}` ? (
                             <span className="books-action-row">
                               <span className="books-confirm">
                                 Las solicitudes que ya se importaron se quedan: solo deja de
@@ -862,7 +918,7 @@ function Spreadsheets({ onGo = null }) {
                             </button>
                           )}
 
-                          {book.accountRevoked ? (
+                          {!canWrite ? null : book.accountRevoked ? (
                             <button className="books-btn is-primary" type="button" onClick={connect}>
                               Reconectar la cuenta
                             </button>
@@ -870,10 +926,9 @@ function Spreadsheets({ onGo = null }) {
                             <button
                               className="books-btn is-primary"
                               type="button"
-                              onClick={() => (onGo === null ? null : onGo("Importar de Excel"))}
-                              disabled={onGo === null}
+                              onClick={() => setConfigurando(book)}
                             >
-                              {book.mapped ? "Importar filas nuevas" : "Mapear e importar"}
+                              {book.mapped ? "Importar filas nuevas" : "Configurar columnas"}
                             </button>
                           )}
                         </footer>
@@ -889,8 +944,8 @@ function Spreadsheets({ onGo = null }) {
                 <td colSpan={4}>
                   <p className="books-empty">
                     {live.length === 0
-                      ? "Los libros se registran una vez que hay una cuenta conectada."
-                      : "Ningún libro registrado todavía."}
+                      ? "Primero conecta una cuenta de Microsoft para poder registrar libros."
+                      : "Aún no hay libros. Pulsa «Registrar libro» para agregar el primero."}
                   </p>
                 </td>
               </tr>

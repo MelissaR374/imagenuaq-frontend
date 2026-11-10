@@ -130,6 +130,7 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
         solicitud?.flow ? fasesDesde(solicitud.flow) : lienzoNuevo()
     );
     const [cambiado, setCambiado] = useState(false);
+    const [abierto, setAbierto] = useState(deSolicitud);
 
     const [origenId, setOrigenId] = useState(null);
 
@@ -154,15 +155,6 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
                 setPlantillas(lista.workflows);
                 setAreas(aplanar(organigrama.roots));
                 setVocabulario(claves.fieldKeys);
-
-                if (deSolicitud) return;
-
-                const primera = lista.workflows.find((una) => una.isActive) ?? lista.workflows[0];
-                if (primera) {
-                    const respuesta = await api.getWorkflow(primera.id);
-                    if (cancelado) return;
-                    abrir(respuesta.workflow);
-                }
             } catch (fallo) {
                 if (!cancelado) setError(fallo.message);
             } finally {
@@ -177,6 +169,7 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
     }, [deSolicitud]);
 
     function abrir(workflow) {
+        setAbierto(true);
         setPlantillaId(workflow.id);
         setVersion(workflow.version);
         setFases(fasesDesde(workflow));
@@ -218,6 +211,7 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
 
     function nuevaPlantilla() {
         if (!puedeDescartar()) return;
+        setAbierto(true);
         setPlantillaId(null);
         setVersion(null);
         setFases(lienzoNuevo());
@@ -426,6 +420,8 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
                     <span className="flow-eyebrow">
                         {deSolicitud
                             ? `${solicitud.folio} · ${solicitud.title}`
+                            : !abierto
+                                ? "NINGUNA PLANTILLA ABIERTA"
                             : plantillaId === null
                                 ? "PLANTILLA NUEVA · SIN GUARDAR"
                                 : `GUARDAR PUBLICA UNA VERSIÓN NUEVA · VERSIÓN ${version}`}
@@ -440,7 +436,7 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
                             disabled={ocupado}
                         >
                             {plantillaId === null && (
-                                <option value="">Plantilla nueva</option>
+                                <option value="">{abierto ? "Plantilla nueva" : "Elige una plantilla"}</option>
                             )}
                             {plantillas.map((una) => (
                                 <option key={una.id} value={una.id}>
@@ -474,7 +470,7 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
                         type="button"
                         className="template-button"
                         onClick={deSolicitud ? abrirCargarPlantilla : abrirClonar}
-                        disabled={ocupado || plantillas.length === 0}
+                        disabled={ocupado || plantillas.length === 0 || !abierto}
                     >
                         Partir de una plantilla
                         <MdKeyboardArrowDown />
@@ -483,7 +479,7 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
                         type="button"
                         className="save-button"
                         onClick={guardar}
-                        disabled={ocupado}
+                        disabled={ocupado || !abierto}
                     >
                         {ocupado ? "Guardando..." : "Guardar flujo"}
                     </button>
@@ -492,6 +488,12 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
 
             {error && <p className="flow-error">{error}</p>}
 
+            {!abierto ? (
+                <p className="flow-blank">
+                    Crea una nueva plantilla de flujo o edita una existente para empezar
+                </p>
+            ) : (
+            <>
             <div className="flow-summary">
                 <div className="summary-text">
                     <span>
@@ -601,6 +603,8 @@ function FlowDesigner({ solicitud = null, onGuardado, onCerrar }) {
                     Guardar este flujo como plantilla nueva
                 </button>
             </footer>
+            </>
+            )}
 
             {modal?.tipo === "etapa" && (
                 <StageModal

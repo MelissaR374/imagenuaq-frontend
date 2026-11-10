@@ -333,11 +333,11 @@
 }
 
 .flow-footer button {
-  border: var(--border);
+  border: 1px solid var(--border);
   border-radius: 5px;
   padding: 10px;
   background: #104678;
-  color: var(--text-muted);
+  color: #fff;
   font-family: "Poppins", sans-serif;
   font-size: 9px;
   font-weight: 600;
@@ -345,7 +345,8 @@
 }
 
 .flow-footer button:hover {
-  color: var(--text);
+  color: #fff;
+  filter: brightness(1.15);
 }
 
 /* =========================================================
@@ -448,4 +449,16 @@
 
 .stage-note-input, .stage-note-output {
   font-size: 10px;
+}
+
+.flow-blank {
+  display: grid;
+  place-items: center;
+  flex: 1;
+  min-height: 240px;
+  margin: 0;
+  padding: 24px;
+  color: var(--text-muted);
+  font-size: 14px;
+  text-align: center;
 }

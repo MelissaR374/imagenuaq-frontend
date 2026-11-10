@@ -349,7 +349,7 @@
 .projects-stage {
   padding-left: 8px;
 
-  border-left: 2px solid var(--accent-line);
+  border-left: 4px solid var(--accent-line);
 
   font-size: var(--size-small);
 }

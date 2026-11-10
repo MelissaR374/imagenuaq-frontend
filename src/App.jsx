@@ -14,7 +14,6 @@ import Areas from "./components/areas/areas.jsx";
 import Roles from "./components/roles/roles.jsx";
 import Spreadsheets from "./components/spreadsheets/spreadsheets.jsx";
 import Schemas from "./components/schemas/schemas.jsx";
-import ImportConfig from "./components/spreadsheets/importConfig.jsx";
 import Inbox from "./components/requests/inbox.jsx";
 import Projects from "./components/projects/projects.jsx";
 import Profile from "./components/profile/profile.jsx";
@@ -54,17 +53,16 @@ const DESCRIPCIONES = {
   "Roles y permisos": "Lo que puede hacer cada rol.",
   "Tipos de contrato": "Configura los tipos de contrato y los beneficios que se asignan a los empleados.",
   "Formatos de solicitud":
-    "Los formatos con que se capturan las solicitudes y sus versiones.",
-  "Libros de Excel": "Los libros de Excel registrados y la conexión con Microsoft.",
-  "Importar de Excel":
-    "El mapeo de cada libro de Excel y la importación de sus filas.",
+    "Los formatos de captura de datos para generar un proyecto.",
+  "Libros de Excel":
+    "Tus libros de Excel: conéctalos, indica qué columna es cada dato e importa las filas nuevas.",
   "Bandeja de solicitudes":
     "Solicitudes recibidas que todavía no son proyecto.",
   Proyectos: "Los proyectos y el avance de sus etapas.",
   "Catálogo de estatus":
     "Los estatus con que se muestran solicitudes y proyectos, globales y por área.",
   "Diseñador de flujos":
-    "Las plantillas de flujo: sus fases y las etapas de cada una.",
+    "Plantillas para definir como se va a tratar un proyecto, para agilizar la asignación de tareas",
   Archivos: "Todas las carpetas de cada proyecto.",
   "Retención de archivos": "Cuánto tiempo se conservan los archivos.",
   "Mis tareas": "Las etapas de desarrollo de un proyecto a tu cargo",
@@ -289,9 +287,7 @@ function Aplicacion() {
         ) : activa === "Formatos de solicitud" ? (
           <Schemas />
         ) : activa === "Libros de Excel" ? (
-          <Spreadsheets onGo={setPestana} />
-        ) : activa === "Importar de Excel" ? (
-          <ImportConfig onGo={setPestana} />
+          <Spreadsheets onGo={setPestana} canWrite={permisos.includes("spreadsheet.write")} />
         ) : activa === "Bandeja de solicitudes" ? (
           <Inbox />
         ) : activa === "Proyectos" ? (
