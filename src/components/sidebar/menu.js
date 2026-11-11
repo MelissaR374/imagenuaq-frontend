@@ -24,6 +24,8 @@ import {
   MdCalendarMonth,
   MdWork,
   MdEventBusy,
+  MdPrint,
+  MdPalette,
 } from "react-icons/md";
 
 export const menuSections = [
@@ -80,6 +82,11 @@ export const menuSections = [
         permission: "absence.read",
       },
       {
+        label: "Órdenes de impresión",
+        icon: MdPrint,
+        permission: "print.read",
+      },
+      {
         label: "Empleados",
         icon: MdBadge,
         roles: ["admin"],
@@ -129,6 +136,11 @@ export const menuSections = [
         label: "Retención de archivos",
         icon: MdAttachFile,
         permission: "document.manage",
+      },
+      {
+        label: "Pantones y maquinas",
+        icon: MdPalette,
+        permission: "print.manage",
       },
       {
         label: "Libros de Excel",
