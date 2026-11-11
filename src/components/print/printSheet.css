@@ -1,0 +1,45 @@
+/* Solo acomodo: el diseno lo revisa quien lleva el CSS. */
+.print-sheet-container { padding: 1.5rem; }
+.print-sheet-toolbar { display: flex; gap: 0.75rem; margin-bottom: 1.5rem; }
+
+.print-sheet {
+  max-width: 700px; margin: 0 auto; padding: 2rem;
+  border: 1px solid var(--border); border-radius: 0.5rem;
+  background: var(--surface); color: var(--text);
+}
+
+.print-sheet-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.5rem; }
+.print-sheet-header h2 { margin: 0; font-size: 1.25rem; flex: 1; text-align: center; }
+.print-sheet-date { font-size: 0.875rem; color: var(--text-secondary); min-width: 6rem; }
+.print-sheet-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 0.25rem; min-width: 6rem; }
+.print-sheet-machine { font-weight: 700; font-size: 1rem; }
+.print-sheet-number { font-size: 0.875rem; color: var(--text-secondary); }
+
+.print-sheet-table { width: 100%; border-collapse: collapse; margin-bottom: 2rem; }
+.print-sheet-table th,
+.print-sheet-table td { padding: 0.5rem 0.75rem; border: 1px solid var(--border); }
+.print-sheet-table th { text-align: left; width: 25%; font-weight: 600; background: var(--surface-secondary); color: var(--text-secondary); }
+.print-sheet-table td { width: 25%; }
+
+.print-sheet-footer { display: flex; justify-content: space-around; margin-top: 3rem; }
+.print-sheet-sig { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; }
+.print-sheet-sig-line { width: 10rem; border-bottom: 1px solid var(--text); }
+.print-sheet-sig span { font-size: 0.8rem; color: var(--text-secondary); }
+
+@media print {
+  body * { visibility: hidden; }
+  .print-sheet-container, .print-sheet-container * { visibility: visible; }
+  .print-sheet-container { position: absolute; left: 0; top: 0; width: 100%; padding: 0; }
+  .no-print { display: none !important; }
+  .print-sheet { border: none; box-shadow: none; padding: 1rem; max-width: 100%; }
+  .print-sheet, .print-sheet-table th { background: #fff; color: #000; }
+  .print-sheet-table th,
+  .print-sheet-table td { border-color: #000; }
+  .print-sheet-sig-line { border-color: #000; }
+  .print-sheet-header h2,
+  .print-sheet-machine { color: #000; }
+  .print-sheet-date,
+  .print-sheet-number,
+  .print-sheet-table th,
+  .print-sheet-sig span { color: #333; }
+}
