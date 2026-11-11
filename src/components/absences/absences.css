@@ -1,0 +1,66 @@
+/* Solo acomodo: el diseño lo revisa quien lleva el CSS. */
+.absences { padding: 1.5rem; }
+.absences-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.absences-header h2 { margin: 0; }
+.absences-search { display: flex; align-items: center; gap: 0.375rem; padding: 0.375rem 0.625rem; border: 1px solid var(--border); border-radius: 0.375rem; flex: 1; min-width: 12rem; max-width: 24rem; background: var(--surface); color: var(--text); }
+.absences-search input { border: none; outline: none; background: transparent; flex: 1; font: inherit; color: inherit; }
+
+.absences-filters { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.filter-chip { display: flex; align-items: center; gap: 0.375rem; padding: 0.375rem 0.75rem; border: 1px solid var(--border); border-radius: 999px; background: transparent; cursor: pointer; font: inherit; color: var(--text); }
+.filter-chip.active { background: var(--accent); color: white; border-color: transparent; }
+.filter-count { font-size: 0.8em; opacity: 0.7; }
+
+.absences-error { color: var(--danger); margin-bottom: 0.75rem; }
+.absences-loading { color: var(--text-muted); }
+.absences-empty { color: var(--text-muted); text-align: center; padding: 3rem 0; }
+
+.absences-table { width: 100%; border-collapse: collapse; }
+.absences-table th,
+.absences-table td { text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border); color: var(--text); }
+.absences-table th { color: var(--text-secondary); font-weight: 600; }
+.absences-reason { max-width: 16rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.absences-actions-cell { display: flex; gap: 0.375rem; }
+.absences-doc-cell { white-space: nowrap; }
+.absences-no-doc { color: var(--text-muted); }
+
+.status-pill { display: inline-block; padding: 0.125rem 0.5rem; border-radius: 999px; font-size: 0.8em; font-weight: 500; }
+.status-pill.warning { background: var(--warning-soft); color: var(--warning); }
+.status-pill.success { background: var(--success-soft); color: var(--success); }
+.status-pill.danger { background: var(--danger-soft); color: var(--danger); }
+.status-pill.neutral { background: var(--surface-secondary); color: var(--text-muted); }
+.status-pill.info { background: var(--accent-soft); color: var(--accent); }
+
+.absences-modal-backdrop {
+  position: fixed; inset: 0; background: rgba(0, 0, 0, 0.4);
+  display: flex; align-items: center; justify-content: center; z-index: 1000;
+}
+.absences-modal {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 0.5rem; padding: 1.5rem;
+  width: 90%; max-width: 28rem; color: var(--text);
+}
+.absences-modal h3 { margin: 0 0 1rem; }
+.absences-modal-field { display: flex; flex-direction: column; gap: 0.25rem; margin-bottom: 1rem; }
+.absences-modal-field span { font-size: 0.875rem; color: var(--text-secondary); }
+.absences-modal-field textarea,
+.absences-modal-field select,
+.absences-modal-field input[type="date"],
+.absences-modal-field input[type="file"] { padding: 0.375rem 0.5rem; font: inherit; background: var(--field); color: var(--text); border: 1px solid var(--border); border-radius: 0.25rem; }
+.absences-modal-wide { max-width: 36rem; }
+.absences-modal-row { display: flex; gap: 1rem; }
+.absences-modal-row .absences-modal-field { flex: 1; }
+.absences-modal-actions { display: flex; gap: 0.5rem; }
+.absences-note { font-size: 0.85em; color: var(--text-muted); margin: 0 0 0.75rem; }
+.absences-warning { font-size: 0.85em; color: var(--warning); background: var(--warning-soft); padding: 0.5rem 0.75rem; border-radius: 0.375rem; margin-bottom: 0.75rem; }
+
+.absences-btn { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.375rem 0.75rem; border: 1px solid var(--border); border-radius: 0.375rem; background: var(--surface); color: var(--text); cursor: pointer; font: inherit; font-size: 0.875rem; }
+.absences-btn:hover:not(:disabled) { background: var(--surface-secondary); }
+.absences-btn:disabled { opacity: 0.5; cursor: default; }
+.absences-btn-small { padding: 0.25rem 0.5rem; font-size: 0.8rem; }
+.absences-btn-primary { border-color: var(--accent); background: var(--accent); color: #fff; font-weight: 600; }
+.absences-btn-primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
+.absences-btn-success { border-color: var(--success); background: var(--success); color: #fff; }
+.absences-btn-success:hover:not(:disabled) { background: var(--success); border-color: var(--success); filter: brightness(0.9); }
+.absences-btn-danger { border-color: var(--danger); background: var(--danger); color: #fff; }
+.absences-btn-danger:hover:not(:disabled) { background: var(--danger); border-color: var(--danger); filter: brightness(0.9); }
+.absences-btn-info { border-color: var(--accent); background: var(--accent); color: #fff; }
+.absences-btn-info:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
