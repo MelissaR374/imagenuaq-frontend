@@ -34,6 +34,8 @@ import Billing from "./components/billing/billing.jsx";
 import FinanceQuotes from "./components/finance/financeQuotes.jsx";
 import FinanceInvoices from "./components/finance/financeInvoices.jsx";
 import ContractTypes from "./components/contractTypes/contractTypes.jsx";
+import Absences from "./components/absences/absences.jsx";
+import AbsenceTypes from "./components/absences/absenceTypes.jsx";
 
 
 import * as api from "./api/client.js";
@@ -53,6 +55,8 @@ const DESCRIPCIONES = {
     "El organigrama de la coordinación y quién está en cada área.",
   "Roles y permisos": "Lo que puede hacer cada rol.",
   "Tipos de contrato": "Configura los tipos de contrato y los beneficios que se asignan a los empleados.",
+  Ausencias: "Las ausencias del personal: permisos, incapacidades y días institucionales, con su estado de aprobación.",
+  "Tipos de ausencia": "El catálogo de tipos de ausencia y sus reglas: si consumen saldo, si requieren documento.",
   "Formatos de solicitud":
     "Los formatos de captura de datos para generar un proyecto.",
   "Libros de Excel":
@@ -286,6 +290,16 @@ function Aplicacion() {
           <Roles />
         ) : activa === "Tipos de contrato" ? (
           <ContractTypes />
+        ) : activa === "Tipos de ausencia" ? (
+          <AbsenceTypes />
+        ) : activa === "Ausencias" ? (
+          <Absences
+            canDetail={usuario.role === "admin" || permisos.includes("absence.read_detail")}
+            canApprove={usuario.role === "admin" || permisos.includes("absence.approve")}
+            canWrite={usuario.role === "admin" || permisos.includes("absence.write")}
+            canRequestOthers={usuario.role === "admin" || permisos.includes("absence.request_others")}
+            userId={usuario.id}
+          />
         ) : activa === "Formatos de solicitud" ? (
           <Schemas />
         ) : activa === "Libros de Excel" ? (
