@@ -36,6 +36,8 @@ import FinanceInvoices from "./components/finance/financeInvoices.jsx";
 import ContractTypes from "./components/contractTypes/contractTypes.jsx";
 import Absences from "./components/absences/absences.jsx";
 import AbsenceTypes from "./components/absences/absenceTypes.jsx";
+import PrintOrders from "./components/print/printOrders.jsx";
+import Pantones from "./components/print/pantones.jsx";
 
 
 import * as api from "./api/client.js";
@@ -79,6 +81,8 @@ const DESCRIPCIONES = {
   Facturación: "Consulta los proyectos y da seguimiento a los documentos importantes",
   Facturas: "Las facturas de todos los proyectos y su estado de trámite.",
   Cotizaciones: "Las cotizaciones pendientes de revisión y su decisión.",
+  "Órdenes de impresión": "Las órdenes de trabajo para las máquinas de impresión.",
+  "Pantones y maquinas": "Catalogo de colores Pantone y maquinas de impresion.",
 };
 
 /** El token de un enlace de solo lectura, si la página se abrió con uno. */
@@ -300,6 +304,13 @@ function Aplicacion() {
             canRequestOthers={usuario.role === "admin" || permisos.includes("absence.request_others")}
             userId={usuario.id}
           />
+        ) : activa === "Órdenes de impresión" ? (
+          <PrintOrders
+            canWrite={usuario.role === "admin" || permisos.includes("print.write")}
+            canCreate={usuario.role === "admin" || permisos.includes("print.create")}
+          />
+        ) : activa === "Pantones y maquinas" ? (
+          <Pantones />
         ) : activa === "Formatos de solicitud" ? (
           <Schemas />
         ) : activa === "Libros de Excel" ? (

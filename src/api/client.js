@@ -889,3 +889,20 @@ export const createEntitlement = (contractTypeId, input) =>
 
 export const updateEntitlement = (contractTypeId, entitlementId, changes) =>
   request(`/contract-types/${contractTypeId}/entitlements/${entitlementId}`, { method: "PATCH", body: changes });
+
+export const listPrintOrders = (params = {}) => request(withQuery("/print/orders", params));
+export const getPrintOrder = (id) => request(`/print/orders/${id}`);
+export const createPrintOrder = (input) => request("/print/orders", { method: "POST", body: input });
+export const updatePrintOrder = (id, input) => request(`/print/orders/${id}`, { method: "PATCH", body: input });
+export const setPrintOrderStatus = (id, input) => request(`/print/orders/${id}/status`, { method: "POST", body: input });
+export const deletePrintOrder = (id) => request(`/print/orders/${id}`, { method: "DELETE" });
+
+export const listPrintMachines = () => request("/print/machines");
+export const createPrintMachine = (input) => request("/print/machines", { method: "POST", body: input });
+export const updatePrintMachine = (id, input) => request(`/print/machines/${id}`, { method: "PATCH", body: input });
+
+export const listPantones = (params = {}) => request(withQuery("/print/pantones", params));
+export const lookupPantones = (entity) => request(withQuery("/print/pantones/lookup", { entity }));
+export const createPantone = (input) => request("/print/pantones", { method: "POST", body: input });
+export const updatePantone = (id, input) => request(`/print/pantones/${id}`, { method: "PATCH", body: input });
+export const deletePantone = (id) => request(`/print/pantones/${id}`, { method: "DELETE" });
