@@ -14,28 +14,23 @@ import {
 import * as api from "../../api/client.js";
 import "./contractTypes.css";
 
-/** Valores por defecto para la configuración de un contrato. No son datos oficiales. */
-const CONFIGURACION_INICIAL = {
-  description: "",
-  vacationDays: "",
-  sickDays: "",
-  calendar: "uaq",
-  vacationStart: "",
-  vacationEnd: "",
-};
-
 function crearConfiguracion(contrato) {
   return {
-    ...CONFIGURACION_INICIAL,
     id: contrato.id,
     name: contrato.name,
     description: contrato.description ?? "",
+    vacationDays: "",
+    sickDays: "",
+    calendar: "uaq",
+    vacationStart: "",
+    vacationEnd: "",
   };
 }
 
 function ContractTypes() {
   const [contratos, setContratos] = useState([]);
   const [configuraciones, setConfiguraciones] = useState({});
+  const [absenceTypes, setAbsenceTypes] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
 
@@ -51,30 +46,25 @@ function ContractTypes() {
   useEffect(() => {
     let cancelado = false;
 
-    async function cargarContratos() {
+    async function cargarDatos() {
       try {
-        const respuesta = await api.listContractTypes();
-
+        const [ctRes, atRes] = await Promise.all([
+          api.listContractTypes(),
+          api.listAbsenceTypes().catch(() => ({ types: [] })),
+        ]);
         if (cancelado) return;
-
-        const lista = respuesta.contractTypes ?? [];
-
-        setContratos(lista);
+        setContratos(ctRes.contractTypes ?? []);
+        setAbsenceTypes(atRes.types ?? []);
         setError("");
       } catch (err) {
-        if (!cancelado) {
-          setError(err.message || "No se pudieron cargar los contratos.");
-        }
+        if (!cancelado) setError(err.message || "No se pudieron cargar los contratos.");
       } finally {
         if (!cancelado) setCargando(false);
       }
     }
 
-    cargarContratos();
-
-    return () => {
-      cancelado = true;
-    };
+    cargarDatos();
+    return () => { cancelado = true; };
   }, []);
 
   const contratosFiltrados = useMemo(() => {
@@ -90,8 +80,8 @@ function ContractTypes() {
     return configuraciones[contrato.id] ?? crearConfiguracion(contrato);
   }
 
-  function abrirEditor(contrato) {
-    setConfirmandoEliminar(false); 
+  async function abrirEditor(contrato) {
+    setConfirmandoEliminar(false);
 
     if (abierto === contrato.id) {
       cerrarEditor();
@@ -99,7 +89,18 @@ function ContractTypes() {
     }
 
     setAbierto(contrato.id);
-    setForm({ ...obtenerConfiguracion(contrato) });
+    const cfg = { ...obtenerConfiguracion(contrato) };
+
+    try {
+      const res = await api.listEntitlements(contrato.id);
+      const entitlements = res.entitlements ?? [];
+      const vac = entitlements.find((e) => e.absenceTypeCode === "vacaciones" && !e.validTo);
+      const inc = entitlements.find((e) => e.absenceTypeCode === "incapacidad" && !e.validTo);
+      if (vac) cfg.vacationDays = vac.amount;
+      if (inc) cfg.sickDays = inc.amount;
+    } catch { void 0; }
+
+    setForm(cfg);
     setMensaje("");
   }
 
@@ -128,7 +129,7 @@ function ContractTypes() {
     cerrarEditor();
   }
 
-  function guardarCambios(event) {
+  async function guardarCambios(event) {
     event.preventDefault();
 
     if (!form) return;
@@ -162,18 +163,34 @@ function ContractTypes() {
     }
 
     setGuardando(true);
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const vacType = absenceTypes.find((t) => t.code === "vacaciones");
+      const incType = absenceTypes.find((t) => t.code === "incapacidad");
 
-    setConfiguraciones((actual) => ({
-      ...actual,
-      [form.id]: {
-        ...form,
-        vacationDays: vacaciones,
-        sickDays: enfermedad,
-      },
-    }));
+      const saves = [];
+      if (vacType) {
+        saves.push(api.createEntitlement(form.id, {
+          absenceTypeId: vacType.id, amount: vacaciones, validFrom: today,
+        }));
+      }
+      if (incType) {
+        saves.push(api.createEntitlement(form.id, {
+          absenceTypeId: incType.id, amount: enfermedad, validFrom: today,
+        }));
+      }
+      await Promise.all(saves);
 
-    setGuardando(false);
-    setMensaje("Cambios guardados temporalmente.");
+      setConfiguraciones((actual) => ({
+        ...actual,
+        [form.id]: { ...form, vacationDays: vacaciones, sickDays: enfermedad },
+      }));
+      setMensaje("Cambios guardados.");
+    } catch (err) {
+      setMensaje(err.message || "Error al guardar.");
+    } finally {
+      setGuardando(false);
+    }
   }
 
   function mostrarDias(valor) {
@@ -531,8 +548,7 @@ function ContractTypes() {
                             </div>
 
                             <p className="contract-types-save-note">
-                              {mensaje ||
-                                "Los cambios son temporales y no se guardan en el servidor."}
+                              {mensaje || ""}
                             </p>
 
                             <div className="contract-types-actions">

@@ -1,0 +1,39 @@
+/* Solo acomodo: el diseño lo revisa quien lleva el CSS. */
+.absence-types { padding: 1.5rem; max-width: 56rem; }
+.absence-types-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; }
+.absence-types-header h2 { margin: 0; }
+.absence-types-error { color: var(--danger, #c53030); margin-bottom: 0.75rem; }
+.absence-types-loading { color: var(--text-muted); }
+
+.absence-types-form {
+  display: flex; flex-direction: column; gap: 0.75rem;
+  padding: 1rem; border: 1px solid var(--border); border-radius: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+.absence-types-field { display: flex; flex-direction: column; gap: 0.25rem; }
+.absence-types-field input,
+.absence-types-field select { padding: 0.375rem 0.5rem; }
+.absence-types-check { display: flex; align-items: center; gap: 0.5rem; }
+.absence-types-actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+
+.absence-types-table { width: 100%; border-collapse: collapse; }
+.absence-types-table th,
+.absence-types-table td { text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border); }
+.absence-types-table .mono { font-family: var(--font-mono, monospace); font-size: 0.85em; }
+.absence-types-table tr.inactive { opacity: 0.5; }
+.absence-types-actions-cell { display: flex; gap: 0.375rem; }
+
+.absence-types .btn { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.375rem 0.75rem; border: 1px solid var(--border); border-radius: 0.375rem; background: var(--surface); color: var(--text); cursor: pointer; font: inherit; font-size: 0.875rem; }
+.absence-types .btn:hover:not(:disabled) { background: var(--surface-secondary); }
+.absence-types .btn:disabled { opacity: 0.5; cursor: default; }
+.absence-types .btn-small { padding: 0.25rem 0.5rem; font-size: 0.8rem; }
+.absence-types .btn-primary { border-color: var(--accent); background: var(--accent); color: #fff; font-weight: 600; }
+.absence-types .btn-primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
+.absence-types .btn-danger { border-color: var(--danger); background: var(--danger); color: #fff; }
+.absence-types .btn-danger:hover:not(:disabled) { filter: brightness(0.9); }
+.absence-types .btn-success { border-color: var(--success); background: var(--success); color: #fff; }
+.absence-types .btn-success:hover:not(:disabled) { filter: brightness(0.9); }
+
+.absence-types .absence-types-field input,
+.absence-types .absence-types-field select { background: var(--field); color: var(--text); border: 1px solid var(--border); border-radius: 0.25rem; }
+.absence-types .absence-types-form { background: var(--surface); color: var(--text); }

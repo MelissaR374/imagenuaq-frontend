@@ -23,6 +23,7 @@ import {
   MdViewQuilt,
   MdCalendarMonth,
   MdWork,
+  MdEventBusy,
 } from "react-icons/md";
 
 export const menuSections = [
@@ -74,6 +75,11 @@ export const menuSections = [
         permission: "document.read",
       },
       {
+        label: "Ausencias",
+        icon: MdEventBusy,
+        permission: "absence.read",
+      },
+      {
         label: "Empleados",
         icon: MdBadge,
         roles: ["admin"],
@@ -103,6 +109,11 @@ export const menuSections = [
         label: "Tipos de contrato",
         icon: MdWork,
         roles: ["admin"],
+      },
+      {
+        label: "Tipos de ausencia",
+        icon: MdEventBusy,
+        permission: "absence.manage",
       },
       {
         label: "Catálogo de estatus",
@@ -144,6 +155,11 @@ export const menuSections = [
       {
         label: "Cotizaciones",
         icon: MdAttachMoney,
+        permission: "finance.read",
+      },
+      {
+        label: "Facturas",
+        icon: MdReceipt,
         permission: "finance.read",
       },
     ],

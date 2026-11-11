@@ -834,3 +834,58 @@ export const markAllNotificationsAsRead = () =>
   request("/notifications/read-all", {
     method: "PATCH",
   });
+
+export const listAbsenceTypes = () => request("/absences/types");
+
+export const createAbsenceType = (input) =>
+  request("/absences/types", { method: "POST", body: input });
+
+export const updateAbsenceType = (id, changes) =>
+  request(`/absences/types/${id}`, { method: "PATCH", body: changes });
+
+export const listAbsences = (params = {}) =>
+  request(withQuery("/absences", params));
+
+export const getAbsence = (id) => request(`/absences/${id}`);
+
+export const createAbsence = (input) =>
+  request("/absences", { method: "POST", body: input });
+
+export const setAbsenceStatus = (id, input) =>
+  request(`/absences/${id}/status`, { method: "POST", body: input });
+
+export const deleteAbsence = (id) =>
+  request(`/absences/${id}`, { method: "DELETE" });
+
+/** Uploads the backing document ("oficio") for an absence. Returns `{ file: { id, name, size } }`. */
+export async function uploadAbsenceDocument(absenceId, file) {
+  const response = await fetch(
+    `${API_URL}/absences/${absenceId}/document?name=${encodeURIComponent(file.name)}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${getToken()}`,
+        "Content-Type": file.type || "application/octet-stream",
+      },
+      body: file,
+    },
+  );
+  if (!response.ok) throw await toError(response);
+  return response.json();
+}
+
+export const getAbsenceHistory = (id) => request(`/absences/${id}/history`);
+
+export const getAvailability = (params = {}) =>
+  request(withQuery("/absences/availability", params));
+
+export const getBalances = (userId) => request(`/absences/balances/${userId}`);
+
+export const listEntitlements = (contractTypeId) =>
+  request(`/contract-types/${contractTypeId}/entitlements`);
+
+export const createEntitlement = (contractTypeId, input) =>
+  request(`/contract-types/${contractTypeId}/entitlements`, { method: "POST", body: input });
+
+export const updateEntitlement = (contractTypeId, entitlementId, changes) =>
+  request(`/contract-types/${contractTypeId}/entitlements/${entitlementId}`, { method: "PATCH", body: changes });
