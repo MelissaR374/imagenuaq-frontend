@@ -3,7 +3,7 @@ import { io } from "socket.io-client";
 import * as api from "../../api/client.js";
 import { API_URL } from "../../config.js";
 import "./sidebar.css";
-import { menuSections, itemVisible } from "./menu.js";
+import { menuSections, itemVisible, leerOrden, ordenar } from "./menu.js";
 import { MdLogout, MdMenu } from "react-icons/md";
 
 /**
@@ -14,6 +14,23 @@ function Sidebar({ usuario, foto = null, role = "admin", permisos = [], activeIt
   
   const [isClosed, setIsClosed] = useState(false);
   const [sinLeer, setSinLeer] = useState(0);
+  const [orden, setOrden] = useState(leerOrden);
+  const [arrastrando, setArrastrando] = useState(null);
+
+  /** Mueve la pestaña en `desde` a `hacia` dentro de `visibles` (una sección) y guarda el orden. */
+  function mover(visibles, desde, hacia) {
+    if (desde < 0 || hacia < 0 || hacia >= visibles.length || desde === hacia) return;
+    const etiquetas = visibles.map((item) => item.label);
+    const [movida] = etiquetas.splice(desde, 1);
+    etiquetas.splice(hacia, 0, movida);
+    const nuevo = [...orden.filter((label) => !etiquetas.includes(label)), ...etiquetas];
+    setOrden(nuevo);
+    try {
+      localStorage.setItem("menuOrden", JSON.stringify(nuevo));
+    } catch {
+      return;
+    }
+  }
 
   useEffect(() => {
     let cancelado = false;
@@ -92,9 +109,11 @@ function Sidebar({ usuario, foto = null, role = "admin", permisos = [], activeIt
 
       <nav className="sidebar-menu">
         {menuSections.map((section, sectionIndex) => {
-          const visibleItems = section.items.filter((item) =>
-            itemVisible(item, role, permisos),
+          const visibleItems = ordenar(
+            section.items.filter((item) => itemVisible(item, role, permisos)),
+            orden,
           );
+          const etiquetas = visibleItems.map((item) => item.label);
 
           if (visibleItems.length === 0) {
             return null;
@@ -107,7 +126,7 @@ function Sidebar({ usuario, foto = null, role = "admin", permisos = [], activeIt
               )}
 
               <div className="sidebar-section-items">
-                {visibleItems.map((item) => {
+                {visibleItems.map((item, indice) => {
                   const Icon = item.icon;
 
                   const isActive = activeItem === item.label;
@@ -115,7 +134,20 @@ function Sidebar({ usuario, foto = null, role = "admin", permisos = [], activeIt
                   return (
                     <button
                       key={item.label}
-                      className={`sidebar-item ${isActive ? "active" : ""}`}
+                      className={`sidebar-item ${isActive ? "active" : ""} ${arrastrando === item.label ? "dragging" : ""}`}
+                      title="Arrastra para reordenar (o Alt + ↑/↓)"
+                      draggable
+                      onDragStart={() => setArrastrando(item.label)}
+                      onDragEnd={() => setArrastrando(null)}
+                      onDragOver={(e) => {
+                        if (etiquetas.includes(arrastrando)) e.preventDefault();
+                      }}
+                      onDrop={() => mover(visibleItems, etiquetas.indexOf(arrastrando), indice)}
+                      onKeyDown={(e) => {
+                        if (!e.altKey) return;
+                        if (e.key === "ArrowUp") mover(visibleItems, indice, indice - 1);
+                        if (e.key === "ArrowDown") mover(visibleItems, indice, indice + 1);
+                      }}
                       onClick={() => onNavigate && onNavigate(item.label)}
                     >
                       <Icon className="sidebar-item-icon" />

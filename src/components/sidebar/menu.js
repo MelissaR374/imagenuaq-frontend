@@ -32,172 +32,79 @@ export const menuSections = [
   {
     title: null,
     items: [
-      {
-        label: "Organigrama",
-        icon: MdContacts,
-      },
-      {
-        label: "Notificaciones",
-        icon: MdNotificationsNone,
-      },
-      {
-        label: "Cronograma",
-        icon: MdSchedule,
-        permission: "calendar.read",
-      },
-      {
-        label: "Calendario",
-        icon: MdCalendarMonth,
-        permission: "calendar.read",
-      },
-      {
-        label: "Mis tareas",
-        icon: MdCheckBox,
-        permission: "task.read",
-      },
+      { label: "Notificaciones", icon: MdNotificationsNone },
+      { label: "Mis tareas", icon: MdCheckBox, permission: "task.read" },
+      { label: "Calendario", icon: MdCalendarMonth, permission: "calendar.read" },
+      { label: "Cronograma", icon: MdSchedule, permission: "calendar.read" },
+      { label: "Organigrama", icon: MdContacts },
     ],
   },
-
   {
-    title: "ADMINISTRAR",
+    title: "PROYECTOS",
     items: [
-      {
-        label: "Bandeja de solicitudes",
-        icon: MdInbox,
-        permission: "request.read",
-      },
-      {
-        label: "Proyectos",
-        icon: MdFolder,
-        permission: "project.read",
-      },
-      {
-        label: "Archivos",
-        icon: MdAttachFile,
-        permission: "document.read",
-      },
-      {
-        label: "Ausencias",
-        icon: MdEventBusy,
-        permission: "absence.read",
-      },
-      {
-        label: "Órdenes de impresión",
-        icon: MdPrint,
-        permission: "print.read",
-      },
-      {
-        label: "Empleados",
-        icon: MdBadge,
-        roles: ["admin"],
-      },
+      { label: "Bandeja de solicitudes", icon: MdInbox, permission: "request.read" },
+      { label: "Proyectos", icon: MdFolder, permission: "project.read" },
+      { label: "Archivos", icon: MdAttachFile, permission: "document.read" },
+      { label: "Órdenes de impresión", icon: MdPrint, permission: "print.read" },
     ],
   },
-
-  {
-    title: "CONFIGURACIÓN",
-    items: [
-      {
-        label: "Diseñador de flujos",
-        icon: MdAccountTree,
-        permission: "workflow.manage",
-      },
-      {
-        label: "Áreas y usuarios",
-        icon: MdBusiness,
-        permission: "area.manage",
-      },
-      {
-        label: "Roles y permisos",
-        icon: MdAdminPanelSettings,
-        roles: ["admin"],
-      },
-      {
-        label: "Tipos de contrato",
-        icon: MdWork,
-        roles: ["admin"],
-      },
-      {
-        label: "Tipos de ausencia",
-        icon: MdEventBusy,
-        permission: "absence.manage",
-      },
-      {
-        label: "Catálogo de estatus",
-        icon: MdLabel,
-        permission: "status.manage",
-      },
-      {
-        label: "Formatos de solicitud",
-        icon: MdDescription,
-        permission: "schema.manage",
-      },
-      {
-        label: "Retención de archivos",
-        icon: MdAttachFile,
-        permission: "document.manage",
-      },
-      {
-        label: "Pantones y maquinas",
-        icon: MdPalette,
-        permission: "print.manage",
-      },
-      {
-        label: "Libros de Excel",
-        icon: MdSchema,
-        permission: "spreadsheet.read",
-      },
-    ],
-  },
-
-  {
-    title: "DATOS",
-    items: [
-      {
-        label: "Facturación",
-        icon: MdReceipt,
-        permission: "finance.read",
-      },
-    ],
-  },
-
-  {
-    title: "COBRO",
-    items: [
-      {
-        label: "Cotizaciones",
-        icon: MdAttachMoney,
-        permission: "finance.read",
-      },
-      {
-        label: "Facturas",
-        icon: MdReceipt,
-        permission: "finance.read",
-      },
-    ],
-  },
-
   {
     title: "LÍDER",
     items: [
-      {
-        label: "Panorama de áreas",
-        icon: MdViewQuilt,
-        permission: "task.write",
-      },
-      {
-        label: "Por asignar",
-        icon: MdInbox,
-        permission: "task.write",
-      },
-      {
-        label: "Equipo",
-        icon: MdPeople,
-        permission: "task.write",
-      },
+      { label: "Panorama de áreas", icon: MdViewQuilt, permission: "task.write" },
+      { label: "Por asignar", icon: MdInbox, permission: "task.write" },
+      { label: "Equipo", icon: MdPeople, permission: "task.write" },
+    ],
+  },
+  {
+    title: "FINANZAS",
+    items: [
+      { label: "Facturación", icon: MdReceipt, permission: "finance.read" },
+      { label: "Cotizaciones", icon: MdAttachMoney, permission: "finance.read" },
+      { label: "Facturas", icon: MdReceipt, permission: "finance.read" },
+    ],
+  },
+  {
+    title: "PERSONAL",
+    items: [
+      { label: "Ausencias", icon: MdEventBusy, permission: "absence.read" },
+      { label: "Empleados", icon: MdBadge, roles: ["admin"] },
+      { label: "Áreas y usuarios", icon: MdBusiness, permission: "area.manage" },
+      { label: "Roles y permisos", icon: MdAdminPanelSettings, roles: ["admin"] },
+      { label: "Tipos de contrato", icon: MdWork, roles: ["admin"] },
+      { label: "Tipos de ausencia", icon: MdEventBusy, permission: "absence.manage" },
+    ],
+  },
+  {
+    title: "CONFIGURACIÓN",
+    items: [
+      { label: "Formatos de solicitud", icon: MdDescription, permission: "schema.manage" },
+      { label: "Diseñador de flujos", icon: MdAccountTree, permission: "workflow.manage" },
+      { label: "Catálogo de estatus", icon: MdLabel, permission: "status.manage" },
+      { label: "Libros de Excel", icon: MdSchema, permission: "spreadsheet.read" },
+      { label: "Retención de archivos", icon: MdAttachFile, permission: "document.manage" },
+      { label: "Pantones y maquinas", icon: MdPalette, permission: "print.manage" },
     ],
   },
 ];
+
+/** Las etiquetas del menú en el orden que dejó el usuario al arrastrarlas; se guarda en este navegador. */
+export function leerOrden() {
+  try {
+    return JSON.parse(localStorage.getItem("menuOrden")) ?? [];
+  } catch {
+    return [];
+  }
+}
+
+/** Ordena `items` según `orden`; los que no aparecen ahí quedan al final, en su orden de siempre. */
+export function ordenar(items, orden) {
+  const posicion = (item) => {
+    const i = orden.indexOf(item.label);
+    return i === -1 ? orden.length + items.indexOf(item) : i;
+  };
+  return [...items].sort((a, b) => posicion(a) - posicion(b));
+}
 
 /**
  * Si el elemento del menú se ve:
