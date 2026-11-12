@@ -30,7 +30,6 @@ const FILTERS = [
   { id: "all", label: "Todas", status: null },
   { id: "requested", label: "Solicitadas", status: "requested" },
   { id: "approved", label: "Aprobadas", status: "approved" },
-  { id: "taken", label: "Gozadas", status: "taken" },
   { id: "rejected", label: "Rechazadas", status: "rejected" },
   { id: "cancelled", label: "Canceladas", status: "cancelled" },
 ];
@@ -273,7 +272,8 @@ function Absences({ canDetail, canApprove, canWrite, canRequestOthers, userId })
                     {STATUS_LABELS[a.status] ?? a.status}
                   </span>
                 </td>
-                <td className="absences-actions-cell">
+                <td>
+                  <div className="absences-actions-cell">
                   {a.status === "requested" && canApprove && (
                     <>
                       <button
@@ -306,16 +306,7 @@ function Absences({ canDetail, canApprove, canWrite, canRequestOthers, userId })
                       Cancelar
                     </button>
                   )}
-                  {a.status === "approved" && canApprove && new Date(a.endsAt) < new Date() && (
-                    <button
-                      className="absences-btn absences-btn-small absences-btn-info"
-                      type="button"
-                      disabled={saving}
-                      onClick={() => doAction(a.eventId, "taken")}
-                    >
-                      Marcar como gozada
-                    </button>
-                  )}
+                  </div>
                 </td>
               </tr>
             ))}
