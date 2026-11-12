@@ -33,7 +33,6 @@ import Timeline from "./components/timeline/timeline.jsx";
 import OrgChart from "./components/orgChart/orgChart.jsx";
 import Billing from "./components/billing/billing.jsx";
 import FinanceQuotes from "./components/finance/financeQuotes.jsx";
-import FinanceInvoices from "./components/finance/financeInvoices.jsx";
 import ContractTypes from "./components/contractTypes/contractTypes.jsx";
 import Absences from "./components/absences/absences.jsx";
 import AbsenceTypes from "./components/absences/absenceTypes.jsx";
@@ -201,7 +200,9 @@ function Aplicacion() {
 
   const rol = ROLES[usuario.role] ?? "trabajador";
   const activa =
-    pestana && (!permisosListos || canSee(pestana, rol, permisos)) ? pestana : "Inicio";
+    pestana && descripciones[pestana] && (!permisosListos || canSee(pestana, rol, permisos))
+      ? pestana
+      : "Inicio";
 
   const puedeAbrirProyectos = canSee("Proyectos", rol, permisos);
 
@@ -345,9 +346,8 @@ function Aplicacion() {
               if(record.projectId == null) return;
               abrirProyecto(record.projectId, "billing");
             }}
+            onOpenProject={puedeAbrirProyectos ? abrirProyecto : null}
           />
-        ) : activa === "Facturas" ? (
-          <FinanceInvoices onOpenProject={puedeAbrirProyectos ? abrirProyecto : null} />
         ) : activa === "Cotizaciones" ? (
           <FinanceQuotes onOpenProject={puedeAbrirProyectos ? abrirProyecto : null} />
         ) : activa === "Calendario" ? (

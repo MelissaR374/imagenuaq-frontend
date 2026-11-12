@@ -1,4 +1,5 @@
-// Finance overview: projects with their invoicing standing, filterable by flag (RF-FIN-07).
+// Finance overview: projects with their invoicing standing, filterable by flag (RF-FIN-07), and
+// the invoices of every project as a second view of the same tab.
 import { useEffect, useState } from "react";
 
 import {
@@ -13,6 +14,7 @@ import {
 import * as api from "../../api/client.js";
 import BillingStatCard from "./billingStatCard";
 import BillingTable from "./billingTable";
+import FinanceInvoices from "../finance/financeInvoices.jsx";
 
 import "./billing.css";
 
@@ -23,7 +25,9 @@ const FILTERS = [
   { id: "receipts", label: "Con recibo", flag: null },
 ];
 
-function Billing({ onOpenRecord }) {
+/** @param {{ onOpenRecord: (record: object) => void, onOpenProject: ((id: number) => void) | null }} props */
+function Billing({ onOpenRecord, onOpenProject }) {
+  const [view, setView] = useState("projects");
   const [projects, setProjects] = useState(null);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState("");
@@ -92,8 +96,37 @@ function Billing({ onOpenRecord }) {
     URL.revokeObjectURL(url);
   }
 
+  const views = (
+    <nav className="billing-views">
+      <button
+        type="button"
+        className={`billing-view ${view === "projects" ? "active" : ""}`}
+        onClick={() => setView("projects")}
+      >
+        Proyectos
+      </button>
+      <button
+        type="button"
+        className={`billing-view ${view === "invoices" ? "active" : ""}`}
+        onClick={() => setView("invoices")}
+      >
+        Facturas
+      </button>
+    </nav>
+  );
+
+  if (view === "invoices") {
+    return (
+      <>
+        {views}
+        <FinanceInvoices onOpenProject={onOpenProject} />
+      </>
+    );
+  }
+
   return (
     <main className="billing-page">
+      {views}
       <header className="billing-header" />
 
       <div className="billing-stats">

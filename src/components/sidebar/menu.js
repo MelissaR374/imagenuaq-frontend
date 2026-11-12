@@ -63,7 +63,6 @@ export const menuSections = [
     items: [
       { label: "Facturación", icon: MdReceipt, permission: "finance.read" },
       { label: "Cotizaciones", icon: MdAttachMoney, permission: "finance.read" },
-      { label: "Facturas", icon: MdReceipt, permission: "finance.read" },
     ],
   },
   {
@@ -125,8 +124,7 @@ export const descripciones = {
   "Panorama de áreas": "Lo que cada área tiene por asignar y la carga de su gente esta semana.",
   Calendario: "Las etapas, ausencias y fechas institucionales del mes, y las ventanas de cierre de semestre.",
   Cronograma: "Qué tan ocupada está cada área día por día, contando a quién le falta gente.",
-  Facturación: "Consulta los proyectos y da seguimiento a los documentos importantes",
-  Facturas: "Las facturas de todos los proyectos y su estado de trámite.",
+  Facturación: "Los proyectos con su estado de cobro y las facturas de todos ellos.",
   Cotizaciones: "Las cotizaciones pendientes de revisión y su decisión.",
   "Órdenes de impresión": "Las órdenes de trabajo para las máquinas de impresión.",
   "Pantones y maquinas": "Catalogo de colores Pantone y maquinas de impresion.",
