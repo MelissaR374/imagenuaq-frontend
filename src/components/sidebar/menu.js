@@ -1,5 +1,5 @@
 // Las pestañas del menú lateral y las reglas para mostrarlas:
-// - Las pestañas generales (Inicio, Organigrama, Notificaciones) se muestran a cualquier usuario autenticado.
+// - Las pestañas generales (Organigrama, Notificaciones) se muestran a cualquier usuario autenticado.
 // - Las pantallas operativas se gestionan dinámicamente mediante el catálogo de permisos por rol (RF-USR-02, RF-USR-05).
 // - Únicamente las funciones reservadas por seguridad a la coordinación (Empleados, Roles y permisos, Tipos de contrato) se restringen a admin.
 import {
@@ -26,14 +26,12 @@ import {
   MdEventBusy,
   MdPrint,
   MdPalette,
-  MdHome,
 } from "react-icons/md";
 
 export const menuSections = [
   {
     title: null,
     items: [
-      { label: "Inicio", icon: MdHome },
       { label: "Notificaciones", icon: MdNotificationsNone },
       { label: "Mis tareas", icon: MdCheckBox, permission: "task.read" },
       { label: "Calendario", icon: MdCalendarMonth, permission: "calendar.read" },
@@ -94,7 +92,6 @@ export const menuSections = [
  * sitúa en el proceso, sin instrucciones ni controles.
  */
 export const descripciones = {
-  Inicio: "Por dónde empezar y qué hay en cada pestaña.",
   Organigrama: "Las áreas de la coordinación y quién está en cada una.",
   Notificaciones: "Lo que pasó en tus solicitudes, proyectos y etapas.",
   "Mi perfil": "Tus datos de cuenta y tu foto.",

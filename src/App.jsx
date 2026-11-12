@@ -9,7 +9,6 @@ import { MdLightMode, MdDarkMode } from "react-icons/md";
 import Login from "./components/login/login.jsx";
 import Sidebar from "./components/sidebar/sidebar.jsx";
 import { canSee, descripciones } from "./components/sidebar/menu.js";
-import Home from "./components/home/home.jsx";
 import Users from "./components/users/users.jsx";
 import Areas from "./components/areas/areas.jsx";
 import Roles from "./components/roles/roles.jsx";
@@ -202,7 +201,9 @@ function Aplicacion() {
   const activa =
     pestana && descripciones[pestana] && (!permisosListos || canSee(pestana, rol, permisos))
       ? pestana
-      : "Inicio";
+      : !permisosListos || canSee("Mis tareas", rol, permisos)
+        ? "Mis tareas"
+        : "Notificaciones";
 
   const puedeAbrirProyectos = canSee("Proyectos", rol, permisos);
 
@@ -265,9 +266,7 @@ function Aplicacion() {
           </div>
         </header>
 
-        {!permisosListos || !canSee(activa, rol, permisos) ? null : activa === "Inicio" ? (
-          <Home user={usuario} role={rol} permissions={permisos} onNavigate={setPestana} />
-        ) : activa === "Organigrama" ? (
+        {!permisosListos || !canSee(activa, rol, permisos) ? null : activa === "Organigrama" ? (
           <OrgChart />
         ) : activa === "Notificaciones" ? (
           <Notifications onUnreadChange={actualizarContadorNotificaciones} />
