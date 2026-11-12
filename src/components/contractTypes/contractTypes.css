@@ -580,3 +580,7 @@
         justify-content: flex-end;
     }
 }
+/* Solo acomodo: el diseño lo revisa quien lleva el CSS. */
+.contract-types-create { display: flex; align-items: flex-end; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.contract-types-create-field { display: flex; flex-direction: column; gap: 0.25rem; min-width: 16rem; }
+.contract-types-create .contract-types-error { flex-basis: 100%; margin: 0; }

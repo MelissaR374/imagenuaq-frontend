@@ -43,6 +43,10 @@ function ContractTypes() {
   const [confirmandoEliminar, setConfirmandoEliminar] = useState(false);
   const [eliminados, setEliminados] = useState([]);
 
+  const [nuevoNombre, setNuevoNombre] = useState(null);
+  const [creando, setCreando] = useState(false);
+  const [errorNuevo, setErrorNuevo] = useState("");
+
   useEffect(() => {
     let cancelado = false;
 
@@ -75,6 +79,23 @@ function ContractTypes() {
         !eliminados.includes(contrato.id) && contrato.name.toLowerCase().includes(texto),
     );
   }, [contratos, busqueda, eliminados]);
+
+  async function crearContrato(event) {
+    event.preventDefault();
+    setCreando(true);
+    setErrorNuevo("");
+    try {
+      const { contractType } = await api.createContractType(nuevoNombre.trim());
+      setContratos((actual) =>
+        [...actual, contractType].sort((a, b) => a.name.localeCompare(b.name)),
+      );
+      setNuevoNombre(null);
+    } catch (err) {
+      setErrorNuevo(err.message || "No se pudo crear el tipo de contrato.");
+    } finally {
+      setCreando(false);
+    }
+  }
 
   function obtenerConfiguracion(contrato) {
     return configuraciones[contrato.id] ?? crearConfiguracion(contrato);
@@ -234,13 +255,42 @@ function ContractTypes() {
         <button
           type="button"
           className="contract-types-new"
-          disabled
-          title="La creación de contratos se habilitará al conectar el backend."
+          onClick={() => {
+            setErrorNuevo("");
+            setNuevoNombre(nuevoNombre === null ? "" : null);
+          }}
         >
           <MdAdd />
           Nuevo tipo de contrato
         </button>
       </div>
+
+      {nuevoNombre !== null && (
+        <form className="contract-types-create" onSubmit={crearContrato}>
+          <label className="contract-types-create-field">
+            <span>Nombre del tipo de contrato</span>
+            <input
+              type="text"
+              maxLength={200}
+              autoFocus
+              value={nuevoNombre}
+              onChange={(event) => setNuevoNombre(event.target.value)}
+            />
+          </label>
+          <button type="submit" className="contract-types-new" disabled={creando || !nuevoNombre.trim()}>
+            <MdSave />
+            {creando ? "Guardando..." : "Guardar"}
+          </button>
+          <button type="button" className="contract-types-cancel" onClick={() => setNuevoNombre(null)}>
+            Cancelar
+          </button>
+          {errorNuevo && (
+            <p className="contract-types-error" role="alert">
+              {errorNuevo}
+            </p>
+          )}
+        </form>
+      )}
 
       <div className="contract-types-search">
         <MdSearch />

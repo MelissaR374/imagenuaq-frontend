@@ -151,6 +151,9 @@ export const listAreaMembers = (areaId) => request(`/areas/${areaId}/members`);
 
 export const listContractTypes = () => request("/contract-types");
 
+export const createContractType = (name) =>
+  request("/contract-types", { method: "POST", body: { name } });
+
 /**
  * El organigrama completo: { roots: [...] }, cada nodo con parentAreaId, leaders y children.
  */
