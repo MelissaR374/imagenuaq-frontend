@@ -857,6 +857,9 @@ export const createAbsence = (input) =>
 export const setAbsenceStatus = (id, input) =>
   request(`/absences/${id}/status`, { method: "POST", body: input });
 
+export const updateAbsence = (id, changes) =>
+  request(`/absences/${id}`, { method: "PATCH", body: changes });
+
 export const deleteAbsence = (id) =>
   request(`/absences/${id}`, { method: "DELETE" });
 

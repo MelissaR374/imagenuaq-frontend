@@ -36,6 +36,13 @@ const FILTERS = [
 
 const EMPTY_DRAFT = { userId: "", absenceTypeId: "", startsAt: "", endsAt: "", reason: "" };
 
+/** The local calendar day of a timestamp, as a date input wants it. */
+function dayOf(timestamp) {
+  const d = new Date(timestamp);
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
 /** @param {{ canDetail: boolean, canApprove: boolean, canWrite: boolean, canRequestOthers: boolean, userId: number }} props */
 function Absences({ canDetail, canApprove, canWrite, canRequestOthers, userId }) {
   const [absences, setAbsences] = useState(null);
@@ -47,6 +54,7 @@ function Absences({ canDetail, canApprove, canWrite, canRequestOthers, userId })
   const [version, setVersion] = useState(0);
 
   const [showCreate, setShowCreate] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [draft, setDraft] = useState(EMPTY_DRAFT);
   const [createError, setCreateError] = useState(null);
   const [createWarning, setCreateWarning] = useState(null);
@@ -97,7 +105,22 @@ function Absences({ canDetail, canApprove, canWrite, canRequestOthers, userId })
     return list.filter((a) => a.status === id).length;
   }
 
+  function openEdit(absence) {
+    setDraft({
+      userId: String(absence.userId),
+      absenceTypeId: String(absence.absenceTypeId),
+      startsAt: dayOf(absence.startsAt),
+      endsAt: dayOf(absence.endsAt),
+      reason: absence.reason ?? "",
+    });
+    setEditingId(absence.eventId);
+    setCreateError(null);
+    setCreateWarning(null);
+    setShowCreate(true);
+  }
+
   function openCreate() {
+    setEditingId(null);
     setDraft({ ...EMPTY_DRAFT, userId: String(userId) });
     setCreateError(null);
     setCreateWarning(null);
@@ -116,8 +139,17 @@ function Absences({ canDetail, canApprove, canWrite, canRequestOthers, userId })
         endsAt: `${draft.endsAt}T23:59:59`,
         reason: draft.reason,
       };
-      const res = await api.createAbsence(payload);
-      if (res.warning) setCreateWarning(res.warning);
+      if (editingId) {
+        await api.updateAbsence(editingId, {
+          absenceTypeId: payload.absenceTypeId,
+          startsAt: payload.startsAt,
+          endsAt: payload.endsAt,
+          reason: payload.reason,
+        });
+      } else {
+        const res = await api.createAbsence(payload);
+        if (res.warning) setCreateWarning(res.warning);
+      }
       setShowCreate(false);
       setDraft(EMPTY_DRAFT);
       setVersion((v) => v + 1);
@@ -296,6 +328,16 @@ function Absences({ canDetail, canApprove, canWrite, canRequestOthers, userId })
                       </button>
                     </>
                   )}
+                  {a.status === "requested" && canWrite && (a.userId === userId || canRequestOthers) && (
+                    <button
+                      className="absences-btn absences-btn-small"
+                      type="button"
+                      disabled={saving}
+                      onClick={() => openEdit(a)}
+                    >
+                      Editar
+                    </button>
+                  )}
                   {a.status === "requested" && a.userId === userId && (
                     <button
                       className="absences-btn absences-btn-small"
@@ -397,11 +439,11 @@ function Absences({ canDetail, canApprove, canWrite, canRequestOthers, userId })
       {showCreate && (
         <div className="absences-modal-backdrop" onClick={() => setShowCreate(false)}>
           <div className="absences-modal absences-modal-wide" onClick={(e) => e.stopPropagation()}>
-            <h3>Nueva ausencia</h3>
+            <h3>{editingId ? "Editar ausencia" : "Nueva ausencia"}</h3>
 
             {createError && <p className="absences-error">{createError}</p>}
 
-            {canRequestOthers && (
+            {canRequestOthers && !editingId && (
               <label className="absences-modal-field">
                 <span>Persona</span>
                 <select
@@ -466,7 +508,7 @@ function Absences({ canDetail, canApprove, canWrite, canRequestOthers, userId })
                 disabled={saving || !canSubmit}
                 onClick={submitCreate}
               >
-                Solicitar
+                {editingId ? "Guardar" : "Solicitar"}
               </button>
               <button className="absences-btn" type="button" disabled={saving} onClick={() => setShowCreate(false)}>
                 Cancelar
