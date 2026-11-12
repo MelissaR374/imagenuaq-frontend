@@ -1,5 +1,5 @@
 // Las pestañas del menú lateral y las reglas para mostrarlas:
-// - Las pestañas generales (Organigrama, Notificaciones) se muestran a cualquier usuario autenticado.
+// - Las pestañas generales (Inicio, Organigrama, Notificaciones) se muestran a cualquier usuario autenticado.
 // - Las pantallas operativas se gestionan dinámicamente mediante el catálogo de permisos por rol (RF-USR-02, RF-USR-05).
 // - Únicamente las funciones reservadas por seguridad a la coordinación (Empleados, Roles y permisos, Tipos de contrato) se restringen a admin.
 import {
@@ -26,12 +26,14 @@ import {
   MdEventBusy,
   MdPrint,
   MdPalette,
+  MdHome,
 } from "react-icons/md";
 
 export const menuSections = [
   {
     title: null,
     items: [
+      { label: "Inicio", icon: MdHome },
       { label: "Notificaciones", icon: MdNotificationsNone },
       { label: "Mis tareas", icon: MdCheckBox, permission: "task.read" },
       { label: "Calendario", icon: MdCalendarMonth, permission: "calendar.read" },
@@ -87,6 +89,48 @@ export const menuSections = [
     ],
   },
 ];
+
+/**
+ * Lo que es cada vista, en una frase declarativa: el encabezado nombra la pantalla y la
+ * sitúa en el proceso, sin instrucciones ni controles.
+ */
+export const descripciones = {
+  Inicio: "Por dónde empezar y qué hay en cada pestaña.",
+  Organigrama: "Las áreas de la coordinación y quién está en cada una.",
+  Notificaciones: "Lo que pasó en tus solicitudes, proyectos y etapas.",
+  "Mi perfil": "Tus datos de cuenta y tu foto.",
+  Empleados: "Las personas registradas y el rol de cada una.",
+  "Áreas y usuarios":
+    "El organigrama de la coordinación y quién está en cada área.",
+  "Roles y permisos": "Lo que puede hacer cada rol.",
+  "Tipos de contrato": "Configura los tipos de contrato y los beneficios que se asignan a los empleados.",
+  Ausencias: "Las ausencias del personal: permisos, incapacidades y días institucionales, con su estado de aprobación.",
+  "Tipos de ausencia": "El catálogo de tipos de ausencia y sus reglas: si consumen saldo, si requieren documento.",
+  "Formatos de solicitud":
+    "Los formatos de captura de datos para generar un proyecto.",
+  "Libros de Excel":
+    "Tus libros de Excel: conéctalos, indica qué columna es cada dato e importa las filas nuevas.",
+  "Bandeja de solicitudes":
+    "Solicitudes recibidas que todavía no son proyecto.",
+  Proyectos: "Los proyectos y el avance de sus etapas.",
+  "Catálogo de estatus":
+    "Los estatus con que se muestran solicitudes y proyectos, globales y por área.",
+  "Diseñador de flujos":
+    "Plantillas para definir como se va a tratar un proyecto, para agilizar la asignación de tareas",
+  Archivos: "Todas las carpetas de cada proyecto.",
+  "Retención de archivos": "Cuánto tiempo se conservan los archivos.",
+  "Mis tareas": "Las etapas de desarrollo de un proyecto a tu cargo",
+  "Por asignar": "Las etapas de tu área que todavía no tienen responsable",
+  Equipo: "Las etapas abiertas de cada persona del área y quién falta esta semana.",
+  "Panorama de áreas": "Lo que cada área tiene por asignar y la carga de su gente esta semana.",
+  Calendario: "Las etapas, ausencias y fechas institucionales del mes, y las ventanas de cierre de semestre.",
+  Cronograma: "Qué tan ocupada está cada área día por día, contando a quién le falta gente.",
+  Facturación: "Consulta los proyectos y da seguimiento a los documentos importantes",
+  Facturas: "Las facturas de todos los proyectos y su estado de trámite.",
+  Cotizaciones: "Las cotizaciones pendientes de revisión y su decisión.",
+  "Órdenes de impresión": "Las órdenes de trabajo para las máquinas de impresión.",
+  "Pantones y maquinas": "Catalogo de colores Pantone y maquinas de impresion.",
+};
 
 /** Las etiquetas del menú en el orden que dejó el usuario al arrastrarlas; se guarda en este navegador. */
 export function leerOrden() {

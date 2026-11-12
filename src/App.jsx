@@ -8,7 +8,8 @@ import { MdLightMode, MdDarkMode } from "react-icons/md";
 
 import Login from "./components/login/login.jsx";
 import Sidebar from "./components/sidebar/sidebar.jsx";
-import { canSee } from "./components/sidebar/menu.js";
+import { canSee, descripciones } from "./components/sidebar/menu.js";
+import Home from "./components/home/home.jsx";
 import Users from "./components/users/users.jsx";
 import Areas from "./components/areas/areas.jsx";
 import Roles from "./components/roles/roles.jsx";
@@ -44,49 +45,17 @@ import * as api from "./api/client.js";
 import { MICROSOFT_PARAM, SHARED_PARAM } from "./config.js";
 import "./App.css";
 
-/**
- * Lo que es cada vista, en una frase declarativa: el encabezado nombra la pantalla y la
- * sitúa en el proceso, sin instrucciones ni controles.
- */
-const DESCRIPCIONES = {
-  Organigrama: "Las áreas de la coordinación y quién está en cada una.",
-  Notificaciones: "Lo que pasó en tus solicitudes, proyectos y etapas.",
-  "Mi perfil": "Tus datos de cuenta y tu foto.",
-  Empleados: "Las personas registradas y el rol de cada una.",
-  "Áreas y usuarios":
-    "El organigrama de la coordinación y quién está en cada área.",
-  "Roles y permisos": "Lo que puede hacer cada rol.",
-  "Tipos de contrato": "Configura los tipos de contrato y los beneficios que se asignan a los empleados.",
-  Ausencias: "Las ausencias del personal: permisos, incapacidades y días institucionales, con su estado de aprobación.",
-  "Tipos de ausencia": "El catálogo de tipos de ausencia y sus reglas: si consumen saldo, si requieren documento.",
-  "Formatos de solicitud":
-    "Los formatos de captura de datos para generar un proyecto.",
-  "Libros de Excel":
-    "Tus libros de Excel: conéctalos, indica qué columna es cada dato e importa las filas nuevas.",
-  "Bandeja de solicitudes":
-    "Solicitudes recibidas que todavía no son proyecto.",
-  Proyectos: "Los proyectos y el avance de sus etapas.",
-  "Catálogo de estatus":
-    "Los estatus con que se muestran solicitudes y proyectos, globales y por área.",
-  "Diseñador de flujos":
-    "Plantillas para definir como se va a tratar un proyecto, para agilizar la asignación de tareas",
-  Archivos: "Todas las carpetas de cada proyecto.",
-  "Retención de archivos": "Cuánto tiempo se conservan los archivos.",
-  "Mis tareas": "Las etapas de desarrollo de un proyecto a tu cargo",
-  "Por asignar": "Las etapas de tu área que todavía no tienen responsable",
-  Equipo: "Las etapas abiertas de cada persona del área y quién falta esta semana.",
-  "Panorama de áreas": "Lo que cada área tiene por asignar y la carga de su gente esta semana.",
-  Calendario: "Las etapas, ausencias y fechas institucionales del mes, y las ventanas de cierre de semestre.",
-  Cronograma: "Qué tan ocupada está cada área día por día, contando a quién le falta gente.",
-  Facturación: "Consulta los proyectos y da seguimiento a los documentos importantes",
-  Facturas: "Las facturas de todos los proyectos y su estado de trámite.",
-  Cotizaciones: "Las cotizaciones pendientes de revisión y su decisión.",
-  "Órdenes de impresión": "Las órdenes de trabajo para las máquinas de impresión.",
-  "Pantones y maquinas": "Catalogo de colores Pantone y maquinas de impresion.",
-};
-
 /** El token de un enlace de solo lectura, si la página se abrió con uno. */
 const TOKEN_COMPARTIDO = new URLSearchParams(window.location.search).get(SHARED_PARAM);
+
+/** La última pestaña abierta en este navegador, para volver a ella al recargar. */
+function leerPestana() {
+  try {
+    return localStorage.getItem("pestana");
+  } catch {
+    return null;
+  }
+}
 
 /** El menú usa nombres de rol en español y el servidor los manda en inglés. */
 const ROLES = {
@@ -115,6 +84,7 @@ function App() {
 function Aplicacion() {
   const [usuario, setUsuario] = useState(null);
   const [permisos, setPermisos] = useState([]);
+  const [permisosListos, setPermisosListos] = useState(false);
 
   const [refrescoNotificaciones, setRefrescoNotificaciones] = useState(0);
 
@@ -125,8 +95,17 @@ function Aplicacion() {
   const [pestana, setPestana] = useState(() =>
     new URLSearchParams(window.location.search).has(MICROSOFT_PARAM)
       ? "Libros de Excel"
-      : null,
+      : leerPestana(),
   );
+
+  useEffect(() => {
+    if (!pestana) return;
+    try {
+      localStorage.setItem("pestana", pestana);
+    } catch {
+      return;
+    }
+  }, [pestana]);
   const [proyectoPorAbrir, setProyectoPorAbrir] = useState(null);
   
   const [pestanaProyectoPorAbrir, setPestanaProyectoPorAbrir] =
@@ -178,7 +157,10 @@ function Aplicacion() {
       .then((data) => {
         if (!cancelado) setPermisos(data.permissions ?? []);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelado) setPermisosListos(true);
+      });
 
     api
       .getPicture(usuarioId)
@@ -204,7 +186,14 @@ function Aplicacion() {
     api.clearToken();
     cambiarFoto(null);
     setUsuario(null);
+    setPermisos([]);
+    setPermisosListos(false);
     setPestana(null);
+    try {
+      localStorage.removeItem("pestana");
+    } catch {
+      return;
+    }
   }
 
   if (verificando) return <p className="app-booting">Cargando...</p>;
@@ -212,7 +201,7 @@ function Aplicacion() {
 
   const rol = ROLES[usuario.role] ?? "trabajador";
   const activa =
-    pestana ?? (usuario.role === "admin" ? "Empleados" : "Notificaciones");
+    pestana && (!permisosListos || canSee(pestana, rol, permisos)) ? pestana : "Inicio";
 
   const puedeAbrirProyectos = canSee("Proyectos", rol, permisos);
 
@@ -254,8 +243,8 @@ function Aplicacion() {
         <header className="main-header">
           <div className="main-header-text">
             <h1 className="main-title">{activa}</h1>
-            {DESCRIPCIONES[activa] ? (
-              <p className="main-description">{DESCRIPCIONES[activa]}</p>
+            {descripciones[activa] ? (
+              <p className="main-description">{descripciones[activa]}</p>
             ) : null}
           </div>
 
@@ -275,7 +264,9 @@ function Aplicacion() {
           </div>
         </header>
 
-        {!canSee(activa, rol, permisos) ? null : activa === "Organigrama" ? (
+        {!permisosListos || !canSee(activa, rol, permisos) ? null : activa === "Inicio" ? (
+          <Home user={usuario} role={rol} permissions={permisos} onNavigate={setPestana} />
+        ) : activa === "Organigrama" ? (
           <OrgChart />
         ) : activa === "Notificaciones" ? (
           <Notifications onUnreadChange={actualizarContadorNotificaciones} />
