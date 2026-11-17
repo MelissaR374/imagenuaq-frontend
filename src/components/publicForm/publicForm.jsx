@@ -6,12 +6,8 @@ import { useEffect, useState } from "react";
 import * as api from "../../api/client.js";
 import FieldInput from "../shared/fieldInput.jsx";
 import { themeClass } from "../shared/theme.js";
+import { GENERAL_BLOCK, SECTIONS } from "../shared/vocabulary.js";
 import "./publicForm.css";
-
-const SECTIONS = [
-  { key: "deliverables", title: "Lo que necesitas" },
-  { key: "information", title: "Información adicional" },
-];
 
 /** @param {{ token: string }} props */
 function PublicForm({ token }) {
@@ -99,7 +95,7 @@ function PublicForm({ token }) {
             <section className="public-form-sec">
               <label className="public-form-field">
                 <span className="public-form-label">
-                  Nombre de la solicitud <span className="field-required">*</span>
+                  {GENERAL_BLOCK.fields[0].publicName} <span className="field-required">*</span>
                 </span>
                 <input
                   className="field-control"
@@ -111,7 +107,7 @@ function PublicForm({ token }) {
               </label>
               <label className="public-form-field">
                 <span className="public-form-label">
-                  Dependencia que solicita <span className="field-required">*</span>
+                  {GENERAL_BLOCK.fields[1].publicName} <span className="field-required">*</span>
                 </span>
                 <input
                   className="field-control"
@@ -126,7 +122,7 @@ function PublicForm({ token }) {
             {SECTIONS.map((section) =>
               form.fields[section.key].length === 0 ? null : (
                 <section className="public-form-sec" key={section.key}>
-                  <h2>{section.title}</h2>
+                  <h2>{section.publicTitle}</h2>
                   {form.fields[section.key].map((field) => (
                     <FieldInput
                       key={field.code}

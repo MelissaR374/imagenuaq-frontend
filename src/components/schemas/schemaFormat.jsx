@@ -779,13 +779,12 @@ function SchemaFormat({ format, formats, types, vocabulary, onChanged, onClose }
           <section className="format-sec format-preview">
             <h3>Lo que ve el solicitante</h3>
             <div className="format-preview-sec">
-              <h4>{GENERAL_BLOCK.title}</h4>
               <div className="format-grid">
                 {GENERAL_BLOCK.fields
                   .filter((general) => !general.internal)
                   .map((general) => (
                     <label className="format-field" key={general.name}>
-                      <span className="format-label">{general.name}</span>
+                      <span className="format-label">{general.publicName}</span>
                       <input disabled />
                     </label>
                   ))}
@@ -795,10 +794,7 @@ function SchemaFormat({ format, formats, types, vocabulary, onChanged, onClose }
               const shown = fields[section.key].filter((field) => field.internal !== true);
               return shown.length === 0 ? null : (
                 <div className="format-preview-sec" key={section.key}>
-                  <h4>
-                    {section.title}
-                    <span className="format-sub">{section.help}</span>
-                  </h4>
+                  <h4>{section.publicTitle}</h4>
                   <div className="format-grid">
                     {shown.map((field, index) => (
                       <PreviewField field={field} index={index} key={index} />
