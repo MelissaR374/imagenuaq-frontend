@@ -25,6 +25,7 @@ import FieldInput from "../shared/fieldInput.jsx";
 import FlowDesigner from "../FlowDesigner/FlowDesigner.jsx";
 import Help from "../shared/help.jsx";
 import RequesterInput from "./requesterInput.jsx";
+import { saveBlob } from "../shared/download.js";
 import "./requestDetail.css";
 
 /**
@@ -269,6 +270,33 @@ function ConversionForm({ data, flow, busy, onChange, onSubmit, onCancel }) {
         </button>
       </div>
     </form>
+  );
+}
+
+/**
+ * A `document` field whose value is a stored file id, as the forms leave it. It shows a download
+ * button instead of a text box holding a number.
+ */
+function StoredFile({ field, fileId }) {
+  const [error, setError] = useState(null);
+
+  async function download() {
+    setError(null);
+    try {
+      saveBlob(await api.downloadFile(fileId), field.name);
+    } catch (failure) {
+      setError(failure.message);
+    }
+  }
+
+  return (
+    <div className="request-detail-field">
+      <span className="request-detail-label">{field.name}</span>
+      <button className="request-detail-quiet" type="button" onClick={download}>
+        Descargar el archivo
+      </button>
+      {error !== null ? <p className="request-detail-note">{error}</p> : null}
+    </div>
   );
 }
 
@@ -705,6 +733,8 @@ function RequestDetail({ request, areas, onClose, onChanged }) {
                       {readable(draft.data[field.code])}
                     </p>
                   </div>
+                ) : field.type === "document" && /^\d+$/.test(String(draft.data[field.code] ?? "")) ? (
+                  <StoredFile key={field.code} field={field} fileId={draft.data[field.code]} />
                 ) : (
                   <div className={mark(field.code, "request-detail-typed")} key={field.code}>
                     <FieldInput

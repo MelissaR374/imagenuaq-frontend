@@ -5,6 +5,7 @@
 // The format comes first because it decides the rest of the form: the fields are drawn from the
 // chosen format, so this screen knows nothing about them. The server converts the values by each
 // field's type, so "1,000" and "15/03/2026" arrive right without anything here touching them.
+// Files go after the request exists, one upload per `document` field, into the request's folder.
 import { useEffect, useState } from "react";
 
 import * as api from "../../api/client.js";
@@ -62,16 +63,24 @@ function RequestForm({ areas, onCreada, onCancelar }) {
     setGuardando(true);
     setError(null);
 
+    const files = Object.entries(values).filter(([, value]) => value instanceof File);
+    const data = Object.fromEntries(
+      Object.entries(values).filter(([, value]) => !(value instanceof File)),
+    );
+
     try {
-      const { request } = await api.createRequest({
+      let { request } = await api.createRequest({
         schemaId: Number(formatId),
         title: header.title,
         requester: header.requester || undefined,
         areaId: header.areaId === "" ? undefined : Number(header.areaId),
         priority: Number(header.priority),
         source: header.source,
-        data: values,
+        data,
       });
+      for (const [code, file] of files) {
+        ({ request } = await api.uploadRequestFile(request.id, code, file));
+      }
       onCreada(request);
     } catch (failure) {
       setError(failure.message);
@@ -191,6 +200,7 @@ function RequestForm({ areas, onCreada, onCancelar }) {
                 field={field}
                 value={values[field.code]}
                 onChange={(value) => setValores({ ...values, [field.code]: value })}
+                archivos
               />
             ))}
           </div>
