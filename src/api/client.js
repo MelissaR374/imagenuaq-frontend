@@ -154,6 +154,10 @@ export const listContractTypes = () => request("/contract-types");
 export const createContractType = (name) =>
   request("/contract-types", { method: "POST", body: { name } });
 
+/** Desactiva un tipo de contrato: sale de la lista, y quien ya lo tiene lo conserva. */
+export const deleteContractType = (id) =>
+  request(`/contract-types/${id}`, { method: "DELETE" });
+
 /**
  * El organigrama completo: { roots: [...] }, cada nodo con parentAreaId, leaders y children.
  */

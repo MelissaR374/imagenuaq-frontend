@@ -41,7 +41,6 @@ function ContractTypes() {
   const [mensaje, setMensaje] = useState("");
 
   const [confirmandoEliminar, setConfirmandoEliminar] = useState(false);
-  const [eliminados, setEliminados] = useState([]);
 
   const [nuevoNombre, setNuevoNombre] = useState(null);
   const [creando, setCreando] = useState(false);
@@ -76,9 +75,9 @@ function ContractTypes() {
 
     return contratos.filter(
       (contrato) =>
-        !eliminados.includes(contrato.id) && contrato.name.toLowerCase().includes(texto),
+        contrato.name.toLowerCase().includes(texto),
     );
-  }, [contratos, busqueda, eliminados]);
+  }, [contratos, busqueda]);
 
   async function crearContrato(event) {
     event.preventDefault();
@@ -141,13 +140,21 @@ function ContractTypes() {
     setMensaje("");
   }
 
-  /** Quita el contrato de la lista visible. shortcut: solo en cliente, conectar DELETE cuando exista. */
-  function eliminarContrato() {
+  /** Desactiva el contrato en el servidor y lo quita de la lista. */
+  async function eliminarContrato() {
     if (!form) return;
 
-    setEliminados((actual) => [...actual, form.id]);
-    setConfirmandoEliminar(false);
-    cerrarEditor();
+    setGuardando(true);
+    try {
+      await api.deleteContractType(form.id);
+      setContratos((actual) => actual.filter((contrato) => contrato.id !== form.id));
+      setConfirmandoEliminar(false);
+      cerrarEditor();
+    } catch (err) {
+      setMensaje(err.message || "No se pudo eliminar el tipo de contrato.");
+    } finally {
+      setGuardando(false);
+    }
   }
 
   async function guardarCambios(event) {
@@ -589,6 +596,7 @@ function ContractTypes() {
                                   <button
                                     type="button"
                                     className="contract-types-delete-confirm-button"
+                                    disabled={guardando}
                                     onClick={eliminarContrato}
                                   >
                                     Confirmar
