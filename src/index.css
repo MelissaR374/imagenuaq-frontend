@@ -157,6 +157,25 @@ textarea {
   font-family: "Poppins", sans-serif;
 }
 
+/* El botón nativo de <input type="file"> («Seleccionar archivo») con el aspecto de los botones de la app. */
+input[type="file"]::file-selector-button {
+  height: 28px;
+  margin-right: 8px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--size-small);
+  cursor: pointer;
+}
+
+input[type="file"]::file-selector-button:hover {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+
 
 /* =========================================================
    SCROLLBAR
