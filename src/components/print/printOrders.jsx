@@ -275,7 +275,7 @@ function PrintOrders({ canWrite, canCreate }) {
                   </button>
                   {canWrite && o.status === "pending" ? (
                     <>
-                      <button className="po-btn po-btn-small" onClick={() => changeStatus(o.id, "in_progress")}>
+                      <button className="po-btn po-btn-small po-btn-primary" onClick={() => changeStatus(o.id, "in_progress")}>
                         Iniciar
                       </button>
                       <button className="po-btn po-btn-small" onClick={() => changeStatus(o.id, "cancelled")}>
