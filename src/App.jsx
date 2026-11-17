@@ -355,6 +355,7 @@ function Aplicacion() {
           <FinanceProviders
             canCreate={permisos.includes("finance.write") || permisos.includes("project.write")}
             canManage={permisos.includes("finance.write")}
+          />
         ) : activa === "Vehículos" ? (
           <VehicleBookings
             isAdmin={usuario.role === "admin"}
