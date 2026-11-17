@@ -2,7 +2,8 @@
 // their areas', or, for coordination, everyone's, drawn by FullCalendar so an event of several days is
 // one bar. Stages and absences are drawn as the server keeps them; notes are post-its anyone sticks on
 // a day; global events and closure windows are written by whoever holds `calendar.write`, by form or by
-// dragging them to another day.
+// dragging them to another day. Vehicle bookings (RF-CAL-04) are made in «Vehículos». Here whoever
+// booked one opens or drags it.
 import { useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { MdPrint } from "react-icons/md";
@@ -16,6 +17,7 @@ import Closures from "./closures.jsx";
 import EventContent from "./eventContent.jsx";
 import GlobalEventForm from "./globalEventForm.jsx";
 import NoteForm from "./noteForm.jsx";
+import VehicleBookingForm from "../vehicles/vehicleBookingForm.jsx";
 import { LAYERS, addDays, daysApart, isoDay } from "./calendarText.js";
 import "./calendar.css";
 
@@ -26,7 +28,7 @@ const DAY_LIMIT = 6;
 const SHOW_ALL_KEY = "imagenuaq.calendar.showAll";
 
 /** The order bars stack in within a day: the frame of the day first, people's work last. */
-const KIND_ORDER = { closure: 0, global: 1, other: 1, due: 2, note: 3, absence: 4, stage: 5 };
+const KIND_ORDER = { closure: 0, global: 1, other: 1, due: 2, note: 3, vehicle: 4, absence: 5, stage: 6 };
 
 /** One server event as a FullCalendar event; all-day ends are already the next midnight. */
 function toCalendarEvent(event, canWrite) {
@@ -38,7 +40,7 @@ function toCalendarEvent(event, canWrite) {
     id: `${event.kind}-${event.id}-${event.userId ?? ""}-${event.startsAt}`,
     ...range,
     title: event.title,
-    editable: kind === "note" ? event.editable : canWrite && event.editable,
+    editable: kind === "note" || kind === "vehicle" ? event.editable : canWrite && event.editable,
     classNames: [
       "calendar-ev",
       `is-${kind}`,
@@ -77,6 +79,7 @@ function Calendar({ isAdmin, canWrite, onOpenProject = null }) {
   const [editing, setEditing] = useState(null);
   const [noteDraft, setNoteDraft] = useState(null);
   const [showClosures, setShowClosures] = useState(false);
+  const [booking, setBooking] = useState(null);
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState(null);
 
@@ -155,6 +158,7 @@ function Calendar({ isAdmin, canWrite, onOpenProject = null }) {
   function closeForms() {
     setEditing(null);
     setNoteDraft(null);
+    setBooking(null);
     setFormError(null);
   }
 
@@ -186,6 +190,12 @@ function Calendar({ isAdmin, canWrite, onOpenProject = null }) {
         api.updateClosure(closure.id, { startsOn: addDays(closure.startsOn, offset), endsOn: addDays(closure.endsOn, offset) });
     } else if (item.kind === "note") {
       action = () => api.updateNote(item.event.id, { day: isoDay(info.event.start) });
+    } else if (item.kind === "vehicle") {
+      action = () =>
+        api.updateVehicleBooking(item.event.bookingId, {
+          startsAt: info.event.start.toISOString(),
+          endsAt: info.event.end.toISOString(),
+        });
     } else {
       const shift = (value) => {
         const date = new Date(value);
@@ -208,6 +218,20 @@ function Calendar({ isAdmin, canWrite, onOpenProject = null }) {
       if (onOpenProject !== null) onOpenProject(item.event.projectId);
     } else if (item.kind === "closure") {
       if (canWrite) setShowClosures(true);
+    } else if (item.kind === "vehicle") {
+      if (item.event.editable) {
+        const { event } = item;
+        setBooking({
+          id: event.bookingId,
+          vehicleId: event.vehicleId,
+          kind: event.bookingKind,
+          destination: event.destination,
+          projectId: event.projectId,
+          notes: event.notes,
+          startsAt: event.startsAt,
+          endsAt: event.endsAt,
+        });
+      }
     } else if (item.kind === "note") {
       if (item.event.editable) {
         setNoteDraft({
@@ -259,7 +283,7 @@ function Calendar({ isAdmin, canWrite, onOpenProject = null }) {
     isAdmin ? { value: "all", label: "Todas las áreas" } : { value: "area", label: "Mis áreas" },
   ];
   const peopleOptions = [...people].sort((a, b) => a[1].localeCompare(b[1]));
-  const formOpen = editing !== null || noteDraft !== null;
+  const formOpen = editing !== null || noteDraft !== null || booking !== null;
 
   return (
     <div className="calendar">
@@ -375,7 +399,17 @@ function Calendar({ isAdmin, canWrite, onOpenProject = null }) {
       {formOpen ? (
         <div className="calendar-overlay" role="presentation" onClick={closeForms}>
           <div className="calendar-dialog" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
-            {noteDraft !== null ? (
+            {booking !== null ? (
+              <VehicleBookingForm
+                booking={booking}
+                busy={busy}
+                error={formError}
+                onSave={(body) => write(() => api.updateVehicleBooking(booking.id, body), true)}
+                onDelete={() => write(() => api.deleteVehicleBooking(booking.id), true)}
+                onCancel={closeForms}
+                key={booking.id}
+              />
+            ) : noteDraft !== null ? (
               <NoteForm
                 note={noteDraft}
                 areas={isAdmin ? areas.all : areas.mine}
