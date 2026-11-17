@@ -273,6 +273,55 @@ export const updateSchema = (id, changes) =>
 
 export const deleteSchema = (id) => request(`/schemas/${id}`, { method: "DELETE" });
 
+/** Los enlaces públicos vigentes de un formato. */
+export const listFormLinks = (id) => request(`/schemas/${id}/links`);
+
+/** Un enlace público, con libro opcional. Su token sólo viene en esta respuesta. */
+export const createFormLink = (id, sheetId = null) =>
+  request(`/schemas/${id}/links`, { method: "POST", body: { sheetId } });
+
+export const revokeFormLink = (id, linkId) =>
+  request(`/schemas/${id}/links/${linkId}`, { method: "DELETE" });
+
+/** El formato detrás de un enlace público: nombre y campos. Sin sesión. */
+export const getPublicForm = (token) =>
+  request(`/forms/${encodeURIComponent(token)}`, { auth: false });
+
+/** Una respuesta al formulario. Devuelve `{ folio, uploadKey }`. Sin sesión. */
+export const submitPublicForm = (token, input) =>
+  request(`/forms/${encodeURIComponent(token)}`, { method: "POST", body: input, auth: false });
+
+/** Termina la respuesta: el servidor escribe su fila en el Excel. Sin sesión. */
+export const finishPublicForm = (token, key) =>
+  request(`/forms/${encodeURIComponent(token)}/finish`, { method: "POST", body: { key }, auth: false });
+
+/** Sube el archivo de un campo `document` de una respuesta recién enviada. Sin sesión. */
+export async function uploadPublicFile(token, key, field, file) {
+  const query = new URLSearchParams({ key, field, name: file.name });
+  const response = await fetch(`${API_URL}/forms/${encodeURIComponent(token)}/files?${query}`, {
+    method: "POST",
+    headers: { "Content-Type": file.type || "application/octet-stream" },
+    body: file,
+  });
+  if (!response.ok) throw await toError(response);
+  return response.json();
+}
+
+/** Sube el archivo de un campo `document` de una solicitud a su carpeta. */
+export async function uploadRequestFile(requestId, field, file) {
+  const query = new URLSearchParams({ field, name: file.name });
+  const response = await fetch(`${API_URL}/requests/${requestId}/files?${query}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${getToken()}`,
+      "Content-Type": file.type || "application/octet-stream",
+    },
+    body: file,
+  });
+  if (!response.ok) throw await toError(response);
+  return response.json();
+}
+
 /**
  * El vocabulario de claves: cada clave publicada alguna vez, con su definición más reciente y
  * en qué formatos vive. Una clave significa una sola cosa en todo el sistema, así que el

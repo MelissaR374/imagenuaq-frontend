@@ -2,7 +2,8 @@
 //
 // La sesión se recupera preguntándole al servidor con GET /api/auth/me, no leyendo el
 // token: el token sigue pareciendo válido durante siete días aunque la cuenta ya no exista.
-// Un enlace de solo lectura (?shared=) muestra su carpeta sin pedir sesión.
+// Un enlace de solo lectura (?shared=) muestra su carpeta sin pedir sesión, y el de un formulario
+// público (?form=) lo deja llenar igual.
 import { useEffect, useState } from "react";
 import { MdLightMode, MdDarkMode } from "react-icons/md";
 
@@ -23,6 +24,7 @@ import StatusCatalog from "./components/statusCatalog/statusCatalog.jsx";
 import Documents from "./components/documents/documents.jsx";
 import Retention from "./components/documents/retention.jsx";
 import SharedFolder from "./components/documents/sharedFolder.jsx";
+import PublicForm from "./components/publicForm/publicForm.jsx";
 import MyTasks from "./components/tasks/myTasks.jsx";
 import Unassigned from "./components/tasks/unassigned.jsx";
 import Team from "./components/tasks/team.jsx";
@@ -40,11 +42,14 @@ import Pantones from "./components/print/pantones.jsx";
 
 
 import * as api from "./api/client.js";
-import { MICROSOFT_PARAM, SHARED_PARAM } from "./config.js";
+import { FORM_PARAM, MICROSOFT_PARAM, SHARED_PARAM } from "./config.js";
 import "./App.css";
 
 /** El token de un enlace de solo lectura, si la página se abrió con uno. */
 const TOKEN_COMPARTIDO = new URLSearchParams(window.location.search).get(SHARED_PARAM);
+
+/** El token de un formulario público, si la página se abrió con uno. */
+const TOKEN_FORMULARIO = new URLSearchParams(window.location.search).get(FORM_PARAM);
 
 /** La última pestaña abierta en este navegador, para volver a ella al recargar. */
 function leerPestana() {
@@ -76,6 +81,7 @@ function reemplazarFoto(blob) {
 
 function App() {
   if (TOKEN_COMPARTIDO) return <SharedFolder token={TOKEN_COMPARTIDO} />;
+  if (TOKEN_FORMULARIO) return <PublicForm token={TOKEN_FORMULARIO} />;
   return <Aplicacion />;
 }
 

@@ -59,3 +59,17 @@ export const SHARED_PARAM = "shared";
 export function sharedLink(token) {
   return `${FRONTEND_DOMAIN}/?${SHARED_PARAM}=${encodeURIComponent(token)}`;
 }
+
+/** Nombre del parámetro donde viaja el token de un formulario público. */
+export const FORM_PARAM = "form";
+
+/**
+ * El enlace al formulario público de un formato, el que sustituye al de Microsoft Forms. Lo abre
+ * esta misma aplicación sin pedir sesión, en components/publicForm/publicForm.jsx.
+ *
+ * @param {string} token
+ * @returns {string}
+ */
+export function formLink(token) {
+  return `${FRONTEND_DOMAIN}/?${FORM_PARAM}=${encodeURIComponent(token)}`;
+}
