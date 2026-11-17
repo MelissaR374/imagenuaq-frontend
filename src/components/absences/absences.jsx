@@ -366,7 +366,7 @@ function Absences({ canDetail, canApprove, canWrite, canRequestOthers, userId })
             <h3>Aprobar ausencia</h3>
 
             <label className="absences-modal-field">
-              <span>Oficio aprovado</span>
+              <span>Oficio aprobado</span>
               <input
                 type="file"
                 onChange={(e) => setApproveForm({ ...approveForm, file: e.target.files[0] || null, confirmNoDoc: false })}
