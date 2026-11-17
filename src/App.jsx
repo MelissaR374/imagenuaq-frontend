@@ -28,6 +28,7 @@ import Unassigned from "./components/tasks/unassigned.jsx";
 import Team from "./components/tasks/team.jsx";
 import Overview from "./components/tasks/overview.jsx";
 import Calendar from "./components/calendar/calendar.jsx";
+import VehicleBookings from "./components/vehicles/vehicleBookings.jsx";
 import Timeline from "./components/timeline/timeline.jsx";
 import OrgChart from "./components/orgChart/orgChart.jsx";
 import Billing from "./components/billing/billing.jsx";
@@ -349,6 +350,13 @@ function Aplicacion() {
           />
         ) : activa === "Cotizaciones" ? (
           <FinanceQuotes onOpenProject={puedeAbrirProyectos ? abrirProyecto : null} />
+        ) : activa === "Vehículos" ? (
+          <VehicleBookings
+            isAdmin={usuario.role === "admin"}
+            userId={usuario.id}
+            canBook={usuario.role === "admin" || permisos.includes("vehicle.book")}
+            canManage={usuario.role === "admin" || permisos.includes("vehicle.manage")}
+          />
         ) : activa === "Calendario" ? (
           <Calendar
             isAdmin={usuario.role === "admin"}
