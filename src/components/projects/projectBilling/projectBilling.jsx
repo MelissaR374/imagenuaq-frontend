@@ -18,6 +18,7 @@ import {
 
 import * as api from "../../../api/client.js";
 import { orDash, shortDate } from "../../shared/format.js";
+import { FLAG_LABELS } from "../../billing/financeFlags.js";
 import { saveBlob } from "../../shared/download.js";
 import { zip } from "../../shared/zip.js";
 import FilePreview from "../../documents/filePreview.jsx";
@@ -525,7 +526,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
         <div className="project-billing-flags">
           {data.flags.map((flag) => (
             <span key={flag} className="project-billing-flag">
-              <MdWarningAmber /> {flag.replaceAll("_", " ")}
+              <MdWarningAmber /> {FLAG_LABELS[flag] ?? flag}
             </span>
           ))}
         </div>

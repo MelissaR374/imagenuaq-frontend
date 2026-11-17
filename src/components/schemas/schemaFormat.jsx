@@ -774,12 +774,12 @@ function SchemaFormat({ format, formats, types, vocabulary, onChanged, onClose }
               : isNew
                 ? "Crear formato"
                 : `Publicar versión ${next}`}
-            {isNew ? null : (
-              <Help
-                text={`Crea la versión ${next} con estos campos. La ${format.version} queda intacta, porque lo capturado con ella se sigue leyendo como se capturó.`}
-              />
-            )}
           </button>
+          {isNew ? null : (
+            <Help
+              text={`Crea la versión ${next} con estos campos. La ${format.version} queda intacta, porque lo capturado con ella se sigue leyendo como se capturó.`}
+            />
+          )}
         </div>
       </footer>
     </section>

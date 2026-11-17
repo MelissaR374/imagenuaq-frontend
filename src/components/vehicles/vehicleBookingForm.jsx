@@ -39,6 +39,7 @@ function VehicleBookingForm({ booking, day = null, busy, error, onSave, onDelete
   const [vehicles, setVehicles] = useState([]);
   const [projects, setProjects] = useState([]);
   const [projectQuery, setProjectQuery] = useState(null);
+  const [projectError, setProjectError] = useState("");
   const [projectOpen, setProjectOpen] = useState(false);
   const [active, setActive] = useState(0);
 
@@ -67,6 +68,10 @@ function VehicleBookingForm({ booking, day = null, busy, error, onSave, onDelete
 
   function submit(formEvent) {
     formEvent.preventDefault();
+    if ((projectQuery ?? "").trim() !== "") {
+      setProjectError("Elige el proyecto de la lista o borra el texto.");
+      return;
+    }
     onSave({
       vehicleId: Number(fields.vehicleId),
       kind: fields.kind,
@@ -85,11 +90,21 @@ function VehicleBookingForm({ booking, day = null, busy, error, onSave, onDelete
     setProjectOpen(false);
   }
 
-  /** Leaving the search keeps the chosen project. Emptying the text clears it. */
+  /**
+   * Leaving the search keeps the chosen project, and emptying the text clears it. Text that names
+   * exactly one project picks it. Any other text with nothing chosen stays, so saving can flag it.
+   */
   function leaveProject() {
+    const typed = (projectQuery ?? "").trim().toLowerCase();
+    const exact = projects.find((project) => (project.key ?? "").toLowerCase() === typed);
+    if (typed !== "" && (exact || matches.length === 1)) {
+      pickProject(exact ?? matches[0]);
+      return;
+    }
+    setProjectOpen(false);
+    if (typed !== "" && fields.projectId === "") return;
     if (projectQuery === "") write("projectId", "");
     setProjectQuery(null);
-    setProjectOpen(false);
   }
 
   /** Arrows move through the matches, Enter picks one, Escape closes the list. */
@@ -189,6 +204,7 @@ function VehicleBookingForm({ booking, day = null, busy, error, onSave, onDelete
             value={projectQuery ?? selectedLabel}
             onChange={(e) => {
               setProjectQuery(e.target.value);
+              setProjectError("");
               setProjectOpen(true);
               setActive(0);
             }}
@@ -230,6 +246,11 @@ function VehicleBookingForm({ booking, day = null, busy, error, onSave, onDelete
               ))
             )}
           </ul>
+        ) : null}
+        {projectError ? (
+          <p className="calendar-error" role="alert">
+            {projectError}
+          </p>
         ) : null}
       </div>
 

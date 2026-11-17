@@ -598,10 +598,12 @@ function StagePanel({
         ) : null}
 
         {stage.status === "active" && !waiting && signing === null ? (
-          <button className="project-btn" type="button" onClick={() => setWaiting(true)} disabled={busy}>
-            Poner en espera
+          <>
+            <button className="project-btn" type="button" onClick={() => setWaiting(true)} disabled={busy}>
+              Poner en espera
+            </button>
             <Help text="Para cuando lo que falta no está en nuestras manos: un visto bueno de la entidad, material de un proveedor, un anticipo." />
-          </button>
+          </>
         ) : null}
 
         {OPEN_STATES.includes(stage.status) && !waiting && signing === null ? (

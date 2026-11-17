@@ -56,8 +56,24 @@ function ContractTypes() {
           api.listContractTypes(),
           api.listAbsenceTypes().catch(() => ({ types: [] })),
         ]);
+        const lista = ctRes.contractTypes ?? [];
+        const derechos = await Promise.all(
+          lista.map((contrato) => api.listEntitlements(contrato.id).catch(() => ({ entitlements: [] }))),
+        );
         if (cancelado) return;
-        setContratos(ctRes.contractTypes ?? []);
+        const cargadas = {};
+        lista.forEach((contrato, indice) => {
+          const vigentes = (derechos[indice].entitlements ?? []).filter((e) => !e.validTo);
+          const vac = vigentes.find((e) => e.absenceTypeCode === "vacaciones");
+          const inc = vigentes.find((e) => e.absenceTypeCode === "incapacidad");
+          cargadas[contrato.id] = {
+            ...crearConfiguracion(contrato),
+            ...(vac ? { vacationDays: vac.amount } : {}),
+            ...(inc ? { sickDays: inc.amount } : {}),
+          };
+        });
+        setContratos(lista);
+        setConfiguraciones(cargadas);
         setAbsenceTypes(atRes.types ?? []);
         setError("");
       } catch (err) {

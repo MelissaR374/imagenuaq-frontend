@@ -1,21 +1,13 @@
 // Finance project table: one row per project with counts and flags from shapeStanding.
 import { MdAdd, MdWarningAmber } from "react-icons/md";
 
+import { FLAG_LABELS } from "./financeFlags.js";
+
 const MXN = new Intl.NumberFormat("es-MX", {
   style: "currency",
   currency: "MXN",
   maximumFractionDigits: 0,
 });
-
-const FLAG_LABELS = {
-  missing_invoices: "Faltan facturas",
-  costed_no_quote: "Sin cotización",
-  delivered_no_invoice: "Entregado sin factura",
-  invoice_not_in_oficio: "Factura sin oficio",
-  oficio_unanswered: "Oficio sin respuesta",
-  payment_no_folio: "Pago sin folio",
-  no_finance_records: "Sin registros",
-};
 
 function BillingTable({ records = [], totalCount, loading, onOpenRecord }) {
   const knownTotal = records.reduce((sum, p) => sum + Number(p.invoiced ?? 0), 0);

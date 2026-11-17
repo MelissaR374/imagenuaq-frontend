@@ -879,7 +879,10 @@ function FolderBrowser({ root, canShare = false }) {
               className="drive-dialog-input"
               value={naming.value}
               onChange={(event) => setNaming({ ...naming, value: event.target.value })}
-              onFocus={(event) => event.target.select()}
+              onFocus={(event) => {
+                const dot = event.target.value.lastIndexOf(".");
+                event.target.setSelectionRange(0, dot > 0 ? dot : event.target.value.length);
+              }}
               maxLength={255}
               aria-label="Nombre"
               autoFocus
