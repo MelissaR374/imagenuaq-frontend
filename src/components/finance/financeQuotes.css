@@ -12,7 +12,7 @@
 
 .finance-quotes-page *, .finance-quotes-page *::before, .finance-quotes-page *::after { box-sizing: border-box; }
 
-.finance-quotes-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
+.finance-quotes-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
 .finance-quotes-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; margin-bottom: 18px; }
 
 .finance-quotes-search {
@@ -46,12 +46,11 @@
 
 .finance-quotes-table { width: 100%; min-width: 700px; border-collapse: collapse; table-layout: fixed; }
 .finance-quotes-table th { padding: 11px 10px; background: var(--surface-secondary); color: var(--text-muted); font-size: var(--size-caps); font-weight: 600; text-align: left; }
-.finance-quotes-table th:nth-child(1) { width: 26%; }
-.finance-quotes-table th:nth-child(2) { width: 22%; }
+.finance-quotes-table th:nth-child(1) { width: 34%; }
+.finance-quotes-table th:nth-child(2) { width: 30%; }
 .finance-quotes-table th:nth-child(3) { width: 14%; }
 .finance-quotes-table th:nth-child(4) { width: 14%; }
-.finance-quotes-table th:nth-child(5) { width: 12%; }
-.finance-quotes-table th:nth-child(6) { width: 12%; }
+.finance-quotes-table th:nth-child(5) { width: 8%; }
 .finance-quotes-table td { padding: 13px 10px; border-bottom: 1px solid var(--border-light); vertical-align: middle; color: var(--text-secondary); font-size: var(--size-small); }
 .finance-quotes-table tbody tr:hover { background: var(--surface-secondary); }
 
@@ -113,7 +112,6 @@
 
 .finance-quotes-page button:focus-visible, .finance-quotes-page input:focus-visible, .finance-quotes-page textarea:focus-visible { outline: 2px solid var(--accent-line); outline-offset: 2px; }
 
-@media (max-width: 1100px) { .finance-quotes-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 600px) {
   .finance-quotes-stats { grid-template-columns: 1fr; gap: 10px; }
   .finance-quotes-toolbar { flex-direction: column; align-items: stretch; }

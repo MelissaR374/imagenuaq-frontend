@@ -124,7 +124,7 @@ export const descripciones = {
   Calendario: "Las etapas, ausencias y fechas institucionales del mes, y las ventanas de cierre de semestre.",
   Cronograma: "Qué tan ocupada está cada área día por día, contando a quién le falta gente.",
   Facturación: "Los proyectos con su estado de cobro y las facturas de todos ellos.",
-  Cotizaciones: "Las cotizaciones pendientes de revisión y su decisión.",
+  Cotizaciones: "Las cotizaciones subidas a cada proyecto.",
   Proveedores: "El directorio de proveedores con sus datos de contacto.",
   "Órdenes de impresión": "Las órdenes de trabajo para las máquinas de impresión.",
   "Pantones y maquinas": "Catalogo de colores Pantone y maquinas de impresion.",

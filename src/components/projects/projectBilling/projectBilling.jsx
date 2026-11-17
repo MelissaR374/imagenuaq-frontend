@@ -187,16 +187,6 @@ function ProjectBilling({ projectId, permissions = [] }) {
     finally { setSaving(false); }
   }
 
-  async function handleDecideQuote(id, decision) {
-    setSaving(true);
-    try {
-      await api.decideQuote(id, { decision });
-      flash(decision === "approved" ? "Cotización aprobada" : "Cotización rechazada");
-      reload();
-    } catch (err) { setActionError(err.message); }
-    finally { setSaving(false); }
-  }
-
   async function handleCreateInvoice(draft) {
     setSaving(true);
     try {
@@ -509,7 +499,6 @@ function ProjectBilling({ projectId, permissions = [] }) {
         quotes={quotes}
         providers={providers}
         canWrite={canWrite}
-        canDecide={canDecide}
         creating={creating}
         editing={editing}
         setEditing={setEditing}
@@ -518,7 +507,6 @@ function ProjectBilling({ projectId, permissions = [] }) {
         onStartEdit={(q) => { setEditing({ kind: "quote", id: q.id, draft: { providerId: q.providerId ?? "", entity: q.entity ?? "", amount: q.amount, description: q.description ?? "" } }); setCreating(null); }}
         onCreate={handleCreateQuote}
         onUpdate={handleUpdateQuote}
-        onDecide={handleDecideQuote}
         onDelete={(id) => setConfirmDelete({ kind: "quote", id })}
         onCancel={() => { setCreating(null); setEditing(null); }}
       />
@@ -599,7 +587,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
   );
 }
 
-function QuotesBlock({ quotes, providers, canWrite, canDecide, creating, editing, setEditing, saving, onStartCreate, onStartEdit, onCreate, onUpdate, onDecide, onDelete, onCancel }) {
+function QuotesBlock({ quotes, providers, canWrite, creating, editing, setEditing, saving, onStartCreate, onStartEdit, onCreate, onUpdate, onDelete, onCancel }) {
   const [draft, setDraft] = useState({ providerId: "", entity: "", amount: "", description: "", _file: null });
 
   function resetDraft() {
@@ -621,14 +609,13 @@ function QuotesBlock({ quotes, providers, canWrite, canDecide, creating, editing
           <tr>
             <th>Proveedor / Entidad</th>
             <th>Monto</th>
-            <th>Estado</th>
             <th>Fecha</th>
             <th />
           </tr>
         </thead>
         <tbody>
           {creating === "quote" ? (
-            <InlineForm colSpan={5} saving={saving} onSave={() => onCreate(draft)} onCancel={onCancel}>
+            <InlineForm colSpan={4} saving={saving} onSave={() => onCreate(draft)} onCancel={onCancel}>
               <select value={draft.providerId} onChange={(e) => setDraft({ ...draft, providerId: e.target.value })}>
                 <option value="">Proveedor (opcional)</option>
                 {providers.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -643,7 +630,7 @@ function QuotesBlock({ quotes, providers, canWrite, canDecide, creating, editing
             if (editing?.kind === "quote" && editing.id === q.id) {
               const ed = editing.draft;
               return (
-                <InlineForm key={q.id} colSpan={5} saving={saving} onSave={() => onUpdate(q.id, ed)} onCancel={onCancel}>
+                <InlineForm key={q.id} colSpan={4} saving={saving} onSave={() => onUpdate(q.id, ed)} onCancel={onCancel}>
                   <select value={ed.providerId} onChange={(e) => setEditing({ ...editing, draft: { ...ed, providerId: e.target.value } })}>
                     <option value="">Proveedor</option>
                     {providers.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -658,7 +645,6 @@ function QuotesBlock({ quotes, providers, canWrite, canDecide, creating, editing
               <tr key={q.id}>
                 <td>{orDash(q.providerName ?? q.entity)}</td>
                 <td>{MXN.format(q.amount)}</td>
-                <td><span className={`project-billing-status ${q.status}`}>{label(q.status)}</span></td>
                 <td>{fmtDate(q.createdAt) ?? "—"}</td>
                 <td className="project-billing-actions">
                   <DownloadButton fileId={q.fileId} />
@@ -668,18 +654,12 @@ function QuotesBlock({ quotes, providers, canWrite, canDecide, creating, editing
                       <button type="button" className="project-billing-icon-btn danger" onClick={() => onDelete(q.id)} title="Eliminar"><MdDelete /></button>
                     </>
                   ) : null}
-                  {canDecide && (q.status === "issued" || q.status === "in_review") ? (
-                    <>
-                      <button type="button" className="project-billing-sm-btn success" onClick={() => onDecide(q.id, "approved")}>Aprobar</button>
-                      <button type="button" className="project-billing-sm-btn danger" onClick={() => onDecide(q.id, "rejected")}>Rechazar</button>
-                    </>
-                  ) : null}
                 </td>
               </tr>
             );
           })}
           {quotes.length === 0 && creating !== "quote" ? (
-            <tr><td colSpan={5} className="project-billing-empty">Sin cotizaciones</td></tr>
+            <tr><td colSpan={4} className="project-billing-empty">Sin cotizaciones</td></tr>
           ) : null}
         </tbody>
       </table>
@@ -723,7 +703,7 @@ function InvoicesBlock({ invoices, quotes, providers, canWrite, canDecide, creat
                 <span>Cotización</span>
                 <select value={draft.quoteId} onChange={(e) => setDraft({ ...draft, quoteId: e.target.value })}>
                   <option value="">Opcional</option>
-                  {quotes.filter((q) => q.status === "approved").map((q) => <option key={q.id} value={q.id}>{orDash(q.providerName)} — {MXN.format(q.amount)}</option>)}
+                  {quotes.filter((q) => q.status !== "rejected").map((q) => <option key={q.id} value={q.id}>{orDash(q.providerName)} — {MXN.format(q.amount)}</option>)}
                 </select>
               </label>
               <label className="project-billing-field">
