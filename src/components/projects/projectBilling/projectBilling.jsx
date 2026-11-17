@@ -120,7 +120,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
 
     Promise.all([
       api.getFinanceSummary(projectId),
-      api.listProviders(),
+      api.listProviders({ limit: 200 }),
       api.getProjectFolder(projectId).catch(() => ({ folder: null })),
     ]).then(([summary, provData, folderData]) => {
       if (cancelled) return;

@@ -26,6 +26,7 @@ import {
   MdEventBusy,
   MdPrint,
   MdPalette,
+  MdStore,
 } from "react-icons/md";
 
 export const menuSections = [
@@ -61,6 +62,7 @@ export const menuSections = [
     items: [
       { label: "Facturación", icon: MdReceipt, permission: "finance.read" },
       { label: "Cotizaciones", icon: MdAttachMoney, permission: "finance.read" },
+      { label: "Proveedores", icon: MdStore, permission: "finance.read" },
     ],
   },
   {
@@ -123,6 +125,7 @@ export const descripciones = {
   Cronograma: "Qué tan ocupada está cada área día por día, contando a quién le falta gente.",
   Facturación: "Los proyectos con su estado de cobro y las facturas de todos ellos.",
   Cotizaciones: "Las cotizaciones pendientes de revisión y su decisión.",
+  Proveedores: "El directorio de proveedores con sus datos de contacto.",
   "Órdenes de impresión": "Las órdenes de trabajo para las máquinas de impresión.",
   "Pantones y maquinas": "Catalogo de colores Pantone y maquinas de impresion.",
 };
