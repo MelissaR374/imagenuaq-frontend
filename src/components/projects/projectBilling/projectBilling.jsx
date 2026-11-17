@@ -469,10 +469,10 @@ function ProjectBilling({ projectId, permissions = [] }) {
             </span>
           ) : null}
         </span>
-        <span>Cotizaciones: {data.quotes ?? 0}</span>
-        <span>Oficios: {data.oficios ?? 0}</span>
-        <span>Pagos: {data.payments ?? 0}</span>
-        <span>Recibos: {data.receipts ?? 0}</span>
+        <span>Cotizaciones: {quotes.length}</span>
+        <span>Oficios: {oficios.length}</span>
+        <span>Pagos: {payments.length}</span>
+        <span>Recibos: {receipts.length}</span>
       </div>
 
       {empty && !creating && (
