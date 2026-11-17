@@ -282,6 +282,21 @@
   font-weight: 600;
 }
 
+/* A field staff fill, kept off the public form. */
+.format-internal {
+  flex-shrink: 0;
+  padding: 1px 6px;
+
+  border-radius: 4px;
+
+  background: var(--accent-soft);
+  color: var(--accent-line);
+
+  font-size: var(--size-caps);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 .format-field-editor {
   padding: 12px;
 
@@ -649,4 +664,11 @@
   .format-body {
     padding: 14px 14px 20px;
   }
+}
+
+/* Solo acomodo: el diseño lo revisa quien lleva el CSS. */
+.format-choices {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
 }
