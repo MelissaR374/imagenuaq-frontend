@@ -100,6 +100,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
   const [folderId, setFolderId] = useState(null);
   const [error, setError] = useState(null);
   const [notice, setNotice] = useState(null);
+  const [actionError, setActionError] = useState(null);
   const [saving, setSaving] = useState(false);
   const [version, setVersion] = useState(0);
 
@@ -139,6 +140,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
     setEditing(null);
     setCreating(null);
     setConfirmDelete(null);
+    setActionError(null);
   }
 
   function flash(msg) {
@@ -147,7 +149,8 @@ function ProjectBilling({ projectId, permissions = [] }) {
   }
 
   async function uploadIfNeeded(file) {
-    if (!file || !folderId) return null;
+    if (!file) return null;
+    if (!folderId) throw new Error("El proyecto no tiene carpeta; no se puede adjuntar el archivo.");
     const result = await api.smartUpload(folderId, file);
     return result.file.id;
   }
@@ -165,7 +168,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
       });
       flash("Cotización registrada");
       reload();
-    } catch (err) { setError(err.message); }
+    } catch (err) { setActionError(err.message); }
     finally { setSaving(false); }
   }
 
@@ -180,7 +183,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
       });
       flash("Cotización actualizada");
       reload();
-    } catch (err) { setError(err.message); }
+    } catch (err) { setActionError(err.message); }
     finally { setSaving(false); }
   }
 
@@ -190,7 +193,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
       await api.decideQuote(id, { decision });
       flash(decision === "approved" ? "Cotización aprobada" : "Cotización rechazada");
       reload();
-    } catch (err) { setError(err.message); }
+    } catch (err) { setActionError(err.message); }
     finally { setSaving(false); }
   }
 
@@ -210,7 +213,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
       });
       flash("Factura registrada");
       reload();
-    } catch (err) { setError(err.message); }
+    } catch (err) { setActionError(err.message); }
     finally { setSaving(false); }
   }
 
@@ -227,7 +230,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
       });
       flash("Factura actualizada");
       reload();
-    } catch (err) { setError(err.message); }
+    } catch (err) { setActionError(err.message); }
     finally { setSaving(false); }
   }
 
@@ -237,7 +240,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
       await api.setInvoiceStatus(id, { status, paymentFolio: paymentFolio || undefined });
       flash(`Factura marcada como ${label(status).toLowerCase()}`);
       reload();
-    } catch (err) { setError(err.message); }
+    } catch (err) { setActionError(err.message); }
     finally { setSaving(false); }
   }
 
@@ -255,7 +258,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
       });
       flash("Oficio registrado");
       reload();
-    } catch (err) { setError(err.message); }
+    } catch (err) { setActionError(err.message); }
     finally { setSaving(false); }
   }
 
@@ -270,7 +273,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
       });
       flash("Oficio actualizado");
       reload();
-    } catch (err) { setError(err.message); }
+    } catch (err) { setActionError(err.message); }
     finally { setSaving(false); }
   }
 
@@ -280,7 +283,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
       await api.advanceOficio(id, { status });
       flash(`Oficio avanzado a ${label(status).toLowerCase()}`);
       reload();
-    } catch (err) { setError(err.message); }
+    } catch (err) { setActionError(err.message); }
     finally { setSaving(false); }
   }
 
@@ -301,7 +304,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
       });
       flash("Pago registrado");
       reload();
-    } catch (err) { setError(err.message); }
+    } catch (err) { setActionError(err.message); }
     finally { setSaving(false); }
   }
 
@@ -316,7 +319,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
       });
       flash("Pago actualizado");
       reload();
-    } catch (err) { setError(err.message); }
+    } catch (err) { setActionError(err.message); }
     finally { setSaving(false); }
   }
 
@@ -334,7 +337,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
       });
       flash("Recibo registrado");
       reload();
-    } catch (err) { setError(err.message); }
+    } catch (err) { setActionError(err.message); }
     finally { setSaving(false); }
   }
 
@@ -349,7 +352,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
       });
       flash("Recibo actualizado");
       reload();
-    } catch (err) { setError(err.message); }
+    } catch (err) { setActionError(err.message); }
     finally { setSaving(false); }
   }
 
@@ -359,7 +362,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
       await api.submitReceipt(id);
       flash("Recibo enviado a validación");
       reload();
-    } catch (err) { setError(err.message); }
+    } catch (err) { setActionError(err.message); }
     finally { setSaving(false); }
   }
 
@@ -369,7 +372,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
       await api.validateReceipt(id, { decision });
       flash(decision === "approved" ? "Recibo validado" : "Recibo rechazado");
       reload();
-    } catch (err) { setError(err.message); }
+    } catch (err) { setActionError(err.message); }
     finally { setSaving(false); }
   }
 
@@ -380,7 +383,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
       await fn(id);
       flash("Eliminado");
       reload();
-    } catch (err) { setError(err.message); }
+    } catch (err) { setActionError(err.message); }
     finally { setSaving(false); }
   }
 
@@ -393,7 +396,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
       flash("Facturas esperadas actualizadas");
       setEditingExpected(false);
       reload();
-    } catch (err) { setError(err.message); }
+    } catch (err) { setActionError(err.message); }
     finally { setSaving(false); }
   }
 
@@ -429,6 +432,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
       </header>
 
       {notice ? <p className="project-billing-notice-msg">{notice}</p> : null}
+      {actionError ? <p className="project-billing-error-msg" role="alert">{actionError}</p> : null}
 
       {(data.flags ?? []).length > 0 && (
         <div className="project-billing-flags">
@@ -715,20 +719,44 @@ function InvoicesBlock({ invoices, quotes, providers, canWrite, canDecide, creat
         <tbody>
           {creating === "invoice" ? (
             <InlineForm colSpan={6} saving={saving} onSave={() => onCreate(draft)} onCancel={onCancel}>
-              <select value={draft.quoteId} onChange={(e) => setDraft({ ...draft, quoteId: e.target.value })}>
-                <option value="">Cotización (opcional)</option>
-                {quotes.filter((q) => q.status === "approved").map((q) => <option key={q.id} value={q.id}>{orDash(q.providerName)} — {MXN.format(q.amount)}</option>)}
-              </select>
-              <select value={draft.providerId} onChange={(e) => setDraft({ ...draft, providerId: e.target.value })}>
-                <option value="">Proveedor (opcional)</option>
-                {providers.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
-              <input placeholder="Monto *" type="number" required value={draft.amount} onChange={(e) => setDraft({ ...draft, amount: e.target.value })} />
-              <input placeholder="Folio factura" value={draft.invoiceFolio} onChange={(e) => setDraft({ ...draft, invoiceFolio: e.target.value })} />
-              <input placeholder="Folio fiscal" value={draft.fiscalFolio} onChange={(e) => setDraft({ ...draft, fiscalFolio: e.target.value })} />
-              <input placeholder="Material" value={draft.material} onChange={(e) => setDraft({ ...draft, material: e.target.value })} />
-              <input placeholder="Destino" value={draft.destination} onChange={(e) => setDraft({ ...draft, destination: e.target.value })} />
-              <input type="file" onChange={(e) => setDraft({ ...draft, _file: e.target.files[0] ?? null })} />
+              <label className="project-billing-field">
+                <span>Cotización</span>
+                <select value={draft.quoteId} onChange={(e) => setDraft({ ...draft, quoteId: e.target.value })}>
+                  <option value="">Opcional</option>
+                  {quotes.filter((q) => q.status === "approved").map((q) => <option key={q.id} value={q.id}>{orDash(q.providerName)} — {MXN.format(q.amount)}</option>)}
+                </select>
+              </label>
+              <label className="project-billing-field">
+                <span>Proveedor</span>
+                <select value={draft.providerId} onChange={(e) => setDraft({ ...draft, providerId: e.target.value })}>
+                  <option value="">Opcional</option>
+                  {providers.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </label>
+              <label className="project-billing-field">
+                <span>Monto *</span>
+                <input type="number" required value={draft.amount} onChange={(e) => setDraft({ ...draft, amount: e.target.value })} />
+              </label>
+              <label className="project-billing-field">
+                <span>Folio factura</span>
+                <input value={draft.invoiceFolio} onChange={(e) => setDraft({ ...draft, invoiceFolio: e.target.value })} />
+              </label>
+              <label className="project-billing-field">
+                <span>Folio fiscal (UUID)</span>
+                <input placeholder="XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX" value={draft.fiscalFolio} onChange={(e) => setDraft({ ...draft, fiscalFolio: e.target.value })} />
+              </label>
+              <label className="project-billing-field">
+                <span>Material</span>
+                <input value={draft.material} onChange={(e) => setDraft({ ...draft, material: e.target.value })} />
+              </label>
+              <label className="project-billing-field">
+                <span>Destino</span>
+                <input value={draft.destination} onChange={(e) => setDraft({ ...draft, destination: e.target.value })} />
+              </label>
+              <label className="project-billing-field">
+                <span>Archivo</span>
+                <input type="file" onChange={(e) => setDraft({ ...draft, _file: e.target.files[0] ?? null })} />
+              </label>
             </InlineForm>
           ) : null}
           {invoices.map((inv) => {
@@ -736,15 +764,33 @@ function InvoicesBlock({ invoices, quotes, providers, canWrite, canDecide, creat
               const ed = editing.draft;
               return (
                 <InlineForm key={inv.id} colSpan={6} saving={saving} onSave={() => onUpdate(inv.id, ed)} onCancel={onCancel}>
-                  <select value={ed.providerId} onChange={(e) => setEditing({ ...editing, draft: { ...ed, providerId: e.target.value } })}>
-                    <option value="">Proveedor</option>
-                    {providers.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                  </select>
-                  <input placeholder="Monto *" type="number" value={ed.amount} onChange={(e) => setEditing({ ...editing, draft: { ...ed, amount: e.target.value } })} />
-                  <input placeholder="Folio factura" value={ed.invoiceFolio} onChange={(e) => setEditing({ ...editing, draft: { ...ed, invoiceFolio: e.target.value } })} />
-                  <input placeholder="Folio fiscal" value={ed.fiscalFolio} onChange={(e) => setEditing({ ...editing, draft: { ...ed, fiscalFolio: e.target.value } })} />
-                  <input placeholder="Material" value={ed.material} onChange={(e) => setEditing({ ...editing, draft: { ...ed, material: e.target.value } })} />
-                  <input placeholder="Destino" value={ed.destination} onChange={(e) => setEditing({ ...editing, draft: { ...ed, destination: e.target.value } })} />
+                  <label className="project-billing-field">
+                    <span>Proveedor</span>
+                    <select value={ed.providerId} onChange={(e) => setEditing({ ...editing, draft: { ...ed, providerId: e.target.value } })}>
+                      <option value="">Opcional</option>
+                      {providers.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                  </label>
+                  <label className="project-billing-field">
+                    <span>Monto *</span>
+                    <input type="number" value={ed.amount} onChange={(e) => setEditing({ ...editing, draft: { ...ed, amount: e.target.value } })} />
+                  </label>
+                  <label className="project-billing-field">
+                    <span>Folio factura</span>
+                    <input value={ed.invoiceFolio} onChange={(e) => setEditing({ ...editing, draft: { ...ed, invoiceFolio: e.target.value } })} />
+                  </label>
+                  <label className="project-billing-field">
+                    <span>Folio fiscal (UUID)</span>
+                    <input placeholder="XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX" value={ed.fiscalFolio} onChange={(e) => setEditing({ ...editing, draft: { ...ed, fiscalFolio: e.target.value } })} />
+                  </label>
+                  <label className="project-billing-field">
+                    <span>Material</span>
+                    <input value={ed.material} onChange={(e) => setEditing({ ...editing, draft: { ...ed, material: e.target.value } })} />
+                  </label>
+                  <label className="project-billing-field">
+                    <span>Destino</span>
+                    <input value={ed.destination} onChange={(e) => setEditing({ ...editing, draft: { ...ed, destination: e.target.value } })} />
+                  </label>
                 </InlineForm>
               );
             }
