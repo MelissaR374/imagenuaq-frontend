@@ -3,8 +3,8 @@
 // forms with paragraphs nobody reads.
 //
 // It is a <button> and not a <span> on purpose: that puts it in the tab order, so the explanation
-// also appears for somebody using the keyboard. The text opens above the (?) unless the panel that
-// holds it would cut it off there, as at the top of a scrolling tab; then it opens below.
+// also appears for somebody using the keyboard. The text is fixed to the window, so a scrolling
+// table or panel cannot cut it off. It opens above the (?) unless the window has no room there.
 import { useState } from "react";
 
 import "./help.css";
@@ -12,14 +12,11 @@ import "./help.css";
 /** Room the text needs above the (?), in pixels: a few lines of a 34-character column. */
 const ROOM_ABOVE = 140;
 
-/** The nearest ancestor that clips what overflows it, or null when only the window does. */
-function clippingParent(node) {
-  for (let parent = node.parentElement; parent !== null; parent = parent.parentElement) {
-    const { overflowY } = getComputedStyle(parent);
-    if (overflowY === "auto" || overflowY === "scroll" || overflowY === "hidden") return parent;
-  }
-  return null;
-}
+/** The widest the text gets, in pixels, so it can be kept inside the window. */
+const TEXT_WIDTH = 280;
+
+/** The gap between the (?) and its text, in pixels. */
+const GAP = 6;
 
 /**
  * The (?) of a field.
@@ -29,12 +26,14 @@ function clippingParent(node) {
  */
 function Help({ text }) {
   const [below, setBelow] = useState(false);
+  const [position, setPosition] = useState({});
 
   function place(event) {
-    const top = event.currentTarget.getBoundingClientRect().top;
-    const parent = clippingParent(event.currentTarget);
-    const ceiling = parent === null ? 0 : parent.getBoundingClientRect().top;
-    setBelow(top - ceiling < ROOM_ABOVE);
+    const box = event.currentTarget.getBoundingClientRect();
+    const opensBelow = box.top < ROOM_ABOVE;
+    const left = Math.max(8, Math.min(box.left - 8, window.innerWidth - TEXT_WIDTH - 8));
+    setBelow(opensBelow);
+    setPosition(opensBelow ? { top: box.bottom + GAP, left } : { top: box.top - GAP, left });
   }
 
   return (
@@ -48,7 +47,7 @@ function Help({ text }) {
       <span className="help-mark" aria-hidden="true">
         ?
       </span>
-      <span className="help-text" role="tooltip">
+      <span className="help-text" role="tooltip" style={position}>
         {text}
       </span>
     </button>

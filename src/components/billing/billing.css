@@ -381,8 +381,8 @@
 .billing-table th:nth-child(4) { width: 8%; }
 .billing-table th:nth-child(5) { width: 7%; }
 .billing-table th:nth-child(6) { width: 12%; }
-.billing-table th:nth-child(7) { width: 26%; }
-.billing-table th:nth-child(8) { width: 5%; text-align: center; }
+.billing-table th:nth-child(7) { width: 23%; }
+.billing-table th:nth-child(8) { width: 8%; text-align: center; }
 
 .billing-table td {
     padding: 13px 10px;
@@ -607,18 +607,20 @@
 
     margin: auto;
 
-    border: none;
-    border-radius: 5px;
+    border: 1px solid var(--accent-line);
+    border-radius: 6px;
 
-    background: transparent;
+    background: var(--accent-soft);
     color: var(--accent);
 
-    font-size: 17px;
+    font-size: 19px;
     cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-.billing-open-button:hover {
-    background: var(--accent-soft);
+.billing-open-button:hover:not(:disabled) {
+    background: var(--accent);
+    color: #ffffff;
 }
 
 /* =========================================================

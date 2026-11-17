@@ -32,6 +32,8 @@ function ProjectForm({ onCreated, onCancel }) {
   const [formatId, setFormatoId] = useState("");
   const [templateId, setPlantillaId] = useState("");
   const [template, setPlantilla] = useState(null);
+  const [people, setPeople] = useState({});
+  const [assignees, setAssignees] = useState({});
   const [values, setValores] = useState({});
   const [header, setCabecera] = useState({
     key: "",
@@ -78,11 +80,25 @@ function ProjectForm({ onCreated, onCancel }) {
     async function loadTemplate() {
       if (templateId === "") {
         setPlantilla(null);
+        setAssignees({});
         return;
       }
       try {
         const response = await api.getWorkflow(Number(templateId));
-        if (!cancelled) setPlantilla(response.workflow);
+        if (cancelled) return;
+        const stages = response.workflow.phases.flatMap((phase) => phase.stages);
+        setPlantilla(response.workflow);
+        setAssignees(
+          Object.fromEntries(
+            stages.map((stage) => [stage.id, stage.defaultAssigneeId ? String(stage.defaultAssigneeId) : ""]),
+          ),
+        );
+
+        const areaIds = [...new Set(stages.map((stage) => stage.areaId))];
+        const lists = await Promise.all(areaIds.map((areaId) => api.listUsers({ areaId })));
+        if (!cancelled) {
+          setPeople(Object.fromEntries(areaIds.map((areaId, i) => [areaId, lists[i].users])));
+        }
       } catch (failure) {
         if (!cancelled) setError(failure.message);
       }
@@ -109,6 +125,7 @@ function ProjectForm({ onCreated, onCancel }) {
           areaId: stage.areaId,
           title: stage.title,
           seq: index + 1,
+          assignedTo: assignees[stage.id] ? Number(assignees[stage.id]) : undefined,
           inputs: stage.inputs ?? [],
           outputs: stage.outputs ?? [],
           estimatedDays: stage.estimatedDays ?? undefined,
@@ -277,6 +294,22 @@ function ProjectForm({ onCreated, onCancel }) {
                     <div className="project-form-card" key={stage.id}>
                       <span className="project-form-card-area">{stage.areaName}</span>
                       <strong>{stage.title}</strong>
+                      <label className="project-form-card-person">
+                        <span>Responsable</span>
+                        <select
+                          value={assignees[stage.id] ?? ""}
+                          onChange={(event) =>
+                            setAssignees({ ...assignees, [stage.id]: event.target.value })
+                          }
+                        >
+                          <option value="">Sin responsable</option>
+                          {(people[stage.areaId] ?? []).map((person) => (
+                            <option value={person.id} key={person.id}>
+                              {person.fullName}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
                     </div>
                   ))}
                 </div>

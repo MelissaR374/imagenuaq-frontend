@@ -14,8 +14,6 @@
   --calendar-absence-soft: var(--surface-secondary);
   --calendar-closure: var(--warning);
   --calendar-closure-soft: var(--warning-soft);
-  --calendar-closure-stripe: color-mix(in srgb, var(--warning) 30%, transparent);
-  --calendar-absence-stripe: color-mix(in srgb, var(--text-secondary) 28%, transparent);
   --calendar-note: #fff2a8;
   --calendar-note-edge: #f2dc6b;
   --calendar-note-text: #4a3d00;
@@ -229,7 +227,7 @@
 
 .calendar-key.is-absence .calendar-key-mark {
   border-color: var(--calendar-absence);
-  background: repeating-linear-gradient(135deg, var(--calendar-absence) 0 2px, transparent 2px 4px);
+  background: var(--calendar-absence-soft);
 }
 
 .calendar-key.is-global .calendar-key-mark {
@@ -388,13 +386,7 @@
 }
 
 .calendar-closure-band {
-  background:
-    repeating-linear-gradient(
-      135deg,
-      var(--calendar-closure-stripe) 0 3px,
-      transparent 3px 14px
-    ),
-    var(--calendar-closure-soft) !important;
+  background: var(--calendar-closure-soft) !important;
 }
 
 /* One bar per event; several days are one bar */
@@ -478,13 +470,7 @@
 .calendar-month .fc .calendar-ev.is-absence {
   border-left-color: var(--calendar-absence);
 
-  background:
-    repeating-linear-gradient(
-      135deg,
-      var(--calendar-absence-stripe) 0 2px,
-      transparent 2px 8px
-    ),
-    var(--calendar-absence-soft);
+  background: var(--calendar-absence-soft);
   color: var(--text-secondary);
 
   cursor: default;

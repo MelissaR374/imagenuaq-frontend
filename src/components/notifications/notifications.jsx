@@ -481,7 +481,7 @@ function Notifications({onUnreadChange}){
                     }
                   >
                     <div 
-                      className={`notificaction-icon ${configuracion.clase}`}
+                      className={`notification-icon ${configuracion.clase}`}
                     >
                       <Icono/>
                     </div>

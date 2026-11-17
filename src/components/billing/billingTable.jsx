@@ -1,5 +1,5 @@
 // Finance project table: one row per project with counts and flags from shapeStanding.
-import { MdOpenInNew, MdWarningAmber } from "react-icons/md";
+import { MdAdd, MdWarningAmber } from "react-icons/md";
 
 const MXN = new Intl.NumberFormat("es-MX", {
   style: "currency",
@@ -38,7 +38,7 @@ function BillingTable({ records = [], totalCount, loading, onOpenRecord }) {
               <th>OFICIOS</th>
               <th>MONTO FACTURADO</th>
               <th>ALERTAS</th>
-              <th>VER</th>
+              <th>FINANZAS</th>
             </tr>
           </thead>
 
@@ -97,11 +97,12 @@ function BillingTable({ records = [], totalCount, loading, onOpenRecord }) {
                     <button
                       type="button"
                       className="billing-open-button"
-                      aria-label={`Ver proyecto ${p.key}`}
+                      aria-label={`Ver y registrar las finanzas de ${p.key}`}
+                      title="Ver y registrar cotizaciones, facturas y pagos"
                       disabled={!onOpenRecord}
                       onClick={() => onOpenRecord?.({ projectId: p.projectId })}
                     >
-                      <MdOpenInNew />
+                      <MdAdd />
                     </button>
                   </td>
                 </tr>

@@ -880,7 +880,7 @@ function RequestDetail({ request, areas, onClose, onChanged }) {
           </div>
         ) : (
           <button
-            className="request-detail-quiet is-danger"
+            className="request-detail-btn is-danger"
             type="button"
             onClick={() => setConfirmandoBorrado(true)}
             disabled={busy}

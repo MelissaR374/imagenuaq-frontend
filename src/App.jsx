@@ -33,6 +33,7 @@ import Timeline from "./components/timeline/timeline.jsx";
 import OrgChart from "./components/orgChart/orgChart.jsx";
 import Billing from "./components/billing/billing.jsx";
 import FinanceQuotes from "./components/finance/financeQuotes.jsx";
+import FinanceProviders from "./components/finance/financeProviders.jsx";
 import ContractTypes from "./components/contractTypes/contractTypes.jsx";
 import Absences from "./components/absences/absences.jsx";
 import AbsenceTypes from "./components/absences/absenceTypes.jsx";
@@ -350,6 +351,10 @@ function Aplicacion() {
           />
         ) : activa === "Cotizaciones" ? (
           <FinanceQuotes onOpenProject={puedeAbrirProyectos ? abrirProyecto : null} />
+        ) : activa === "Proveedores" ? (
+          <FinanceProviders
+            canCreate={permisos.includes("finance.write") || permisos.includes("project.write")}
+            canManage={permisos.includes("finance.write")}
         ) : activa === "Vehículos" ? (
           <VehicleBookings
             isAdmin={usuario.role === "admin"}

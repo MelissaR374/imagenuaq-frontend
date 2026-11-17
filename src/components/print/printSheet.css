@@ -27,7 +27,7 @@
 .print-sheet-sig span { font-size: 0.8rem; color: var(--text-secondary); }
 
 @media print {
-  body * { visibility: hidden; }
+  body:has(.print-sheet-container) * { visibility: hidden; }
   .print-sheet-container, .print-sheet-container * { visibility: visible; }
   .print-sheet-container { position: absolute; left: 0; top: 0; width: 100%; padding: 0; }
   .no-print { display: none !important; }

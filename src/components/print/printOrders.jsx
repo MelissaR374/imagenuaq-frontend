@@ -96,7 +96,7 @@ function PrintOrders({ canWrite, canCreate }) {
         if (cancelled) return;
         setProjects(projRes.projects ?? []);
         setMachines((machRes.machines ?? []).filter((m) => m.isActive));
-        setAllPantones(ptnRes.pantones ?? []);
+        setAllPantones((ptnRes.pantones ?? []).filter((p) => p.isActive));
       })
       .catch(() => {});
     return () => { cancelled = true; };
@@ -275,7 +275,7 @@ function PrintOrders({ canWrite, canCreate }) {
                   </button>
                   {canWrite && o.status === "pending" ? (
                     <>
-                      <button className="po-btn po-btn-small" onClick={() => changeStatus(o.id, "in_progress")}>
+                      <button className="po-btn po-btn-small po-btn-primary" onClick={() => changeStatus(o.id, "in_progress")}>
                         Iniciar
                       </button>
                       <button className="po-btn po-btn-small" onClick={() => changeStatus(o.id, "cancelled")}>
@@ -362,19 +362,21 @@ function PrintOrders({ canWrite, canCreate }) {
                   onBlur={() => setTimeout(() => setPantoneOpen(false), 150)}
                 />
                 {pantoneOpen ? (() => {
-                  const source = pantones.length > 0 ? pantones : allPantones;
+                  const entityIds = new Set(pantones.map((p) => p.id));
+                  const source = [...pantones, ...allPantones.filter((p) => !entityIds.has(p.id))];
+                  const picked = source.some((p) => p.pantoneCode === pantoneSearch);
                   const hits = source.filter((p) => {
-                    if (!pantoneSearch) return true;
+                    if (!pantoneSearch || picked) return true;
                     const q = pantoneSearch.toLowerCase();
                     return p.pantoneCode.toLowerCase().includes(q) || p.entityName.toLowerCase().includes(q);
-                  }).slice(0, 10);
+                  });
                   return hits.length > 0 ? (
                     <ul className="po-dropdown">
                       {hits.map((p) => (
                         <li key={p.id} onMouseDown={() => selectPantone(p.pantoneCode)}>
+                          {p.hexValue ? <span className="ptn-swatch-inline" style={{ background: p.hexValue }} /> : null}
                           <strong>{p.pantoneCode}</strong>
                           <span className="po-dropdown-hint">{p.entityName}</span>
-                          {p.hexValue ? <span className="ptn-swatch-inline" style={{ background: p.hexValue }} /> : null}
                         </li>
                       ))}
                     </ul>

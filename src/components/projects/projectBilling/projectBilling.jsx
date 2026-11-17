@@ -7,7 +7,8 @@ import {
   MdPayment,
   MdInfoOutline,
   MdWarningAmber,
-  MdDownload,
+  MdVisibility,
+  MdFolderZip,
   MdAdd,
   MdEdit,
   MdDelete,
@@ -18,6 +19,10 @@ import {
 import * as api from "../../../api/client.js";
 import { orDash } from "../../shared/format.js";
 import { saveBlob } from "../../shared/download.js";
+import { zip } from "../../shared/zip.js";
+import FilePreview from "../../documents/filePreview.jsx";
+
+import "../../documents/folderBrowser.css";
 
 import "./projectBilling.css";
 
@@ -55,17 +60,53 @@ function fmtDate(value) {
   return new Date(value).toLocaleDateString();
 }
 
-function DownloadButton({ fileId }) {
+/** MIME types the preview can show, as in the Archivos screen. */
+const PREVIEWABLE = /^(image\/|application\/pdf$)/;
+
+/** Opens an attachment: PDFs and images in the full-screen preview, anything else downloads. */
+function FileButton({ fileId }) {
+  const [file, setFile] = useState(null);
+  const [error, setError] = useState(null);
+
   if (!fileId) return null;
 
   async function handleClick() {
-    const blob = await api.downloadFile(fileId);
-    saveBlob(blob, `archivo-${fileId}`);
+    try {
+      const { file: meta } = await api.getFile(fileId);
+      setError(null);
+      if (PREVIEWABLE.test(meta.mime ?? "")) setFile(meta);
+      else saveBlob(await api.downloadFile(fileId), meta.name);
+    } catch (err) {
+      setError(err.message);
+    }
   }
 
   return (
-    <button type="button" className="project-billing-download" onClick={handleClick} title="Descargar">
-      <MdDownload />
+    <>
+      <button type="button" className="project-billing-download" onClick={handleClick} title="Ver archivo">
+        <MdVisibility />
+      </button>
+      {error ? <span className="project-billing-file-error" role="alert">{error}</span> : null}
+      {file ? <FilePreview files={[file]} index={0} onIndex={() => {}} onClose={() => setFile(null)} /> : null}
+    </>
+  );
+}
+
+/** Where each kind of record keeps its attachment, and the folder it gets inside the zip. */
+const ATTACHMENTS = [
+  { kind: "quotes", folder: "cotizaciones", fileId: (r) => r.fileId },
+  { kind: "invoices", folder: "facturas", fileId: (r) => r.fileId },
+  { kind: "oficios", folder: "oficios", fileId: (r) => r.stampedFileId },
+  { kind: "payments", folder: "pagos", fileId: (r) => r.proofFileId },
+  { kind: "receipts", folder: "recibos", fileId: (r) => r.fileId },
+];
+
+/** "Descargar todo" for one block; hidden when none of its records has a file. */
+function ZipButton({ count, busy, onClick, label = "Descargar todo" }) {
+  if (count === 0) return null;
+  return (
+    <button type="button" className="project-billing-zip-btn" disabled={busy} onClick={onClick} title={`${count} archivo(s) en un .zip`}>
+      <MdFolderZip /> {busy ? "Preparando…" : label}
     </button>
   );
 }
@@ -100,6 +141,8 @@ function ProjectBilling({ projectId, permissions = [] }) {
   const [folderId, setFolderId] = useState(null);
   const [error, setError] = useState(null);
   const [notice, setNotice] = useState(null);
+  const [actionError, setActionError] = useState(null);
+  const [zipping, setZipping] = useState(null);
   const [saving, setSaving] = useState(false);
   const [version, setVersion] = useState(0);
 
@@ -119,7 +162,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
 
     Promise.all([
       api.getFinanceSummary(projectId),
-      api.listProviders(),
+      api.listProviders({ limit: 200 }),
       api.getProjectFolder(projectId).catch(() => ({ folder: null })),
     ]).then(([summary, provData, folderData]) => {
       if (cancelled) return;
@@ -139,6 +182,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
     setEditing(null);
     setCreating(null);
     setConfirmDelete(null);
+    setActionError(null);
   }
 
   function flash(msg) {
@@ -146,16 +190,28 @@ function ProjectBilling({ projectId, permissions = [] }) {
     setTimeout(() => setNotice(null), 3000);
   }
 
-  async function uploadIfNeeded(file) {
-    if (!file || !folderId) return null;
-    const result = await api.smartUpload(folderId, file);
+  /** The id of `name` inside `parentId`, matched without case, created when it is missing. */
+  async function childFolder(parentId, name) {
+    const { folder } = await api.getFolder(parentId);
+    const found = (folder.folders ?? []).find((f) => f.name.toLowerCase() === name);
+    if (found) return found.id;
+    return (await api.createFolder(parentId, name)).folder.id;
+  }
+
+  /** Uploads `file` to the project's `finanzas/<subfolder>` and returns its id, or null with no file. */
+  async function uploadIfNeeded(file, subfolder) {
+    if (!file) return null;
+    if (!folderId) throw new Error("El proyecto no tiene carpeta; no se puede adjuntar el archivo.");
+    const finance = await childFolder(folderId, "finanzas");
+    const target = await childFolder(finance, subfolder);
+    const result = await api.smartUpload(target, file);
     return result.file.id;
   }
 
   async function handleCreateQuote(draft) {
     setSaving(true);
     try {
-      const fileId = await uploadIfNeeded(draft._file);
+      const fileId = await uploadIfNeeded(draft._file, "cotizaciones");
       await api.createQuote(projectId, {
         providerId: draft.providerId || undefined,
         entity: draft.entity || undefined,
@@ -165,7 +221,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
       });
       flash("Cotización registrada");
       reload();
-    } catch (err) { setError(err.message); }
+    } catch (err) { setActionError(err.message); }
     finally { setSaving(false); }
   }
 
@@ -180,24 +236,14 @@ function ProjectBilling({ projectId, permissions = [] }) {
       });
       flash("Cotización actualizada");
       reload();
-    } catch (err) { setError(err.message); }
-    finally { setSaving(false); }
-  }
-
-  async function handleDecideQuote(id, decision) {
-    setSaving(true);
-    try {
-      await api.decideQuote(id, { decision });
-      flash(decision === "approved" ? "Cotización aprobada" : "Cotización rechazada");
-      reload();
-    } catch (err) { setError(err.message); }
+    } catch (err) { setActionError(err.message); }
     finally { setSaving(false); }
   }
 
   async function handleCreateInvoice(draft) {
     setSaving(true);
     try {
-      const fileId = await uploadIfNeeded(draft._file);
+      const fileId = await uploadIfNeeded(draft._file, "facturas");
       await api.createInvoice(projectId, {
         quoteId: draft.quoteId || undefined,
         providerId: draft.providerId || undefined,
@@ -210,7 +256,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
       });
       flash("Factura registrada");
       reload();
-    } catch (err) { setError(err.message); }
+    } catch (err) { setActionError(err.message); }
     finally { setSaving(false); }
   }
 
@@ -227,7 +273,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
       });
       flash("Factura actualizada");
       reload();
-    } catch (err) { setError(err.message); }
+    } catch (err) { setActionError(err.message); }
     finally { setSaving(false); }
   }
 
@@ -237,14 +283,14 @@ function ProjectBilling({ projectId, permissions = [] }) {
       await api.setInvoiceStatus(id, { status, paymentFolio: paymentFolio || undefined });
       flash(`Factura marcada como ${label(status).toLowerCase()}`);
       reload();
-    } catch (err) { setError(err.message); }
+    } catch (err) { setActionError(err.message); }
     finally { setSaving(false); }
   }
 
   async function handleCreateOficio(draft) {
     setSaving(true);
     try {
-      const fileId = await uploadIfNeeded(draft._file);
+      const fileId = await uploadIfNeeded(draft._file, "oficios");
       await api.createOficio(projectId, {
         folio: draft.folio,
         recipient: draft.recipient || undefined,
@@ -255,7 +301,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
       });
       flash("Oficio registrado");
       reload();
-    } catch (err) { setError(err.message); }
+    } catch (err) { setActionError(err.message); }
     finally { setSaving(false); }
   }
 
@@ -270,7 +316,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
       });
       flash("Oficio actualizado");
       reload();
-    } catch (err) { setError(err.message); }
+    } catch (err) { setActionError(err.message); }
     finally { setSaving(false); }
   }
 
@@ -280,14 +326,14 @@ function ProjectBilling({ projectId, permissions = [] }) {
       await api.advanceOficio(id, { status });
       flash(`Oficio avanzado a ${label(status).toLowerCase()}`);
       reload();
-    } catch (err) { setError(err.message); }
+    } catch (err) { setActionError(err.message); }
     finally { setSaving(false); }
   }
 
   async function handleCreatePayment(draft) {
     setSaving(true);
     try {
-      const fileId = await uploadIfNeeded(draft._file);
+      const fileId = await uploadIfNeeded(draft._file, "pagos");
       await api.createPayment(projectId, {
         direction: draft.direction,
         amount: Number(draft.amount),
@@ -301,7 +347,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
       });
       flash("Pago registrado");
       reload();
-    } catch (err) { setError(err.message); }
+    } catch (err) { setActionError(err.message); }
     finally { setSaving(false); }
   }
 
@@ -316,14 +362,14 @@ function ProjectBilling({ projectId, permissions = [] }) {
       });
       flash("Pago actualizado");
       reload();
-    } catch (err) { setError(err.message); }
+    } catch (err) { setActionError(err.message); }
     finally { setSaving(false); }
   }
 
   async function handleCreateReceipt(draft) {
     setSaving(true);
     try {
-      const fileId = await uploadIfNeeded(draft._file);
+      const fileId = await uploadIfNeeded(draft._file, "recibos");
       await api.createReceipt(projectId, {
         quoteId: draft.quoteId || undefined,
         requester: draft.requester || undefined,
@@ -334,7 +380,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
       });
       flash("Recibo registrado");
       reload();
-    } catch (err) { setError(err.message); }
+    } catch (err) { setActionError(err.message); }
     finally { setSaving(false); }
   }
 
@@ -349,7 +395,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
       });
       flash("Recibo actualizado");
       reload();
-    } catch (err) { setError(err.message); }
+    } catch (err) { setActionError(err.message); }
     finally { setSaving(false); }
   }
 
@@ -359,7 +405,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
       await api.submitReceipt(id);
       flash("Recibo enviado a validación");
       reload();
-    } catch (err) { setError(err.message); }
+    } catch (err) { setActionError(err.message); }
     finally { setSaving(false); }
   }
 
@@ -369,7 +415,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
       await api.validateReceipt(id, { decision });
       flash(decision === "approved" ? "Recibo validado" : "Recibo rechazado");
       reload();
-    } catch (err) { setError(err.message); }
+    } catch (err) { setActionError(err.message); }
     finally { setSaving(false); }
   }
 
@@ -380,8 +426,46 @@ function ProjectBilling({ projectId, permissions = [] }) {
       await fn(id);
       flash("Eliminado");
       reload();
-    } catch (err) { setError(err.message); }
+    } catch (err) { setActionError(err.message); }
     finally { setSaving(false); }
+  }
+
+  /** The `{ folder, fileId }` pairs of `kinds`, each file once. */
+  function attachmentsOf(kinds) {
+    const seen = new Set();
+    const list = [];
+    for (const { kind, folder, fileId } of ATTACHMENTS) {
+      if (!kinds.includes(kind)) continue;
+      for (const record of data[kind] ?? []) {
+        const id = fileId(record);
+        if (id && !seen.has(id)) {
+          seen.add(id);
+          list.push({ folder, fileId: id });
+        }
+      }
+    }
+    return list;
+  }
+
+  /** Downloads every attachment of `kinds` as one zip, one folder per kind. */
+  async function handleDownloadZip(kinds, suffix) {
+    setZipping(suffix);
+    try {
+      const taken = new Set();
+      const entries = [];
+      for (const { folder, fileId } of attachmentsOf(kinds)) {
+        const [{ file }, blob] = await Promise.all([api.getFile(fileId), api.downloadFile(fileId)]);
+        const dot = file.name.lastIndexOf(".");
+        const stem = dot > 0 ? file.name.slice(0, dot) : file.name;
+        const ext = dot > 0 ? file.name.slice(dot) : "";
+        let name = `${folder}/${file.name}`;
+        for (let n = 2; taken.has(name.toLowerCase()); n++) name = `${folder}/${stem} (${n})${ext}`;
+        taken.add(name.toLowerCase());
+        entries.push({ name, data: new Uint8Array(await blob.arrayBuffer()) });
+      }
+      saveBlob(zip(entries), `${data.key ?? `proyecto-${projectId}`}-${suffix}.zip`);
+    } catch (err) { setActionError(err.message); }
+    finally { setZipping(null); }
   }
 
   async function handleSetExpected() {
@@ -393,7 +477,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
       flash("Facturas esperadas actualizadas");
       setEditingExpected(false);
       reload();
-    } catch (err) { setError(err.message); }
+    } catch (err) { setActionError(err.message); }
     finally { setSaving(false); }
   }
 
@@ -426,9 +510,16 @@ function ProjectBilling({ projectId, permissions = [] }) {
       <header className="project-billing-header">
         <MdOutlineDescription />
         <h3>Finanzas del proyecto</h3>
+        <ZipButton
+          count={attachmentsOf(ATTACHMENTS.map((a) => a.kind)).length}
+          busy={zipping !== null}
+          onClick={() => handleDownloadZip(ATTACHMENTS.map((a) => a.kind), "finanzas")}
+          label="Descargar todos los archivos"
+        />
       </header>
 
       {notice ? <p className="project-billing-notice-msg">{notice}</p> : null}
+      {actionError ? <p className="project-billing-error-msg" role="alert">{actionError}</p> : null}
 
       {(data.flags ?? []).length > 0 && (
         <div className="project-billing-flags">
@@ -469,10 +560,10 @@ function ProjectBilling({ projectId, permissions = [] }) {
             </span>
           ) : null}
         </span>
-        <span>Cotizaciones: {data.quotes ?? 0}</span>
-        <span>Oficios: {data.oficios ?? 0}</span>
-        <span>Pagos: {data.payments ?? 0}</span>
-        <span>Recibos: {data.receipts ?? 0}</span>
+        <span>Cotizaciones: {quotes.length}</span>
+        <span>Oficios: {oficios.length}</span>
+        <span>Pagos: {payments.length}</span>
+        <span>Recibos: {receipts.length}</span>
       </div>
 
       {empty && !creating && (
@@ -502,10 +593,10 @@ function ProjectBilling({ projectId, permissions = [] }) {
       ) : null}
 
       <QuotesBlock
+        zipButton={<ZipButton count={attachmentsOf(["quotes"]).length} busy={zipping !== null} onClick={() => handleDownloadZip(["quotes"], "cotizaciones")} />}
         quotes={quotes}
         providers={providers}
         canWrite={canWrite}
-        canDecide={canDecide}
         creating={creating}
         editing={editing}
         setEditing={setEditing}
@@ -514,12 +605,12 @@ function ProjectBilling({ projectId, permissions = [] }) {
         onStartEdit={(q) => { setEditing({ kind: "quote", id: q.id, draft: { providerId: q.providerId ?? "", entity: q.entity ?? "", amount: q.amount, description: q.description ?? "" } }); setCreating(null); }}
         onCreate={handleCreateQuote}
         onUpdate={handleUpdateQuote}
-        onDecide={handleDecideQuote}
         onDelete={(id) => setConfirmDelete({ kind: "quote", id })}
         onCancel={() => { setCreating(null); setEditing(null); }}
       />
 
       <InvoicesBlock
+        zipButton={<ZipButton count={attachmentsOf(["invoices"]).length} busy={zipping !== null} onClick={() => handleDownloadZip(["invoices"], "facturas")} />}
         invoices={invoices}
         quotes={quotes}
         providers={providers}
@@ -539,6 +630,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
       />
 
       <OficiosBlock
+        zipButton={<ZipButton count={attachmentsOf(["oficios"]).length} busy={zipping !== null} onClick={() => handleDownloadZip(["oficios"], "oficios")} />}
         oficios={oficios}
         invoices={invoices}
         canWrite={canDecide}
@@ -556,6 +648,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
       />
 
       <PaymentsBlock
+        zipButton={<ZipButton count={attachmentsOf(["payments"]).length} busy={zipping !== null} onClick={() => handleDownloadZip(["payments"], "pagos")} />}
         payments={payments}
         oficios={oficios}
         invoices={invoices}
@@ -574,6 +667,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
       />
 
       <ReceiptsBlock
+        zipButton={<ZipButton count={attachmentsOf(["receipts"]).length} busy={zipping !== null} onClick={() => handleDownloadZip(["receipts"], "recibos")} />}
         receipts={receipts}
         quotes={quotes}
         canWrite={canWrite}
@@ -595,7 +689,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
   );
 }
 
-function QuotesBlock({ quotes, providers, canWrite, canDecide, creating, editing, setEditing, saving, onStartCreate, onStartEdit, onCreate, onUpdate, onDecide, onDelete, onCancel }) {
+function QuotesBlock({ zipButton, quotes, providers, canWrite, creating, editing, setEditing, saving, onStartCreate, onStartEdit, onCreate, onUpdate, onDelete, onCancel }) {
   const [draft, setDraft] = useState({ providerId: "", entity: "", amount: "", description: "", _file: null });
 
   function resetDraft() {
@@ -606,6 +700,7 @@ function QuotesBlock({ quotes, providers, canWrite, canDecide, creating, editing
     <div className="project-billing-block">
       <h4>
         <MdOutlineDescription /> Cotizaciones
+        {zipButton}
         {canWrite ? (
           <button type="button" className="project-billing-add-btn" onClick={() => { resetDraft(); onStartCreate(); }}>
             <MdAdd /> Agregar
@@ -617,14 +712,13 @@ function QuotesBlock({ quotes, providers, canWrite, canDecide, creating, editing
           <tr>
             <th>Proveedor / Entidad</th>
             <th>Monto</th>
-            <th>Estado</th>
             <th>Fecha</th>
             <th />
           </tr>
         </thead>
         <tbody>
           {creating === "quote" ? (
-            <InlineForm colSpan={5} saving={saving} onSave={() => onCreate(draft)} onCancel={onCancel}>
+            <InlineForm colSpan={4} saving={saving} onSave={() => onCreate(draft)} onCancel={onCancel}>
               <select value={draft.providerId} onChange={(e) => setDraft({ ...draft, providerId: e.target.value })}>
                 <option value="">Proveedor (opcional)</option>
                 {providers.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -639,7 +733,7 @@ function QuotesBlock({ quotes, providers, canWrite, canDecide, creating, editing
             if (editing?.kind === "quote" && editing.id === q.id) {
               const ed = editing.draft;
               return (
-                <InlineForm key={q.id} colSpan={5} saving={saving} onSave={() => onUpdate(q.id, ed)} onCancel={onCancel}>
+                <InlineForm key={q.id} colSpan={4} saving={saving} onSave={() => onUpdate(q.id, ed)} onCancel={onCancel}>
                   <select value={ed.providerId} onChange={(e) => setEditing({ ...editing, draft: { ...ed, providerId: e.target.value } })}>
                     <option value="">Proveedor</option>
                     {providers.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -654,20 +748,13 @@ function QuotesBlock({ quotes, providers, canWrite, canDecide, creating, editing
               <tr key={q.id}>
                 <td>{orDash(q.providerName ?? q.entity)}</td>
                 <td>{MXN.format(q.amount)}</td>
-                <td><span className={`project-billing-status ${q.status}`}>{label(q.status)}</span></td>
                 <td>{fmtDate(q.createdAt) ?? "—"}</td>
                 <td className="project-billing-actions">
-                  <DownloadButton fileId={q.fileId} />
+                  <FileButton fileId={q.fileId} />
                   {canWrite && (q.status === "issued" || q.status === "in_review") ? (
                     <>
                       <button type="button" className="project-billing-icon-btn" onClick={() => onStartEdit(q)} title="Editar"><MdEdit /></button>
                       <button type="button" className="project-billing-icon-btn danger" onClick={() => onDelete(q.id)} title="Eliminar"><MdDelete /></button>
-                    </>
-                  ) : null}
-                  {canDecide && (q.status === "issued" || q.status === "in_review") ? (
-                    <>
-                      <button type="button" className="project-billing-sm-btn success" onClick={() => onDecide(q.id, "approved")}>Aprobar</button>
-                      <button type="button" className="project-billing-sm-btn danger" onClick={() => onDecide(q.id, "rejected")}>Rechazar</button>
                     </>
                   ) : null}
                 </td>
@@ -675,7 +762,7 @@ function QuotesBlock({ quotes, providers, canWrite, canDecide, creating, editing
             );
           })}
           {quotes.length === 0 && creating !== "quote" ? (
-            <tr><td colSpan={5} className="project-billing-empty">Sin cotizaciones</td></tr>
+            <tr><td colSpan={4} className="project-billing-empty">Sin cotizaciones</td></tr>
           ) : null}
         </tbody>
       </table>
@@ -683,7 +770,7 @@ function QuotesBlock({ quotes, providers, canWrite, canDecide, creating, editing
   );
 }
 
-function InvoicesBlock({ invoices, quotes, providers, canWrite, canDecide, creating, editing, setEditing, saving, onStartCreate, onStartEdit, onCreate, onUpdate, onSetStatus, onDelete, onCancel }) {
+function InvoicesBlock({ zipButton, invoices, quotes, providers, canWrite, canDecide, creating, editing, setEditing, saving, onStartCreate, onStartEdit, onCreate, onUpdate, onSetStatus, onDelete, onCancel }) {
   const [draft, setDraft] = useState({ quoteId: "", providerId: "", amount: "", material: "", invoiceFolio: "", fiscalFolio: "", destination: "", _file: null });
   const [statusForm, setStatusForm] = useState(null);
 
@@ -695,6 +782,7 @@ function InvoicesBlock({ invoices, quotes, providers, canWrite, canDecide, creat
     <div className="project-billing-block">
       <h4>
         <MdReceiptLong /> Facturas
+        {zipButton}
         {canWrite ? (
           <button type="button" className="project-billing-add-btn" onClick={() => { resetDraft(); onStartCreate(); }}>
             <MdAdd /> Agregar
@@ -715,20 +803,44 @@ function InvoicesBlock({ invoices, quotes, providers, canWrite, canDecide, creat
         <tbody>
           {creating === "invoice" ? (
             <InlineForm colSpan={6} saving={saving} onSave={() => onCreate(draft)} onCancel={onCancel}>
-              <select value={draft.quoteId} onChange={(e) => setDraft({ ...draft, quoteId: e.target.value })}>
-                <option value="">Cotización (opcional)</option>
-                {quotes.filter((q) => q.status === "approved").map((q) => <option key={q.id} value={q.id}>{orDash(q.providerName)} — {MXN.format(q.amount)}</option>)}
-              </select>
-              <select value={draft.providerId} onChange={(e) => setDraft({ ...draft, providerId: e.target.value })}>
-                <option value="">Proveedor (opcional)</option>
-                {providers.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
-              <input placeholder="Monto *" type="number" required value={draft.amount} onChange={(e) => setDraft({ ...draft, amount: e.target.value })} />
-              <input placeholder="Folio factura" value={draft.invoiceFolio} onChange={(e) => setDraft({ ...draft, invoiceFolio: e.target.value })} />
-              <input placeholder="Folio fiscal" value={draft.fiscalFolio} onChange={(e) => setDraft({ ...draft, fiscalFolio: e.target.value })} />
-              <input placeholder="Material" value={draft.material} onChange={(e) => setDraft({ ...draft, material: e.target.value })} />
-              <input placeholder="Destino" value={draft.destination} onChange={(e) => setDraft({ ...draft, destination: e.target.value })} />
-              <input type="file" onChange={(e) => setDraft({ ...draft, _file: e.target.files[0] ?? null })} />
+              <label className="project-billing-field">
+                <span>Cotización</span>
+                <select value={draft.quoteId} onChange={(e) => setDraft({ ...draft, quoteId: e.target.value })}>
+                  <option value="">Opcional</option>
+                  {quotes.filter((q) => q.status !== "rejected").map((q) => <option key={q.id} value={q.id}>{orDash(q.providerName)} — {MXN.format(q.amount)}</option>)}
+                </select>
+              </label>
+              <label className="project-billing-field">
+                <span>Proveedor</span>
+                <select value={draft.providerId} onChange={(e) => setDraft({ ...draft, providerId: e.target.value })}>
+                  <option value="">Opcional</option>
+                  {providers.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </label>
+              <label className="project-billing-field">
+                <span>Monto *</span>
+                <input type="number" required value={draft.amount} onChange={(e) => setDraft({ ...draft, amount: e.target.value })} />
+              </label>
+              <label className="project-billing-field">
+                <span>Folio factura</span>
+                <input value={draft.invoiceFolio} onChange={(e) => setDraft({ ...draft, invoiceFolio: e.target.value })} />
+              </label>
+              <label className="project-billing-field">
+                <span>Folio fiscal (UUID)</span>
+                <input placeholder="XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX" value={draft.fiscalFolio} onChange={(e) => setDraft({ ...draft, fiscalFolio: e.target.value })} />
+              </label>
+              <label className="project-billing-field">
+                <span>Material</span>
+                <input value={draft.material} onChange={(e) => setDraft({ ...draft, material: e.target.value })} />
+              </label>
+              <label className="project-billing-field">
+                <span>Destino</span>
+                <input value={draft.destination} onChange={(e) => setDraft({ ...draft, destination: e.target.value })} />
+              </label>
+              <label className="project-billing-field">
+                <span>Archivo</span>
+                <input type="file" onChange={(e) => setDraft({ ...draft, _file: e.target.files[0] ?? null })} />
+              </label>
             </InlineForm>
           ) : null}
           {invoices.map((inv) => {
@@ -736,15 +848,33 @@ function InvoicesBlock({ invoices, quotes, providers, canWrite, canDecide, creat
               const ed = editing.draft;
               return (
                 <InlineForm key={inv.id} colSpan={6} saving={saving} onSave={() => onUpdate(inv.id, ed)} onCancel={onCancel}>
-                  <select value={ed.providerId} onChange={(e) => setEditing({ ...editing, draft: { ...ed, providerId: e.target.value } })}>
-                    <option value="">Proveedor</option>
-                    {providers.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                  </select>
-                  <input placeholder="Monto *" type="number" value={ed.amount} onChange={(e) => setEditing({ ...editing, draft: { ...ed, amount: e.target.value } })} />
-                  <input placeholder="Folio factura" value={ed.invoiceFolio} onChange={(e) => setEditing({ ...editing, draft: { ...ed, invoiceFolio: e.target.value } })} />
-                  <input placeholder="Folio fiscal" value={ed.fiscalFolio} onChange={(e) => setEditing({ ...editing, draft: { ...ed, fiscalFolio: e.target.value } })} />
-                  <input placeholder="Material" value={ed.material} onChange={(e) => setEditing({ ...editing, draft: { ...ed, material: e.target.value } })} />
-                  <input placeholder="Destino" value={ed.destination} onChange={(e) => setEditing({ ...editing, draft: { ...ed, destination: e.target.value } })} />
+                  <label className="project-billing-field">
+                    <span>Proveedor</span>
+                    <select value={ed.providerId} onChange={(e) => setEditing({ ...editing, draft: { ...ed, providerId: e.target.value } })}>
+                      <option value="">Opcional</option>
+                      {providers.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                  </label>
+                  <label className="project-billing-field">
+                    <span>Monto *</span>
+                    <input type="number" value={ed.amount} onChange={(e) => setEditing({ ...editing, draft: { ...ed, amount: e.target.value } })} />
+                  </label>
+                  <label className="project-billing-field">
+                    <span>Folio factura</span>
+                    <input value={ed.invoiceFolio} onChange={(e) => setEditing({ ...editing, draft: { ...ed, invoiceFolio: e.target.value } })} />
+                  </label>
+                  <label className="project-billing-field">
+                    <span>Folio fiscal (UUID)</span>
+                    <input placeholder="XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX" value={ed.fiscalFolio} onChange={(e) => setEditing({ ...editing, draft: { ...ed, fiscalFolio: e.target.value } })} />
+                  </label>
+                  <label className="project-billing-field">
+                    <span>Material</span>
+                    <input value={ed.material} onChange={(e) => setEditing({ ...editing, draft: { ...ed, material: e.target.value } })} />
+                  </label>
+                  <label className="project-billing-field">
+                    <span>Destino</span>
+                    <input value={ed.destination} onChange={(e) => setEditing({ ...editing, draft: { ...ed, destination: e.target.value } })} />
+                  </label>
                 </InlineForm>
               );
             }
@@ -770,7 +900,7 @@ function InvoicesBlock({ invoices, quotes, providers, canWrite, canDecide, creat
                 </td>
                 <td>{orDash(inv.oficioFolio)}</td>
                 <td className="project-billing-actions">
-                  <DownloadButton fileId={inv.fileId} />
+                  <FileButton fileId={inv.fileId} />
                   {canEdit ? (
                     <>
                       <button type="button" className="project-billing-icon-btn" onClick={() => onStartEdit(inv)} title="Editar"><MdEdit /></button>
@@ -800,7 +930,7 @@ function InvoicesBlock({ invoices, quotes, providers, canWrite, canDecide, creat
   );
 }
 
-function OficiosBlock({ oficios, invoices, canWrite, creating, editing, setEditing, saving, onStartCreate, onStartEdit, onCreate, onUpdate, onAdvance, onDelete, onCancel }) {
+function OficiosBlock({ zipButton, oficios, invoices, canWrite, creating, editing, setEditing, saving, onStartCreate, onStartEdit, onCreate, onUpdate, onAdvance, onDelete, onCancel }) {
   const [draft, setDraft] = useState({ folio: "", recipient: "", amount: "", note: "", invoiceIds: [], _file: null });
 
   function resetDraft() {
@@ -813,6 +943,7 @@ function OficiosBlock({ oficios, invoices, canWrite, creating, editing, setEditi
     <div className="project-billing-block">
       <h4>
         <MdOutlineDescription /> Oficios
+        {zipButton}
         {canWrite ? (
           <button type="button" className="project-billing-add-btn" onClick={() => { resetDraft(); onStartCreate(); }}>
             <MdAdd /> Agregar
@@ -881,7 +1012,7 @@ function OficiosBlock({ oficios, invoices, canWrite, creating, editing, setEditi
                 <td><span className={`project-billing-status ${o.status}`}>{label(o.status)}</span></td>
                 <td>{o.daysUnanswered ?? "—"}</td>
                 <td className="project-billing-actions">
-                  <DownloadButton fileId={o.stampedFileId} />
+                  <FileButton fileId={o.stampedFileId} />
                   {canWrite ? (
                     <button type="button" className="project-billing-icon-btn" onClick={() => onStartEdit(o)} title="Editar"><MdEdit /></button>
                   ) : null}
@@ -906,7 +1037,7 @@ function OficiosBlock({ oficios, invoices, canWrite, creating, editing, setEditi
   );
 }
 
-function PaymentsBlock({ payments, oficios, invoices, providers, canWrite, creating, editing, setEditing, saving, onStartCreate, onStartEdit, onCreate, onUpdate, onDelete, onCancel }) {
+function PaymentsBlock({ zipButton, payments, oficios, invoices, providers, canWrite, creating, editing, setEditing, saving, onStartCreate, onStartEdit, onCreate, onUpdate, onDelete, onCancel }) {
   const [draft, setDraft] = useState({ direction: "incoming", amount: "", oficioId: "", invoiceId: "", providerId: "", paidOn: "", trackingFolio: "", note: "", _file: null });
 
   function resetDraft() {
@@ -917,6 +1048,7 @@ function PaymentsBlock({ payments, oficios, invoices, providers, canWrite, creat
     <div className="project-billing-block">
       <h4>
         <MdPayment /> Pagos
+        {zipButton}
         {canWrite ? (
           <button type="button" className="project-billing-add-btn" onClick={() => { resetDraft(); onStartCreate(); }}>
             <MdAdd /> Agregar
@@ -983,7 +1115,7 @@ function PaymentsBlock({ payments, oficios, invoices, providers, canWrite, creat
                 <td>{fmtDate(pay.paidOn) ?? "—"}</td>
                 <td>{orDash(pay.trackingFolio)}</td>
                 <td className="project-billing-actions">
-                  <DownloadButton fileId={pay.proofFileId} />
+                  <FileButton fileId={pay.proofFileId} />
                   {canWrite ? (
                     <>
                       <button type="button" className="project-billing-icon-btn" onClick={() => onStartEdit(pay)} title="Editar"><MdEdit /></button>
@@ -1003,7 +1135,7 @@ function PaymentsBlock({ payments, oficios, invoices, providers, canWrite, creat
   );
 }
 
-function ReceiptsBlock({ receipts, quotes, canWrite, canValidate, creating, editing, setEditing, saving, onStartCreate, onStartEdit, onCreate, onUpdate, onSubmit, onValidate, onDelete, onCancel }) {
+function ReceiptsBlock({ zipButton, receipts, quotes, canWrite, canValidate, creating, editing, setEditing, saving, onStartCreate, onStartEdit, onCreate, onUpdate, onSubmit, onValidate, onDelete, onCancel }) {
   const [draft, setDraft] = useState({ quoteId: "", requester: "", amount: "", reference: "", concept: "", _file: null });
 
   function resetDraft() {
@@ -1014,6 +1146,7 @@ function ReceiptsBlock({ receipts, quotes, canWrite, canValidate, creating, edit
     <div className="project-billing-block">
       <h4>
         <MdReceiptLong /> Recibos referenciados
+        {zipButton}
         {canWrite ? (
           <button type="button" className="project-billing-add-btn" onClick={() => { resetDraft(); onStartCreate(); }}>
             <MdAdd /> Agregar
@@ -1065,7 +1198,7 @@ function ReceiptsBlock({ receipts, quotes, canWrite, canValidate, creating, edit
                 <td><span className={`project-billing-status ${r.status}`}>{label(r.status)}</span></td>
                 <td>{orDash(r.concept)}</td>
                 <td className="project-billing-actions">
-                  <DownloadButton fileId={r.fileId} />
+                  <FileButton fileId={r.fileId} />
                   {canWrite && r.status === "draft" ? (
                     <>
                       <button type="button" className="project-billing-icon-btn" onClick={() => onStartEdit(r)} title="Editar"><MdEdit /></button>

@@ -103,7 +103,7 @@ function ListaDeClaves({ id, etiqueta, ayuda, claves, vocabulario, tipos, onCamb
                     }}
                     placeholder="Ej. Número de orden"
                 />
-                <button type="button" className="modal-cancel" onClick={agregar}>
+                <button type="button" className="modal-primary" onClick={agregar}>
                     Agregar
                 </button>
             </div>
