@@ -41,6 +41,8 @@ const GROUP_NAMES = {
   availability: "Disponibilidad",
   document: "Documentos",
   calendar: "Calendario",
+  vehicle: "Vehículos",
+  print: "Impresión",
 };
 
 const labelOf = (role) => ROLE_NAMES[role.name] ?? role.name;
