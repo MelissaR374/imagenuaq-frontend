@@ -168,17 +168,28 @@ function ProjectBilling({ projectId, permissions = [] }) {
     setTimeout(() => setNotice(null), 3000);
   }
 
-  async function uploadIfNeeded(file) {
+  /** The id of `name` inside `parentId`, matched without case, created when it is missing. */
+  async function childFolder(parentId, name) {
+    const { folder } = await api.getFolder(parentId);
+    const found = (folder.folders ?? []).find((f) => f.name.toLowerCase() === name);
+    if (found) return found.id;
+    return (await api.createFolder(parentId, name)).folder.id;
+  }
+
+  /** Uploads `file` to the project's `finanzas/<subfolder>` and returns its id, or null with no file. */
+  async function uploadIfNeeded(file, subfolder) {
     if (!file) return null;
     if (!folderId) throw new Error("El proyecto no tiene carpeta; no se puede adjuntar el archivo.");
-    const result = await api.smartUpload(folderId, file);
+    const finance = await childFolder(folderId, "finanzas");
+    const target = await childFolder(finance, subfolder);
+    const result = await api.smartUpload(target, file);
     return result.file.id;
   }
 
   async function handleCreateQuote(draft) {
     setSaving(true);
     try {
-      const fileId = await uploadIfNeeded(draft._file);
+      const fileId = await uploadIfNeeded(draft._file, "cotizaciones");
       await api.createQuote(projectId, {
         providerId: draft.providerId || undefined,
         entity: draft.entity || undefined,
@@ -210,7 +221,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
   async function handleCreateInvoice(draft) {
     setSaving(true);
     try {
-      const fileId = await uploadIfNeeded(draft._file);
+      const fileId = await uploadIfNeeded(draft._file, "facturas");
       await api.createInvoice(projectId, {
         quoteId: draft.quoteId || undefined,
         providerId: draft.providerId || undefined,
@@ -257,7 +268,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
   async function handleCreateOficio(draft) {
     setSaving(true);
     try {
-      const fileId = await uploadIfNeeded(draft._file);
+      const fileId = await uploadIfNeeded(draft._file, "oficios");
       await api.createOficio(projectId, {
         folio: draft.folio,
         recipient: draft.recipient || undefined,
@@ -300,7 +311,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
   async function handleCreatePayment(draft) {
     setSaving(true);
     try {
-      const fileId = await uploadIfNeeded(draft._file);
+      const fileId = await uploadIfNeeded(draft._file, "pagos");
       await api.createPayment(projectId, {
         direction: draft.direction,
         amount: Number(draft.amount),
@@ -336,7 +347,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
   async function handleCreateReceipt(draft) {
     setSaving(true);
     try {
-      const fileId = await uploadIfNeeded(draft._file);
+      const fileId = await uploadIfNeeded(draft._file, "recibos");
       await api.createReceipt(projectId, {
         quoteId: draft.quoteId || undefined,
         requester: draft.requester || undefined,
