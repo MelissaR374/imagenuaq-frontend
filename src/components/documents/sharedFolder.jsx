@@ -15,29 +15,13 @@ import {
 import * as api from "../../api/client.js";
 import { fileSize, shortDate } from "../shared/format.js";
 import FileIcon from "../shared/fileIcon.jsx";
+import { themeClass } from "../shared/theme.js";
 import FilePreview from "./filePreview.jsx";
 import "./folderBrowser.css";
 import "./sharedFolder.css";
 
 /** MIME types the preview can show: images in an `<img>`, PDFs in an `<iframe>`. */
 const PREVIEWABLE = /^(image\/|application\/pdf$)/;
-
-/**
- * The theme the viewer last chose in the app, or their system's, as App.jsx decides it. The page
- * renders outside the app's shell, so it reads the choice itself.
- */
-function themeClass() {
-  let saved;
-  try {
-    saved = localStorage.getItem("theme");
-  } catch {
-    saved = null;
-  }
-  const dark = saved
-    ? saved === "dark"
-    : window.matchMedia("(prefers-color-scheme: dark)").matches;
-  return dark ? "dark-mode" : "light-mode";
-}
 
 /** @param {{ token: string }} props */
 function SharedFolder({ token }) {
