@@ -24,6 +24,7 @@ import { columnLetter } from "../shared/format.js";
 import Help from "../shared/help.jsx";
 import FieldInput from "../shared/fieldInput.jsx";
 import TypeIcon from "../shared/typeIcon.jsx";
+import { GENERAL_BLOCK, SECTIONS } from "../shared/vocabulary.js";
 import "./importConfig.css";
 
 /** An empty rule: this field is not filled. */
@@ -574,15 +575,12 @@ function ImportMapper({ book, onDirty, onSaved, onContinue }) {
   }
 
   const sections = [
-    { titulo: "La solicitud", list: requestFields },
-    {
-      titulo: "Entregables",
-      list: fields.filter((field) => field.section === "deliverables"),
-    },
-    {
-      titulo: "Información",
-      list: fields.filter((field) => field.section === "information"),
-    },
+    { title: GENERAL_BLOCK.title, help: GENERAL_BLOCK.help, list: requestFields },
+    ...SECTIONS.map((section) => ({
+      title: section.title,
+      help: section.help,
+      list: fields.filter((field) => field.section === section.key),
+    })),
   ];
 
   return (
@@ -680,8 +678,11 @@ function ImportMapper({ book, onDirty, onSaved, onContinue }) {
 
             {sections.map((section) =>
               section.list.length === 0 ? null : (
-                <section className="imp-sec" key={section.titulo}>
-                  <h3>{section.titulo}</h3>
+                <section className="imp-sec" key={section.title}>
+                  <h3>
+                    {section.title}
+                    <span className="imp-sub">{section.help}</span>
+                  </h3>
                   <div className="imp-fields">
                     {section.list.map((field) => (
                       <MappedField

@@ -948,3 +948,13 @@
     padding: 14px 14px 20px;
   }
 }
+
+/* Solo acomodo: el diseño lo revisa quien lleva el CSS. */
+
+.imp-sub {
+  margin-left: 4px;
+
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+}
