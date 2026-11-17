@@ -406,7 +406,8 @@
 }
 
 .format-field input,
-.format-field select {
+.format-field select,
+.format-add-row select {
   height: 32px;
   padding: 0 8px;
 
