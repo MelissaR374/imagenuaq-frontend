@@ -227,10 +227,23 @@
     width: 19px;
     height: 19px;
     padding: 0;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-muted);
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
+}
+
+.flow-card-remove:hover {
+    color: var(--danger);
+    background: var(--danger-soft);
+}
+
+.flow-card-remove svg {
+    font-size: 13px;
 }
 
 .flow-io-keys {

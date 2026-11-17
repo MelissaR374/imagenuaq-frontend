@@ -253,9 +253,28 @@
 
 .flow-key-remove {
     padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
     display: flex;
     align-items: center;
     cursor: pointer;
+}
+
+.flow-key-remove:hover {
+    color: var(--danger);
+}
+
+.flow-modal-remove {
+    margin-right: auto;
+    max-width: 100%;
+    white-space: normal;
+    color: var(--danger);
+    border-color: var(--danger);
+}
+
+.flow-modal-remove:hover {
+    background: var(--danger-soft);
 }
 
 .flow-key-add {

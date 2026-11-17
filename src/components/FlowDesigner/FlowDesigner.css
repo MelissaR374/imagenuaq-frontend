@@ -203,6 +203,14 @@
   font-weight: 600;
   letter-spacing: 0.4px;
   white-space: nowrap;
+  gap: 2px;
+}
+
+.phase-title > span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* editar fase*/
@@ -436,11 +444,24 @@
 }
 
 .phase-remove-button {
-  padding: 0;
+  padding: 2px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+}
+
+.phase-remove-button:hover {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.phase-remove-button svg {
+  font-size: 13px;
 }
 
 .flow-field-help {
