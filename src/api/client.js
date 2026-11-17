@@ -597,6 +597,9 @@ export async function downloadFile(id) {
   return response.blob();
 }
 
+/** Los datos de un archivo: nombre, tipo y tamaño. */
+export const getFile = (id) => request(`/documents/${id}`);
+
 export const updateFile = (id, changes) =>
   request(`/documents/${id}`, { method: "PATCH", body: changes });
 

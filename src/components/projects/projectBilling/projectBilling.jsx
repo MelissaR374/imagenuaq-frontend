@@ -7,7 +7,7 @@ import {
   MdPayment,
   MdInfoOutline,
   MdWarningAmber,
-  MdDownload,
+  MdVisibility,
   MdAdd,
   MdEdit,
   MdDelete,
@@ -18,6 +18,9 @@ import {
 import * as api from "../../../api/client.js";
 import { orDash } from "../../shared/format.js";
 import { saveBlob } from "../../shared/download.js";
+import FilePreview from "../../documents/filePreview.jsx";
+
+import "../../documents/folderBrowser.css";
 
 import "./projectBilling.css";
 
@@ -55,18 +58,35 @@ function fmtDate(value) {
   return new Date(value).toLocaleDateString();
 }
 
-function DownloadButton({ fileId }) {
+/** MIME types the preview can show, as in the Archivos screen. */
+const PREVIEWABLE = /^(image\/|application\/pdf$)/;
+
+/** Opens an attachment: PDFs and images in the full-screen preview, anything else downloads. */
+function FileButton({ fileId }) {
+  const [file, setFile] = useState(null);
+  const [error, setError] = useState(null);
+
   if (!fileId) return null;
 
   async function handleClick() {
-    const blob = await api.downloadFile(fileId);
-    saveBlob(blob, `archivo-${fileId}`);
+    try {
+      const { file: meta } = await api.getFile(fileId);
+      setError(null);
+      if (PREVIEWABLE.test(meta.mime ?? "")) setFile(meta);
+      else saveBlob(await api.downloadFile(fileId), meta.name);
+    } catch (err) {
+      setError(err.message);
+    }
   }
 
   return (
-    <button type="button" className="project-billing-download" onClick={handleClick} title="Descargar">
-      <MdDownload />
-    </button>
+    <>
+      <button type="button" className="project-billing-download" onClick={handleClick} title="Ver archivo">
+        <MdVisibility />
+      </button>
+      {error ? <span className="project-billing-file-error" role="alert">{error}</span> : null}
+      {file ? <FilePreview files={[file]} index={0} onIndex={() => {}} onClose={() => setFile(null)} /> : null}
+    </>
   );
 }
 
@@ -647,7 +667,7 @@ function QuotesBlock({ quotes, providers, canWrite, creating, editing, setEditin
                 <td>{MXN.format(q.amount)}</td>
                 <td>{fmtDate(q.createdAt) ?? "—"}</td>
                 <td className="project-billing-actions">
-                  <DownloadButton fileId={q.fileId} />
+                  <FileButton fileId={q.fileId} />
                   {canWrite && (q.status === "issued" || q.status === "in_review") ? (
                     <>
                       <button type="button" className="project-billing-icon-btn" onClick={() => onStartEdit(q)} title="Editar"><MdEdit /></button>
@@ -796,7 +816,7 @@ function InvoicesBlock({ invoices, quotes, providers, canWrite, canDecide, creat
                 </td>
                 <td>{orDash(inv.oficioFolio)}</td>
                 <td className="project-billing-actions">
-                  <DownloadButton fileId={inv.fileId} />
+                  <FileButton fileId={inv.fileId} />
                   {canEdit ? (
                     <>
                       <button type="button" className="project-billing-icon-btn" onClick={() => onStartEdit(inv)} title="Editar"><MdEdit /></button>
@@ -907,7 +927,7 @@ function OficiosBlock({ oficios, invoices, canWrite, creating, editing, setEditi
                 <td><span className={`project-billing-status ${o.status}`}>{label(o.status)}</span></td>
                 <td>{o.daysUnanswered ?? "—"}</td>
                 <td className="project-billing-actions">
-                  <DownloadButton fileId={o.stampedFileId} />
+                  <FileButton fileId={o.stampedFileId} />
                   {canWrite ? (
                     <button type="button" className="project-billing-icon-btn" onClick={() => onStartEdit(o)} title="Editar"><MdEdit /></button>
                   ) : null}
@@ -1009,7 +1029,7 @@ function PaymentsBlock({ payments, oficios, invoices, providers, canWrite, creat
                 <td>{fmtDate(pay.paidOn) ?? "—"}</td>
                 <td>{orDash(pay.trackingFolio)}</td>
                 <td className="project-billing-actions">
-                  <DownloadButton fileId={pay.proofFileId} />
+                  <FileButton fileId={pay.proofFileId} />
                   {canWrite ? (
                     <>
                       <button type="button" className="project-billing-icon-btn" onClick={() => onStartEdit(pay)} title="Editar"><MdEdit /></button>
@@ -1091,7 +1111,7 @@ function ReceiptsBlock({ receipts, quotes, canWrite, canValidate, creating, edit
                 <td><span className={`project-billing-status ${r.status}`}>{label(r.status)}</span></td>
                 <td>{orDash(r.concept)}</td>
                 <td className="project-billing-actions">
-                  <DownloadButton fileId={r.fileId} />
+                  <FileButton fileId={r.fileId} />
                   {canWrite && r.status === "draft" ? (
                     <>
                       <button type="button" className="project-billing-icon-btn" onClick={() => onStartEdit(r)} title="Editar"><MdEdit /></button>

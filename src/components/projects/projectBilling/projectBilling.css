@@ -607,3 +607,8 @@
         margin: 0 16px;
     }
 }
+
+.project-billing-file-error {
+    color: var(--danger, #d32f2f);
+    font-size: 11px;
+}
