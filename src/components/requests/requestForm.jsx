@@ -10,6 +10,7 @@ import { useEffect, useState } from "react";
 import * as api from "../../api/client.js";
 import FieldInput from "../shared/fieldInput.jsx";
 import Help from "../shared/help.jsx";
+import { SECTIONS } from "../shared/vocabulary.js";
 import RequesterInput from "./requesterInput.jsx";
 import "./requestForm.css";
 
@@ -53,8 +54,10 @@ function RequestForm({ areas, onCreada, onCancelar }) {
   }, []);
 
   const format = formats.find((one) => String(one.id) === String(formatId)) ?? null;
-  const fields = format
-    ? [...format.fields.deliverables, ...format.fields.information]
+  const internalFields = format
+    ? [...format.fields.deliverables, ...format.fields.information].filter(
+        (field) => field.internal === true,
+      )
     : [];
 
   async function save(event) {
@@ -167,7 +170,10 @@ function RequestForm({ areas, onCreada, onCancelar }) {
         </label>
 
         <label className="request-form-field">
-          <span className="request-form-label">Cómo llegó</span>
+          <span className="request-form-label">
+            Canal de recepción
+            <Help text="Por dónde llegó la solicitud: capturada aquí directamente, por correo o por el formulario." />
+          </span>
           <select
             value={header.source}
             onChange={(event) => setCabecera({ ...header, source: event.target.value })}
@@ -181,11 +187,40 @@ function RequestForm({ areas, onCreada, onCancelar }) {
         </label>
       </div>
 
-      {format ? (
+      {format
+        ? SECTIONS.map((section) => {
+            const shown = format.fields[section.key].filter((field) => field.internal !== true);
+            return shown.length === 0 ? null : (
+              <section className="request-form-sec" key={section.key}>
+                <h3>
+                  {section.title}
+                  <span className="request-form-sub">{section.help}</span>
+                </h3>
+                <div className="request-form-grid">
+                  {shown.map((field) => (
+                    <FieldInput
+                      key={field.code}
+                      field={field}
+                      value={values[field.code]}
+                      onChange={(value) => setValores({ ...values, [field.code]: value })}
+                    />
+                  ))}
+                </div>
+              </section>
+            );
+          })
+        : null}
+
+      {internalFields.length === 0 ? null : (
         <section className="request-form-sec">
-          <h3>Lo que pide {format.name}</h3>
+          <h3>
+            Datos internos
+            <span className="request-form-sub">
+              Los llena el equipo; el solicitante no los ve
+            </span>
+          </h3>
           <div className="request-form-grid">
-            {fields.map((field) => (
+            {internalFields.map((field) => (
               <FieldInput
                 key={field.code}
                 field={field}
@@ -195,7 +230,7 @@ function RequestForm({ areas, onCreada, onCancelar }) {
             ))}
           </div>
         </section>
-      ) : null}
+      )}
 
       {error !== null ? <p className="request-form-error">{error}</p> : null}
 

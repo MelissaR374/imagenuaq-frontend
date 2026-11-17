@@ -192,3 +192,18 @@
     padding: 12px 14px;
   }
 }
+
+/* Solo acomodo: el diseño lo revisa quien lleva el CSS. */
+
+.request-form-sec h3 {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.request-form-sub {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+}
