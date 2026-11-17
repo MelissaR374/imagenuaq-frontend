@@ -174,6 +174,30 @@
   background: var(--surface);
 }
 
+.project-form-card-person {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  margin-top: 4px;
+
+  color: var(--text-muted);
+  font-size: var(--size-small);
+}
+
+.project-form-card-person select {
+  height: 28px;
+  padding: 0 6px;
+
+  border: 1px solid var(--border);
+  border-radius: 6px;
+
+  background: var(--field);
+  color: var(--text);
+
+  font: inherit;
+}
+
 .project-form-card-area {
   color: var(--text-muted);
 
