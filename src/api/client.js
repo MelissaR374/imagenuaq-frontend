@@ -709,6 +709,26 @@ export const updateNote = (noteId, body) => request(`/calendar/notes/${noteId}`,
 
 export const deleteNote = (noteId) => request(`/calendar/notes/${noteId}`, { method: "DELETE" });
 
+/** Los vehículos que se reservan para entregar y recoger material, activos o no (RF-CAL-04). */
+export const listVehicles = () => request("/vehicles");
+
+export const createVehicle = (body) => request("/vehicles", { method: "POST", body });
+
+/** Renombra un vehículo o lo da de baja con `isActive: false`; sus reservas se quedan. */
+export const updateVehicle = (vehicleId, body) => request(`/vehicles/${vehicleId}`, { method: "PATCH", body });
+
+/** Las reservas que tocan `from`..`to` (a lo más 92 días), opcionalmente de un `vehicleId`. */
+export const listVehicleBookings = (params) => request(withQuery("/vehicles/bookings", params));
+
+/** Reserva un vehículo: `kind` es "delivery" o "pickup"; dos reservas del mismo vehículo no se empalman. */
+export const createVehicleBooking = (body) => request("/vehicles/bookings", { method: "POST", body });
+
+/** Cambia o mueve una reserva propia (o cualquiera, para coordinación). */
+export const updateVehicleBooking = (bookingId, body) =>
+  request(`/vehicles/bookings/${bookingId}`, { method: "PATCH", body });
+
+export const deleteVehicleBooking = (bookingId) => request(`/vehicles/bookings/${bookingId}`, { method: "DELETE" });
+
 /** Projects with their finance standing, the most missing invoices first; `flag` filters by flag. */
 export const listFinanceProjects = (params = {}) => request(withQuery("/finance/projects", params));
 

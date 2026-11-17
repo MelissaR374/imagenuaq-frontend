@@ -1,4 +1,4 @@
-// What the calendar screens share: the layers, the note scopes and the day arithmetic. Days are the
+// What the calendar screens share: the layers, the note scopes, the vehicle booking kinds and the day arithmetic. Days are the
 // browser's local days, which for this coordination are Querétaro's, as the server cuts them.
 
 /** The layers a viewer can switch off, keyed by the `kind` they show; they double as the legend. */
@@ -6,6 +6,7 @@ export const LAYERS = [
   { kind: "due", label: "Entregas" },
   { kind: "stage", label: "Etapas" },
   { kind: "absence", label: "Ausencias" },
+  { kind: "vehicle", label: "Vehículos" },
   { kind: "global", label: "Institucionales" },
   { kind: "note", label: "Notas" },
   { kind: "closure", label: "Cierre de semestre" },
@@ -15,6 +16,12 @@ export const NOTE_SCOPES = {
   personal: "Solo yo",
   area: "Mi área",
   global: "Todos",
+};
+
+/** What a vehicle booking is for, as the server names it. */
+export const VEHICLE_KINDS = {
+  delivery: "Entrega",
+  pickup: "Recolección",
 };
 
 export const RULE_DAYS = [

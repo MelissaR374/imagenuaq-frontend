@@ -26,6 +26,7 @@ import {
   MdEventBusy,
   MdPrint,
   MdPalette,
+  MdLocalShipping,
 } from "react-icons/md";
 
 export const menuSections = [
@@ -36,6 +37,7 @@ export const menuSections = [
       { label: "Mis tareas", icon: MdCheckBox, permission: "task.read" },
       { label: "Calendario", icon: MdCalendarMonth, permission: "calendar.read" },
       { label: "Cronograma", icon: MdSchedule, permission: "calendar.read" },
+      { label: "Vehículos", icon: MdLocalShipping, permission: "calendar.read" },
       { label: "Organigrama", icon: MdContacts },
     ],
   },
@@ -119,7 +121,8 @@ export const descripciones = {
   "Por asignar": "Las etapas de tu área que todavía no tienen responsable",
   Equipo: "Las etapas abiertas de cada persona del área y quién falta esta semana.",
   "Panorama de áreas": "Lo que cada área tiene por asignar y la carga de su gente esta semana.",
-  Calendario: "Las etapas, ausencias y fechas institucionales del mes, y las ventanas de cierre de semestre.",
+  Calendario: "Las etapas, ausencias, reservas de vehículo y fechas institucionales del mes, y las ventanas de cierre de semestre.",
+  Vehículos: "Las reservas de vehículo para entregar y recoger material, y el catálogo de vehículos.",
   Cronograma: "Qué tan ocupada está cada área día por día, contando a quién le falta gente.",
   Facturación: "Los proyectos con su estado de cobro y las facturas de todos ellos.",
   Cotizaciones: "Las cotizaciones pendientes de revisión y su decisión.",
