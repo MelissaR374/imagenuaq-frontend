@@ -651,3 +651,21 @@
     padding: 14px 14px 20px;
   }
 }
+
+/* Solo acomodo: el diseño lo revisa quien lleva el CSS. Los datos generales, fijos, y la nota de
+   lo que se llena después. */
+
+.format-field-row.is-fixed .format-field-head {
+  justify-content: space-between;
+}
+
+.format-preview h4 {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.format-preview-internal {
+  margin-top: 18px;
+}
