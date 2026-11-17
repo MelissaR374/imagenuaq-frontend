@@ -1,0 +1,76 @@
+/* Solo acomodo: el diseño lo revisa quien lleva el CSS. */
+.public-form-page {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  padding: 24px 16px;
+  box-sizing: border-box;
+}
+
+.public-form {
+  width: 100%;
+  max-width: 720px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.public-form-body,
+.public-form-sec {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.public-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.public-form-foot {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* El envío: el único botón de la página, así que lleva el azul de acción. */
+.public-form-send {
+  height: 38px;
+  padding: 0 22px;
+
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+
+  background: var(--accent);
+  color: #ffffff;
+
+  font: inherit;
+  font-size: var(--size-body);
+  font-weight: 600;
+
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.public-form-send:hover:not(:disabled) {
+  border-color: var(--accent-hover);
+  background: var(--accent-hover);
+}
+
+.public-form-send:focus-visible {
+  outline: 2px solid var(--accent-line);
+  outline-offset: 2px;
+}
+
+.public-form-send:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+@media (max-width: 600px) {
+  .public-form-send {
+    width: 100%;
+  }
+}

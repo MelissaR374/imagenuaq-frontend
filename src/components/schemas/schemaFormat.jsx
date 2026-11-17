@@ -8,6 +8,7 @@ import { shortDate } from "../shared/format.js";
 import Help from "../shared/help.jsx";
 import FieldInput from "../shared/fieldInput.jsx";
 import TypeIcon from "../shared/typeIcon.jsx";
+import FormLinks from "./formLinks.jsx";
 import { GENERAL_BLOCK, SECTIONS } from "../shared/vocabulary.js";
 import "./schemaFormat.css";
 
@@ -35,6 +36,11 @@ function reuseText(published) {
     return "Esta clave ya se publicó antes: su nombre y su tipo vienen de ahí.";
   }
   return `Dato compartido con ${usedIn.join(", ")}: su nombre y su tipo vienen de ahí.`;
+}
+
+/** A choice field's options as they will be published: trimmed, no blank lines. */
+function cleanChoices(field) {
+  return (field.choices ?? []).map((choice) => choice.trim()).filter((choice) => choice !== "");
 }
 
 /** A field's editor, opened in place inside the list. */
@@ -111,7 +117,14 @@ function FieldEditor({
           {!locked ? (
             <select
               value={field.type}
-              onChange={(event) => onChange({ type: event.target.value })}
+              onChange={(event) => {
+                const type = event.target.value;
+                onChange(
+                  type === "choice"
+                    ? { type, choices: field.choices ?? [], multiple: field.multiple ?? false }
+                    : { type, choices: undefined, multiple: undefined },
+                );
+              }}
             >
               {types.map((type) => (
                 <option value={type.code} key={type.code}>
@@ -138,6 +151,32 @@ function FieldEditor({
             placeholder="Ej: en centímetros, ancho por alto"
           />
         </label>
+
+        {field.type === "choice" ? (
+          <>
+            <label className="format-field">
+              <span className="format-label">
+                Opciones
+                <Help text="Una por renglón. Se guardan tal como las escribes aquí, aunque quien responde las teclee con otras mayúsculas." />
+              </span>
+              <textarea
+                className="format-choices"
+                value={(field.choices ?? []).join("\n")}
+                onChange={(event) => onChange({ choices: event.target.value.split("\n") })}
+                placeholder={"Hoja membretada\nTarjeta de presentación"}
+                rows={4}
+              />
+            </label>
+            <label className="format-check">
+              <input
+                type="checkbox"
+                checked={field.multiple === true}
+                onChange={(event) => onChange({ multiple: event.target.checked })}
+              />
+              Varias respuestas
+            </label>
+          </>
+        ) : null}
 
         <label className="format-field">
           <span className="format-label">
@@ -317,6 +356,8 @@ function SchemaFormat({ format, formats, types, vocabulary, onChanged, onClose }
     problem = "Un formato necesita al menos un campo.";
   } else if (everyField.some((field) => field.name.trim() === "" || field.code.trim() === "")) {
     problem = "Hay un campo sin nombre o sin clave.";
+  } else if (everyField.some((field) => field.type === "choice" && cleanChoices(field).length === 0)) {
+    problem = "Hay un campo de opciones sin opciones.";
   } else if (repeatedKeys.length > 0) {
     problem = `Clave repetida: ${repeatedKeys.join(", ")}.`;
   } else if (isNew && (draftFormat.name.trim() === "" || draftFormat.code.trim() === "")) {
@@ -330,16 +371,19 @@ function SchemaFormat({ format, formats, types, vocabulary, onChanged, onClose }
   async function publish() {
     setOcupado(true);
     setError(null);
+    const clean = (list) =>
+      list.map((field) => (field.type === "choice" ? { ...field, choices: cleanChoices(field) } : field));
+    const toPublish = { deliverables: clean(fields.deliverables), information: clean(fields.information) };
     try {
       if (isNew) {
         const { schema } = await api.createSchema({
           code: draftFormat.code,
           name: draftFormat.name,
-          fields: fields,
+          fields: toPublish,
         });
         onChanged(schema.id);
       } else {
-        await api.createSchemaVersion(format.id, fields);
+        await api.createSchemaVersion(format.id, toPublish);
         onChanged(format.id);
       }
     } catch (failure) {
@@ -783,6 +827,8 @@ function SchemaFormat({ format, formats, types, vocabulary, onChanged, onClose }
               </div>
             </div>
           </section>
+
+          {isNew || format.version === null ? null : <FormLinks format={format} />}
         </div>
       </div>
 
