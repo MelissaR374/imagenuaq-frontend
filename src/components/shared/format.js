@@ -8,9 +8,13 @@ export function orDash(value) {
   return value;
 }
 
-/** The date without its time, in the local format. */
+/**
+ * The date without its time, in Mexican format. A bare `YYYY-MM-DD` goes through `dayDate`, since
+ * parsing it as a moment would show the day before west of UTC.
+ */
 export function shortDate(value) {
-  return new Date(value).toLocaleDateString();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(String(value))) return dayDate(value);
+  return new Date(value).toLocaleDateString("es-MX");
 }
 
 /** Excel's column letter for a zero-based index: 0 → A, 25 → Z, 26 → AA. */
@@ -52,7 +56,17 @@ export function fileSize(bytes) {
  */
 export function dayDate(value) {
   const [year, month, day] = String(value).slice(0, 10).split("-").map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString();
+  return new Date(year, month - 1, day).toLocaleDateString("es-MX");
+}
+
+/**
+ * A moment's local day as the YYYY-MM-DD a date input or a `date` column takes. `toISOString`
+ * would give tomorrow's date in Mexico after 18:00.
+ */
+export function isoDay(date = new Date()) {
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
 }
 
 /** Whole days between two moments, at least one: how long a stage took (RF-PRY-04). */

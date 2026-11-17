@@ -1,5 +1,6 @@
 // What the task screens share that is not a component: the week the load is counted over, its
 // days, and how a stage's state reads.
+import { isoDay as localDate } from "../shared/format.js";
 
 /** How a stage's state reads beside it; the same words as the project detail. */
 export const STAGE_STATUS_LABELS = {
@@ -32,10 +33,4 @@ export function weekDays(from) {
       label: date.toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" }),
     };
   });
-}
-
-function localDate(date) {
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${date.getFullYear()}-${month}-${day}`;
 }

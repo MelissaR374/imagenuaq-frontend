@@ -12,6 +12,7 @@ import {
 } from "react-icons/md";
 
 import * as api from "../../api/client.js";
+import { isoDay } from "../shared/format.js";
 import "./contractTypes.css";
 
 function crearConfiguracion(contrato) {
@@ -192,7 +193,7 @@ function ContractTypes() {
 
     setGuardando(true);
     try {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = isoDay();
       const vacType = absenceTypes.find((t) => t.code === "vacaciones");
       const incType = absenceTypes.find((t) => t.code === "incapacidad");
 

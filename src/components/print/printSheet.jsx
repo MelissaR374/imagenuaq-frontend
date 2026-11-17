@@ -2,17 +2,16 @@
 // Screen shows it styled. Ctrl+P produces a clean black-and-white sheet.
 import { MdArrowBack, MdPrint } from "react-icons/md";
 
-import { orDash } from "../shared/format.js";
+import { orDash, shortDate } from "../shared/format.js";
 
 import "./printSheet.css";
 
 function yesNo(value) {
-  return value ? "Si" : "—";
+  return value ? "Sí" : "—";
 }
 
 function formatDate(value) {
-  if (!value) return new Date().toLocaleDateString();
-  return new Date(value).toLocaleDateString();
+  return shortDate(value || new Date());
 }
 
 /** @param {{ order: object, onBack: () => void }} props */

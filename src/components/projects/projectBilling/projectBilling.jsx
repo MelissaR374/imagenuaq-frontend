@@ -17,7 +17,7 @@ import {
 } from "react-icons/md";
 
 import * as api from "../../../api/client.js";
-import { orDash } from "../../shared/format.js";
+import { orDash, shortDate } from "../../shared/format.js";
 import { saveBlob } from "../../shared/download.js";
 import { zip } from "../../shared/zip.js";
 import FilePreview from "../../documents/filePreview.jsx";
@@ -57,7 +57,7 @@ function label(status) {
 
 function fmtDate(value) {
   if (!value) return null;
-  return new Date(value).toLocaleDateString();
+  return shortDate(value);
 }
 
 /** MIME types the preview can show, as in the Archivos screen. */

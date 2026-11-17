@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 
 import * as api from "../../api/client.js";
 import { sharedLink } from "../../config.js";
-import { shortDate } from "../shared/format.js";
+import { isoDay, shortDate } from "../shared/format.js";
 
 const LINK_DAYS = 7;
 
@@ -15,7 +15,7 @@ const LINK_DAYS = 7;
 function inDays(days) {
   const date = new Date();
   date.setDate(date.getDate() + days);
-  return date.toISOString().slice(0, 10);
+  return isoDay(date);
 }
 
 /**
