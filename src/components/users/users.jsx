@@ -391,12 +391,30 @@ function Users({ admin }) {
                 {contrato.name}
               </option>
             ))}
+
+            {form.contractTypeId !== "" &&
+              !contratos.some((contrato) => String(contrato.id) === form.contractTypeId) && (
+                <option value={form.contractTypeId}>Tipo de contrato desactivado</option>
+              )}
           </select>
           <p className="user-form-hint">
             Determina los días de permiso a los que la persona tiene derecho.
           </p>
+        </div>
 
-          
+        <div className="user-form-field">
+          <label className="user-form-label" htmlFor="user-birthday">
+            Cumpleaños (opcional)
+          </label>
+
+          <input
+            className="user-form-input"
+            id="user-birthday"
+            name="birthday"
+            type="date"
+            value={form.birthday}
+            onChange={handleChange}
+          />
         </div>
 
         <div className="user-form-field">
@@ -424,21 +442,6 @@ function Users({ admin }) {
               Las áreas a las que pertenece se cambian en «Áreas y usuarios».
             </p>
           )}
-        </div>
-
-        <div className="user-form-field">
-          <label className="user-form-label" htmlFor="user-birthday">
-            Cumpleaños (opcional)
-          </label>
-
-          <input
-            className="user-form-input"
-            id="user-birthday"
-            name="birthday"
-            type="date"
-            value={form.birthday}
-            onChange={handleChange}
-          />
         </div>
 
         <p className="user-form-error" role="alert">
