@@ -1,6 +1,8 @@
 // What one event says inside its bar on the month: a project's due date, a stage with its person, an
-// absence, a dated or timed institutional event, a closure window, or a note drawn as a post-it.
-import { MdFlag } from "react-icons/md";
+// absence, a vehicle booking, a dated or timed institutional event, a closure window, or a note drawn as a post-it.
+import { MdFlag, MdLocalShipping } from "react-icons/md";
+
+import { VEHICLE_KINDS } from "./calendarText.js";
 
 /**
  * @param {{ item: { kind: string, event?: object, closure?: object }, timeText?: string }} props
@@ -37,6 +39,22 @@ function EventContent({ item, timeText = "" }) {
     return (
       <span className="calendar-ev-title" title="Ausencia registrada">
         {event.userName ?? event.areaName ?? "Alguien"} · fuera
+      </span>
+    );
+  }
+
+  if (kind === "vehicle") {
+    const what = VEHICLE_KINDS[event.bookingKind] ?? "";
+    const hint = [event.vehicleName, what, event.destination, event.bookedByName];
+    if (event.projectKey) hint.push(event.projectKey);
+    return (
+      <span className="calendar-ev-line" title={hint.join(" · ")}>
+        <MdLocalShipping className="calendar-ev-flag" aria-hidden="true" />
+        {timeText === "" ? null : <span className="calendar-ev-time">{timeText}</span>}
+        <span className="calendar-ev-title">
+          {event.vehicleName} · {what}
+        </span>
+        <span className="calendar-ev-who">{event.destination}</span>
       </span>
     );
   }

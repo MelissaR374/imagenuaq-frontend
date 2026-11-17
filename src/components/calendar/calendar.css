@@ -8,6 +8,8 @@
   --calendar-festivo-soft: #fdeef5;
   --calendar-general: #0f766e;
   --calendar-general-soft: #e8f6f4;
+  --calendar-vehicle: #6d28d9;
+  --calendar-vehicle-soft: #f3eefd;
   --calendar-absence: var(--text-secondary);
   --calendar-absence-soft: var(--surface-secondary);
   --calendar-closure: var(--warning);
@@ -41,6 +43,8 @@
   --calendar-festivo-soft: #3b2232;
   --calendar-general: #5eead4;
   --calendar-general-soft: #1d3634;
+  --calendar-vehicle: #c4b5fd;
+  --calendar-vehicle-soft: #2b2443;
   --calendar-note: #e9d77a;
   --calendar-note-edge: #c9b452;
   --calendar-note-text: #2d2500;
@@ -231,6 +235,11 @@
   background: var(--calendar-festivo);
 }
 
+.calendar-key.is-vehicle .calendar-key-mark {
+  border-color: var(--calendar-vehicle);
+  background: var(--calendar-vehicle);
+}
+
 .calendar-key.is-note .calendar-key-mark {
   border-color: var(--calendar-note-edge);
   background: var(--calendar-note);
@@ -403,6 +412,26 @@
   overflow: hidden;
 
   color: inherit;
+}
+
+/* A timed event is a "dot" event: FullCalendar puts the content straight in the link, with no
+   .fc-event-main to clip it, so the link clips and the line takes the width it has. */
+.calendar-month .fc .calendar-ev.fc-daygrid-dot-event {
+  overflow: hidden;
+}
+
+.calendar-month .fc .calendar-ev.fc-daygrid-dot-event .calendar-ev-line {
+  flex: 1 1 auto;
+}
+
+.calendar-month .fc .calendar-ev.is-vehicle {
+  border-left-color: var(--calendar-vehicle);
+
+  background: var(--calendar-vehicle-soft);
+}
+
+.calendar-month .fc .calendar-ev.is-vehicle .calendar-ev-flag {
+  color: var(--calendar-vehicle);
 }
 
 .calendar-month .fc .calendar-ev.is-waiting {
@@ -660,6 +689,11 @@
 
   font-size: var(--size-small);
   font-weight: 500;
+}
+
+/* The 140px basis is a width inside a row; directly in the form's column it would be a height. */
+.calendar-form > .calendar-field {
+  flex: none;
 }
 
 .calendar-check {
