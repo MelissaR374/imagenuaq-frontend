@@ -8,6 +8,7 @@ import {
   MdInfoOutline,
   MdWarningAmber,
   MdVisibility,
+  MdFolderZip,
   MdAdd,
   MdEdit,
   MdDelete,
@@ -18,6 +19,7 @@ import {
 import * as api from "../../../api/client.js";
 import { orDash } from "../../shared/format.js";
 import { saveBlob } from "../../shared/download.js";
+import { zip } from "../../shared/zip.js";
 import FilePreview from "../../documents/filePreview.jsx";
 
 import "../../documents/folderBrowser.css";
@@ -90,6 +92,25 @@ function FileButton({ fileId }) {
   );
 }
 
+/** Where each kind of record keeps its attachment, and the folder it gets inside the zip. */
+const ATTACHMENTS = [
+  { kind: "quotes", folder: "cotizaciones", fileId: (r) => r.fileId },
+  { kind: "invoices", folder: "facturas", fileId: (r) => r.fileId },
+  { kind: "oficios", folder: "oficios", fileId: (r) => r.stampedFileId },
+  { kind: "payments", folder: "pagos", fileId: (r) => r.proofFileId },
+  { kind: "receipts", folder: "recibos", fileId: (r) => r.fileId },
+];
+
+/** "Descargar todo" for one block; hidden when none of its records has a file. */
+function ZipButton({ count, busy, onClick, label = "Descargar todo" }) {
+  if (count === 0) return null;
+  return (
+    <button type="button" className="project-billing-zip-btn" disabled={busy} onClick={onClick} title={`${count} archivo(s) en un .zip`}>
+      <MdFolderZip /> {busy ? "Preparando…" : label}
+    </button>
+  );
+}
+
 /** Inline form row for any entity; children are the form fields. */
 function InlineForm({ colSpan, saving, onSave, onCancel, children }) {
   return (
@@ -121,6 +142,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
   const [error, setError] = useState(null);
   const [notice, setNotice] = useState(null);
   const [actionError, setActionError] = useState(null);
+  const [zipping, setZipping] = useState(null);
   const [saving, setSaving] = useState(false);
   const [version, setVersion] = useState(0);
 
@@ -408,6 +430,44 @@ function ProjectBilling({ projectId, permissions = [] }) {
     finally { setSaving(false); }
   }
 
+  /** The `{ folder, fileId }` pairs of `kinds`, each file once. */
+  function attachmentsOf(kinds) {
+    const seen = new Set();
+    const list = [];
+    for (const { kind, folder, fileId } of ATTACHMENTS) {
+      if (!kinds.includes(kind)) continue;
+      for (const record of data[kind] ?? []) {
+        const id = fileId(record);
+        if (id && !seen.has(id)) {
+          seen.add(id);
+          list.push({ folder, fileId: id });
+        }
+      }
+    }
+    return list;
+  }
+
+  /** Downloads every attachment of `kinds` as one zip, one folder per kind. */
+  async function handleDownloadZip(kinds, suffix) {
+    setZipping(suffix);
+    try {
+      const taken = new Set();
+      const entries = [];
+      for (const { folder, fileId } of attachmentsOf(kinds)) {
+        const [{ file }, blob] = await Promise.all([api.getFile(fileId), api.downloadFile(fileId)]);
+        const dot = file.name.lastIndexOf(".");
+        const stem = dot > 0 ? file.name.slice(0, dot) : file.name;
+        const ext = dot > 0 ? file.name.slice(dot) : "";
+        let name = `${folder}/${file.name}`;
+        for (let n = 2; taken.has(name.toLowerCase()); n++) name = `${folder}/${stem} (${n})${ext}`;
+        taken.add(name.toLowerCase());
+        entries.push({ name, data: new Uint8Array(await blob.arrayBuffer()) });
+      }
+      saveBlob(zip(entries), `${data.key ?? `proyecto-${projectId}`}-${suffix}.zip`);
+    } catch (err) { setActionError(err.message); }
+    finally { setZipping(null); }
+  }
+
   async function handleSetExpected() {
     const count = parseInt(expectedDraft, 10);
     if (isNaN(count) || count < 0) return;
@@ -450,6 +510,12 @@ function ProjectBilling({ projectId, permissions = [] }) {
       <header className="project-billing-header">
         <MdOutlineDescription />
         <h3>Finanzas del proyecto</h3>
+        <ZipButton
+          count={attachmentsOf(ATTACHMENTS.map((a) => a.kind)).length}
+          busy={zipping !== null}
+          onClick={() => handleDownloadZip(ATTACHMENTS.map((a) => a.kind), "finanzas")}
+          label="Descargar todos los archivos"
+        />
       </header>
 
       {notice ? <p className="project-billing-notice-msg">{notice}</p> : null}
@@ -527,6 +593,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
       ) : null}
 
       <QuotesBlock
+        zipButton={<ZipButton count={attachmentsOf(["quotes"]).length} busy={zipping !== null} onClick={() => handleDownloadZip(["quotes"], "cotizaciones")} />}
         quotes={quotes}
         providers={providers}
         canWrite={canWrite}
@@ -543,6 +610,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
       />
 
       <InvoicesBlock
+        zipButton={<ZipButton count={attachmentsOf(["invoices"]).length} busy={zipping !== null} onClick={() => handleDownloadZip(["invoices"], "facturas")} />}
         invoices={invoices}
         quotes={quotes}
         providers={providers}
@@ -562,6 +630,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
       />
 
       <OficiosBlock
+        zipButton={<ZipButton count={attachmentsOf(["oficios"]).length} busy={zipping !== null} onClick={() => handleDownloadZip(["oficios"], "oficios")} />}
         oficios={oficios}
         invoices={invoices}
         canWrite={canDecide}
@@ -579,6 +648,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
       />
 
       <PaymentsBlock
+        zipButton={<ZipButton count={attachmentsOf(["payments"]).length} busy={zipping !== null} onClick={() => handleDownloadZip(["payments"], "pagos")} />}
         payments={payments}
         oficios={oficios}
         invoices={invoices}
@@ -597,6 +667,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
       />
 
       <ReceiptsBlock
+        zipButton={<ZipButton count={attachmentsOf(["receipts"]).length} busy={zipping !== null} onClick={() => handleDownloadZip(["receipts"], "recibos")} />}
         receipts={receipts}
         quotes={quotes}
         canWrite={canWrite}
@@ -618,7 +689,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
   );
 }
 
-function QuotesBlock({ quotes, providers, canWrite, creating, editing, setEditing, saving, onStartCreate, onStartEdit, onCreate, onUpdate, onDelete, onCancel }) {
+function QuotesBlock({ zipButton, quotes, providers, canWrite, creating, editing, setEditing, saving, onStartCreate, onStartEdit, onCreate, onUpdate, onDelete, onCancel }) {
   const [draft, setDraft] = useState({ providerId: "", entity: "", amount: "", description: "", _file: null });
 
   function resetDraft() {
@@ -629,6 +700,7 @@ function QuotesBlock({ quotes, providers, canWrite, creating, editing, setEditin
     <div className="project-billing-block">
       <h4>
         <MdOutlineDescription /> Cotizaciones
+        {zipButton}
         {canWrite ? (
           <button type="button" className="project-billing-add-btn" onClick={() => { resetDraft(); onStartCreate(); }}>
             <MdAdd /> Agregar
@@ -698,7 +770,7 @@ function QuotesBlock({ quotes, providers, canWrite, creating, editing, setEditin
   );
 }
 
-function InvoicesBlock({ invoices, quotes, providers, canWrite, canDecide, creating, editing, setEditing, saving, onStartCreate, onStartEdit, onCreate, onUpdate, onSetStatus, onDelete, onCancel }) {
+function InvoicesBlock({ zipButton, invoices, quotes, providers, canWrite, canDecide, creating, editing, setEditing, saving, onStartCreate, onStartEdit, onCreate, onUpdate, onSetStatus, onDelete, onCancel }) {
   const [draft, setDraft] = useState({ quoteId: "", providerId: "", amount: "", material: "", invoiceFolio: "", fiscalFolio: "", destination: "", _file: null });
   const [statusForm, setStatusForm] = useState(null);
 
@@ -710,6 +782,7 @@ function InvoicesBlock({ invoices, quotes, providers, canWrite, canDecide, creat
     <div className="project-billing-block">
       <h4>
         <MdReceiptLong /> Facturas
+        {zipButton}
         {canWrite ? (
           <button type="button" className="project-billing-add-btn" onClick={() => { resetDraft(); onStartCreate(); }}>
             <MdAdd /> Agregar
@@ -857,7 +930,7 @@ function InvoicesBlock({ invoices, quotes, providers, canWrite, canDecide, creat
   );
 }
 
-function OficiosBlock({ oficios, invoices, canWrite, creating, editing, setEditing, saving, onStartCreate, onStartEdit, onCreate, onUpdate, onAdvance, onDelete, onCancel }) {
+function OficiosBlock({ zipButton, oficios, invoices, canWrite, creating, editing, setEditing, saving, onStartCreate, onStartEdit, onCreate, onUpdate, onAdvance, onDelete, onCancel }) {
   const [draft, setDraft] = useState({ folio: "", recipient: "", amount: "", note: "", invoiceIds: [], _file: null });
 
   function resetDraft() {
@@ -870,6 +943,7 @@ function OficiosBlock({ oficios, invoices, canWrite, creating, editing, setEditi
     <div className="project-billing-block">
       <h4>
         <MdOutlineDescription /> Oficios
+        {zipButton}
         {canWrite ? (
           <button type="button" className="project-billing-add-btn" onClick={() => { resetDraft(); onStartCreate(); }}>
             <MdAdd /> Agregar
@@ -963,7 +1037,7 @@ function OficiosBlock({ oficios, invoices, canWrite, creating, editing, setEditi
   );
 }
 
-function PaymentsBlock({ payments, oficios, invoices, providers, canWrite, creating, editing, setEditing, saving, onStartCreate, onStartEdit, onCreate, onUpdate, onDelete, onCancel }) {
+function PaymentsBlock({ zipButton, payments, oficios, invoices, providers, canWrite, creating, editing, setEditing, saving, onStartCreate, onStartEdit, onCreate, onUpdate, onDelete, onCancel }) {
   const [draft, setDraft] = useState({ direction: "incoming", amount: "", oficioId: "", invoiceId: "", providerId: "", paidOn: "", trackingFolio: "", note: "", _file: null });
 
   function resetDraft() {
@@ -974,6 +1048,7 @@ function PaymentsBlock({ payments, oficios, invoices, providers, canWrite, creat
     <div className="project-billing-block">
       <h4>
         <MdPayment /> Pagos
+        {zipButton}
         {canWrite ? (
           <button type="button" className="project-billing-add-btn" onClick={() => { resetDraft(); onStartCreate(); }}>
             <MdAdd /> Agregar
@@ -1060,7 +1135,7 @@ function PaymentsBlock({ payments, oficios, invoices, providers, canWrite, creat
   );
 }
 
-function ReceiptsBlock({ receipts, quotes, canWrite, canValidate, creating, editing, setEditing, saving, onStartCreate, onStartEdit, onCreate, onUpdate, onSubmit, onValidate, onDelete, onCancel }) {
+function ReceiptsBlock({ zipButton, receipts, quotes, canWrite, canValidate, creating, editing, setEditing, saving, onStartCreate, onStartEdit, onCreate, onUpdate, onSubmit, onValidate, onDelete, onCancel }) {
   const [draft, setDraft] = useState({ quoteId: "", requester: "", amount: "", reference: "", concept: "", _file: null });
 
   function resetDraft() {
@@ -1071,6 +1146,7 @@ function ReceiptsBlock({ receipts, quotes, canWrite, canValidate, creating, edit
     <div className="project-billing-block">
       <h4>
         <MdReceiptLong /> Recibos referenciados
+        {zipButton}
         {canWrite ? (
           <button type="button" className="project-billing-add-btn" onClick={() => { resetDraft(); onStartCreate(); }}>
             <MdAdd /> Agregar
