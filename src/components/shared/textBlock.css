@@ -1,0 +1,31 @@
+/* Un bloque de texto de un formato: una aclaración entre los campos, que no captura nada. */
+
+.text-block {
+  grid-column: 1 / -1;
+
+  padding: 10px 14px;
+
+  border-left: 3px solid var(--accent-line);
+  border-radius: 0 6px 6px 0;
+
+  background: var(--surface-secondary);
+}
+
+.text-block-title {
+  margin: 0 0 4px;
+
+  color: var(--text);
+
+  font-size: var(--size-body);
+  font-weight: 600;
+}
+
+.text-block-text {
+  margin: 0;
+
+  color: var(--text-secondary);
+
+  font-size: var(--size-small);
+  line-height: 1.5;
+  white-space: pre-line;
+}

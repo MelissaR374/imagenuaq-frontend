@@ -17,6 +17,7 @@ import { shortDate } from "../shared/format.js";
 import { formLink } from "../../config.js";
 import SchemaFormat from "./schemaFormat.jsx";
 import "./schemas.css";
+import { formatFields, isTextBlock } from "../shared/vocabulary.js";
 
 const TABS = [
   {
@@ -37,10 +38,10 @@ function fieldTally(format) {
   if (format.fields === null || format.fields === undefined) {
     return "Sin versión publicada";
   }
-  const deliverables = format.fields.deliverables;
-  const information = format.fields.information;
-  const total = deliverables.length + information.length;
-  const required = [...deliverables, ...information].filter((campo) => campo.required).length;
+  const deliverables = format.fields.deliverables.filter((entry) => !isTextBlock(entry));
+  const fields = formatFields(format.fields);
+  const total = fields.length;
+  const required = fields.filter((campo) => campo.required).length;
 
   return `${total} ${total === 1 ? "campo" : "campos"} · ${required} ${
     required === 1 ? "obligatorio" : "obligatorios"

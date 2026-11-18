@@ -25,6 +25,7 @@ import Help from "../shared/help.jsx";
 import FieldInput from "../shared/fieldInput.jsx";
 import RequesterInput from "../requests/requesterInput.jsx";
 import "./projectForm.css";
+import { formatFields } from "../shared/vocabulary.js";
 
 function ProjectForm({ onCreated, onCancel }) {
   const [formats, setFormatos] = useState([]);
@@ -111,7 +112,7 @@ function ProjectForm({ onCreated, onCancel }) {
   }, [templateId]);
 
   const format = formats.find((one) => String(one.id) === String(formatId)) ?? null;
-  const fields = format ? [...format.fields.deliverables, ...format.fields.information] : [];
+  const fields = format ? formatFields(format.fields) : [];
 
   /** The template's phases as stages with their phase, which is what capture accepts. */
   function stagesFromTemplate() {

@@ -27,6 +27,7 @@ import Help from "../shared/help.jsx";
 import RequesterInput from "./requesterInput.jsx";
 import { saveBlob } from "../shared/download.js";
 import "./requestDetail.css";
+import { formatFields } from "../shared/vocabulary.js";
 
 /**
  * The steps of the walk that belong to a request. Step 1 has already happened if we are looking at
@@ -403,7 +404,7 @@ function RequestDetail({ request, areas, onClose, onChanged }) {
 
   let fields = [];
   if (detail.fields !== null && detail.fields !== undefined) {
-    fields = [...detail.fields.deliverables, ...detail.fields.information];
+    fields = formatFields(detail.fields);
   }
 
   /** What differs from what is saved: it is what gets the amber mark and what is counted. */

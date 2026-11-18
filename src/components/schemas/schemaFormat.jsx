@@ -9,7 +9,8 @@ import Help from "../shared/help.jsx";
 import FieldInput from "../shared/fieldInput.jsx";
 import TypeIcon from "../shared/typeIcon.jsx";
 import FormLinks from "./formLinks.jsx";
-import { GENERAL_BLOCK, SECTIONS } from "../shared/vocabulary.js";
+import TextBlock from "../shared/textBlock.jsx";
+import { GENERAL_BLOCK, SECTIONS, formatFields, isTextBlock } from "../shared/vocabulary.js";
 import "./schemaFormat.css";
 
 const EMPTY_FIELD = { code: "", name: "", type: "text", note: "", required: false };
@@ -231,6 +232,47 @@ function FieldEditor({
   );
 }
 
+/** A text block's editor, opened in place inside the list like a field's. */
+function TextEditor({ block, onChange, onRemove, onClose }) {
+  return (
+    <div className="format-field-editor">
+      <div className="format-grid">
+        <label className="format-field">
+          <span className="format-label">Encabezado (opcional)</span>
+          <input
+            value={block.title}
+            onChange={(event) => onChange({ title: event.target.value })}
+            placeholder="Ej: Antes de pedir"
+          />
+        </label>
+
+        <label className="format-field format-text-body">
+          <span className="format-label">
+            Texto
+            <Help text="Una aclaración que se lee entre los campos, en el formulario y en la captura. No pide ningún dato." />
+          </span>
+          <textarea
+            className="format-choices"
+            value={block.text}
+            onChange={(event) => onChange({ text: event.target.value })}
+            placeholder="Ej: El tiraje mínimo es de 100 piezas. Los archivos van en PDF."
+            rows={4}
+          />
+        </label>
+      </div>
+
+      <div className="format-action-row">
+        <button className="format-quiet is-danger" type="button" onClick={onRemove}>
+          Quitar el texto
+        </button>
+        <button className="format-quiet" type="button" onClick={onClose}>
+          Listo
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /** A field drawn as the capture form draws it, with a stand-in name or key while they are empty. */
 function PreviewField({ field, index }) {
   return (
@@ -347,7 +389,7 @@ function SchemaFormat({ format, formats, types, vocabulary, onChanged, onClose }
     }
   }
 
-  const everyField = [...fields.deliverables, ...fields.information];
+  const everyField = formatFields(fields);
   const keys = everyField.map((field) => field.code);
   const repeatedKeys = [...new Set(keys.filter((code, i) => code !== "" && keys.indexOf(code) !== i))];
 
@@ -358,6 +400,12 @@ function SchemaFormat({ format, formats, types, vocabulary, onChanged, onClose }
     problem = "Hay un campo sin nombre o sin clave.";
   } else if (everyField.some((field) => field.type === "choice" && cleanChoices(field).length === 0)) {
     problem = "Hay un campo de opciones sin opciones.";
+  } else if (
+    [...fields.deliverables, ...fields.information].some(
+      (entry) => isTextBlock(entry) && entry.text.trim() === "",
+    )
+  ) {
+    problem = "Hay un bloque de texto vacío.";
   } else if (repeatedKeys.length > 0) {
     problem = `Clave repetida: ${repeatedKeys.join(", ")}.`;
   } else if (isNew && (draftFormat.name.trim() === "" || draftFormat.code.trim() === "")) {
@@ -626,6 +674,64 @@ function SchemaFormat({ format, formats, types, vocabulary, onChanged, onClose }
 
                 <ul className="format-fields">
                   {fields[section.key].map((field, index) => {
+                    if (isTextBlock(field)) {
+                      const isOpenText =
+                        editing !== null &&
+                        editing.section === section.key &&
+                        editing.index === index;
+                      return (
+                        <li
+                          className={`format-field-row is-text${isOpenText ? " is-open" : ""}`}
+                          key={index}
+                        >
+                          <div className="format-field-head">
+                            <span className="format-move">
+                              <button
+                                type="button"
+                                onClick={() => move(section.key, index, -1)}
+                                aria-label="Subir"
+                              >
+                                ↑
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => move(section.key, index, 1)}
+                                aria-label="Bajar"
+                              >
+                                ↓
+                              </button>
+                            </span>
+
+                            <button
+                              className="format-field-open"
+                              type="button"
+                              onClick={() =>
+                                setEditando(isOpenText ? null : { section: section.key, index })
+                              }
+                            >
+                              <span className="format-field-name">
+                                {field.title.trim() === "" ? "Texto aclaratorio" : field.title}
+                              </span>
+                              <span className="format-field-key">
+                                {field.text.trim() === "" ? "sin texto" : field.text}
+                              </span>
+                            </button>
+
+                            <span className="format-internal">Texto</span>
+                          </div>
+
+                          {isOpenText ? (
+                            <TextEditor
+                              block={field}
+                              onChange={(changes) => changeField(section.key, index, changes)}
+                              onRemove={() => removeField(section.key, index)}
+                              onClose={() => setEditando(null)}
+                            />
+                          ) : null}
+                        </li>
+                      );
+                    }
+
                     const published = publishedKeys.get(field.code);
                     const repeated = field.code !== "" && repeatedKeys.includes(field.code);
                     const isOpen =
@@ -722,6 +828,14 @@ function SchemaFormat({ format, formats, types, vocabulary, onChanged, onClose }
                     + Agregar campo
                   </button>
 
+                  <button
+                    className="format-add"
+                    type="button"
+                    onClick={() => addField(section.key, { kind: "text", title: "", text: "" })}
+                  >
+                    + Agregar texto
+                  </button>
+
                   <select
                     value=""
                     onChange={(event) => {
@@ -761,8 +875,7 @@ function SchemaFormat({ format, formats, types, vocabulary, onChanged, onClose }
                 <summary>Versiones anteriores ({versions.length - 1})</summary>
                 <ul>
                   {versions.slice(1).map((version) => {
-                    const total =
-                      version.fields.deliverables.length + version.fields.information.length;
+                    const total = formatFields(version.fields).length;
                     return (
                       <li key={version.id}>
                         <span className="format-label">Versión {version.version}</span>
@@ -796,9 +909,13 @@ function SchemaFormat({ format, formats, types, vocabulary, onChanged, onClose }
                 <div className="format-preview-sec" key={section.key}>
                   <h4>{section.publicTitle}</h4>
                   <div className="format-grid">
-                    {shown.map((field, index) => (
-                      <PreviewField field={field} index={index} key={index} />
-                    ))}
+                    {shown.map((field, index) =>
+                      isTextBlock(field) ? (
+                        <TextBlock block={field} key={index} />
+                      ) : (
+                        <PreviewField field={field} index={index} key={index} />
+                      ),
+                    )}
                   </div>
                 </div>
               );

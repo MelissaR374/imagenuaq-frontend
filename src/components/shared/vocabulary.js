@@ -66,3 +66,18 @@ export const GENERAL_BLOCK = {
     { name: "Canal de recepción", internal: true },
   ],
 };
+
+/** Whether a section entry is a text block: a heading and text that explain and capture nothing. */
+export function isTextBlock(entry) {
+  return entry?.kind === "text";
+}
+
+/**
+ * A format's fields from both sections as one list, without its text blocks.
+ *
+ * @param {{ deliverables: object[], information: object[] }} fields
+ * @returns {object[]}
+ */
+export function formatFields(fields) {
+  return [...fields.deliverables, ...fields.information].filter((entry) => !isTextBlock(entry));
+}

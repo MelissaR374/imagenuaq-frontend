@@ -11,7 +11,8 @@ import { useEffect, useState } from "react";
 import * as api from "../../api/client.js";
 import FieldInput from "../shared/fieldInput.jsx";
 import Help from "../shared/help.jsx";
-import { SECTIONS } from "../shared/vocabulary.js";
+import TextBlock from "../shared/textBlock.jsx";
+import { SECTIONS, formatFields, isTextBlock } from "../shared/vocabulary.js";
 import RequesterInput from "./requesterInput.jsx";
 import "./requestForm.css";
 
@@ -56,9 +57,7 @@ function RequestForm({ areas, onCreada, onCancelar }) {
 
   const format = formats.find((one) => String(one.id) === String(formatId)) ?? null;
   const internalFields = format
-    ? [...format.fields.deliverables, ...format.fields.information].filter(
-        (field) => field.internal === true,
-      )
+    ? formatFields(format.fields).filter((field) => field.internal === true)
     : [];
 
   async function save(event) {
@@ -206,15 +205,19 @@ function RequestForm({ areas, onCreada, onCancelar }) {
                   <span className="request-form-sub">{section.help}</span>
                 </h3>
                 <div className="request-form-grid">
-                  {shown.map((field) => (
-                    <FieldInput
-                      key={field.code}
-                      field={field}
-                      value={values[field.code]}
-                      onChange={(value) => setValores({ ...values, [field.code]: value })}
-                      archivos
-                    />
-                  ))}
+                  {shown.map((field, index) =>
+                    isTextBlock(field) ? (
+                      <TextBlock block={field} key={`texto-${index}`} />
+                    ) : (
+                      <FieldInput
+                        key={field.code}
+                        field={field}
+                        value={values[field.code]}
+                        onChange={(value) => setValores({ ...values, [field.code]: value })}
+                        archivos
+                      />
+                    ),
+                  )}
                 </div>
               </section>
             );

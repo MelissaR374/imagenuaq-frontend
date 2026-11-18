@@ -24,7 +24,7 @@ import { columnLetter } from "../shared/format.js";
 import Help from "../shared/help.jsx";
 import FieldInput from "../shared/fieldInput.jsx";
 import TypeIcon from "../shared/typeIcon.jsx";
-import { GENERAL_BLOCK, SECTIONS } from "../shared/vocabulary.js";
+import { GENERAL_BLOCK, SECTIONS, isTextBlock } from "../shared/vocabulary.js";
 import "./importConfig.css";
 
 /** An empty rule: this field is not filled. */
@@ -92,7 +92,7 @@ function fieldsOf(format) {
   return [
     ...format.fields.deliverables.map((field) => ({ ...field, section: "deliverables" })),
     ...format.fields.information.map((field) => ({ ...field, section: "information" })),
-  ];
+  ].filter((field) => !isTextBlock(field));
 }
 
 /** The rules it starts with: what was saved is kept and the rest starts empty. */

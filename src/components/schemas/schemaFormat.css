@@ -691,3 +691,13 @@
   box-sizing: border-box;
   resize: vertical;
 }
+
+.format-text-body {
+  grid-column: 1 / -1;
+}
+
+.format-field-row.is-text .format-field-key {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

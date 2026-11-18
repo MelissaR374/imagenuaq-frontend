@@ -6,7 +6,8 @@ import { useEffect, useState } from "react";
 import * as api from "../../api/client.js";
 import FieldInput from "../shared/fieldInput.jsx";
 import { themeClass } from "../shared/theme.js";
-import { GENERAL_BLOCK, SECTIONS } from "../shared/vocabulary.js";
+import TextBlock from "../shared/textBlock.jsx";
+import { GENERAL_BLOCK, SECTIONS, isTextBlock } from "../shared/vocabulary.js";
 import "./publicForm.css";
 
 /** @param {{ token: string }} props */
@@ -123,15 +124,19 @@ function PublicForm({ token }) {
               form.fields[section.key].length === 0 ? null : (
                 <section className="public-form-sec" key={section.key}>
                   <h2>{section.publicTitle}</h2>
-                  {form.fields[section.key].map((field) => (
-                    <FieldInput
-                      key={field.code}
-                      field={field}
-                      value={values[field.code]}
-                      onChange={(value) => setValues({ ...values, [field.code]: value })}
-                      archivos
-                    />
-                  ))}
+                  {form.fields[section.key].map((field, index) =>
+                    isTextBlock(field) ? (
+                      <TextBlock block={field} key={`texto-${index}`} />
+                    ) : (
+                      <FieldInput
+                        key={field.code}
+                        field={field}
+                        value={values[field.code]}
+                        onChange={(value) => setValues({ ...values, [field.code]: value })}
+                        archivos
+                      />
+                    ),
+                  )}
                 </section>
               ),
             )}
