@@ -21,7 +21,7 @@ import "./billing.css";
 const FILTERS = [
   { id: "all", label: "Todos", flag: null },
   { id: "costed_no_quote", label: "Falta cotización", flag: "costed_no_quote" },
-  { id: "missing_invoices", label: "Sin factura", flag: "missing_invoices" },
+  { id: "missing_invoices", label: "Faltan facturas", flag: "missing_invoices" },
   { id: "receipts", label: "Con recibo", flag: null },
 ];
 
@@ -36,10 +36,7 @@ function Billing({ onOpenRecord, onOpenProject }) {
   useEffect(() => {
     let cancelled = false;
 
-    const flag = FILTERS.find((f) => f.id === activeFilter)?.flag ?? null;
-    const params = flag ? { flag } : {};
-
-    api.listFinanceProjects(params)
+    api.listFinanceProjects({})
       .then((data) => {
         if (!cancelled) {
           setProjects(data.projects ?? []);
@@ -51,14 +48,16 @@ function Billing({ onOpenRecord, onOpenProject }) {
       });
 
     return () => { cancelled = true; };
-  }, [activeFilter]);
+  }, []);
 
   const loading = projects === null && error === null;
 
   const list = projects ?? [];
+  const activeFlag = FILTERS.find((f) => f.id === activeFilter)?.flag ?? null;
 
   const filtered = list.filter((p) => {
     if (activeFilter === "receipts" && p.receipts === 0) return false;
+    if (activeFlag && !p.flags?.includes(activeFlag)) return false;
 
     if (!search.trim()) return true;
     const hay = [p.key, p.title, p.requester].filter(Boolean).join(" ").toLowerCase();
@@ -68,6 +67,8 @@ function Billing({ onOpenRecord, onOpenProject }) {
   const totalProjects = list.length;
   const missingQuote = list.filter((p) => p.flags?.includes("costed_no_quote")).length;
   const missingInvoice = list.filter((p) => p.flags?.includes("missing_invoices")).length;
+  const withQuote = list.filter((p) => p.quotes > 0).length;
+  const withInvoice = list.filter((p) => p.uploadedInvoices > 0).length;
   const totalInvoiced = list.reduce((sum, p) => sum + Number(p.invoiced ?? 0), 0);
 
   function filterCount(id) {
@@ -139,13 +140,13 @@ function Billing({ onOpenRecord, onOpenProject }) {
         <BillingStatCard
           title="Falta cotización"
           value={missingQuote}
-          description={`${totalProjects - missingQuote} con cotización`}
+          description={`${withQuote} con cotización`}
           icon={MdDescription}
         />
         <BillingStatCard
-          title="Sin factura"
+          title="Faltan facturas"
           value={missingInvoice}
-          description={`${totalProjects - missingInvoice} con factura`}
+          description={`${withInvoice} con factura`}
           icon={MdReceiptLong}
         />
         <BillingStatCard
