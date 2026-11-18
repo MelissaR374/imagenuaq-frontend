@@ -3,6 +3,9 @@
 import { parseMarkdown } from "./markdown.js";
 import "./textBlock.css";
 
+/** `#`, `##` and `###` as the levels under a form's section heading, which is an h2. */
+const HEADINGS = { 1: "h3", 2: "h4", 3: "h5" };
+
 /** Inline nodes from markdown.js as elements. */
 function inline(nodes) {
   return nodes.map((node, index) => {
@@ -28,7 +31,8 @@ function TextBlock({ block }) {
       <div className="text-block-text">
         {parseMarkdown(block.text).map((part, index) => {
           if (part.type === "heading") {
-            return <h5 key={index}>{inline(part.children)}</h5>;
+            const Heading = HEADINGS[part.level];
+            return <Heading key={index}>{inline(part.children)}</Heading>;
           }
           if (part.type === "ul" || part.type === "ol") {
             const List = part.type;

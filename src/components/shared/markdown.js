@@ -46,7 +46,8 @@ export function parseInline(text) {
 }
 
 /**
- * A text as blocks: `heading`, `ul` and `ol` with their items, and `p` with its lines. A blank line
+ * A text as blocks: `heading` with its `level` from 1 to 3, `ul` and `ol` with their items, and `p`
+ * with its lines. A blank line
  * ends a paragraph or a list, and a single line break stays a line break.
  *
  * @param {string} source
@@ -57,14 +58,14 @@ export function parseMarkdown(source) {
   let current = null;
 
   for (const line of source.split(/\r?\n/)) {
-    const heading = /^#{1,3}\s+(.*)$/.exec(line);
+    const heading = /^(#{1,3})\s+(.*)$/.exec(line);
     const bullet = /^\s*[-*]\s+(.*)$/.exec(line);
     const numbered = /^\s*\d+[.)]\s+(.*)$/.exec(line);
 
     if (line.trim() === "") {
       current = null;
     } else if (heading !== null) {
-      blocks.push({ type: "heading", children: parseInline(heading[1]) });
+      blocks.push({ type: "heading", level: heading[1].length, children: parseInline(heading[2]) });
       current = null;
     } else if (bullet !== null || numbered !== null) {
       const type = bullet !== null ? "ul" : "ol";
