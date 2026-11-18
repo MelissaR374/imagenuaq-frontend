@@ -413,7 +413,7 @@
 .project-billing-inline-form input[type="file"] {
     height: auto;
     padding: 4px 8px;
-    max-width: 220px;
+    max-width: 90em;
 }
 
 .project-billing-form-actions {

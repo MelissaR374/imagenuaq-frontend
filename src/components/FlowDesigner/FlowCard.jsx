@@ -20,102 +20,69 @@ function FlowCard({
     onEdit,
     onRemove,
 }) {
-
+    
     return (
+      <article className="flow-card">
+        <button
+          type="button"
+          className="flow-card-edit"
+          title="Editar etapa"
+          onClick={() => onEdit?.()}
+        >
+          <MdEdit />
+        </button>
 
-        <article className="flow-card">
+        <button
+          type="button"
+          className="flow-card-remove"
+          title="Quitar etapa"
+          onClick={() => onRemove?.()}
+        >
+          <MdClose />
+        </button>
 
-            <button
-                type="button"
-                className="flow-card-edit"
-                title="Editar etapa"
-                onClick={() => onEdit?.()}
-            >
-                <MdEdit />
-            </button>
+        <span className="flow-card-area">{area}</span>
 
-            <button
-                type="button"
-                className="flow-card-remove"
-                title="Quitar etapa"
-                onClick={() => onRemove?.()}
-            >
-                <MdClose />
-            </button>
+        <h3>{title}</h3>
 
-            <span className="flow-card-area">
-                {area}
-            </span>
+        <div className="flow-person">
+          <span className="person-avatar">{initials}</span>
 
-            <h3>
-                {title}
-            </h3>
+          <span className="person-name">{person}</span>
+        </div>
 
-            <div className="flow-person">
-
-                <span className="person-avatar">
-                    {initials}
-                </span>
-
-                <span className="person-name">
-                    {person}
-                </span>
-
+        <div className="flow-io">
+          <div className="flow-io-row">
+            <span className="flow-io-label">ENTRA</span>
+            <div className="flow-io-content">
+              {entradas.length > 0 && (
+                <ul className="flow-io-keys">
+                  {entradas.map((clave, i) => (
+                    <li key={i}>{clave}</li>
+                  ))}
+                </ul>
+              )}
+              {notaEntrada && <p>{notaEntrada}</p>}
             </div>
+          </div>
 
-            <div className="flow-io">
-
-                <div>
-
-                    <span>
-                        ENTRA
-                    </span>
-
-                    {entradas.length > 0 && (
-                        <ul className="flow-io-keys">
-                            {entradas.map((clave, i) => (
-                                <li key={i}>{clave}</li>
-                            ))}
-                        </ul>
-                    )}
-
-                    {notaEntrada && (
-                        <p>
-                            {notaEntrada}
-                        </p>
-                    )}
-
-                </div>
-
-                <div>
-
-                    <span>
-                        SALE
-                    </span>
-
-                    {salidas.length > 0 && (
-                        <ul className="flow-io-keys">
-                            {salidas.map((clave, i) => (
-                                <li key={i}>{clave}</li>
-                            ))}
-                        </ul>
-                    )}
-
-                    {notaSalida && (
-                        <p>
-                            {notaSalida}
-                        </p>
-                    )}
-
-                </div>
-
+          <div className="flow-io-row">
+            <span className="flow-io-label">SALE</span>
+            <div className="flow-io-content">
+              {salidas.length > 0 && (
+                <ul className="flow-io-keys">
+                  {salidas.map((clave, i) => (
+                    <li key={i}>{clave}</li>
+                  ))}
+                </ul>
+              )}
+              {notaSalida && (<p>{notaSalida}</p>)}
             </div>
+          </div>
+        </div>
 
-            <span className="flow-days">
-                {days}
-            </span>
-
-        </article>
+        <span className="flow-days">{days}</span>
+      </article>
     );
 }
 

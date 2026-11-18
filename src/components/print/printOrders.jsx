@@ -275,21 +275,33 @@ function PrintOrders({ canWrite, canCreate }) {
                   </button>
                   {canWrite && o.status === "pending" ? (
                     <>
-                      <button className="po-btn po-btn-small po-btn-primary" onClick={() => changeStatus(o.id, "in_progress")}>
+                      <button
+                        className="po-btn po-btn-small po-btn-primary"
+                        onClick={() => changeStatus(o.id, "in_progress")}
+                      >
                         Iniciar
                       </button>
-                      <button className="po-btn po-btn-small" onClick={() => changeStatus(o.id, "cancelled")}>
+                      <button
+                        className="po-btn po-btn-small"
+                        onClick={() => changeStatus(o.id, "cancelled")}
+                      >
                         Cancelar
                       </button>
                     </>
                   ) : null}
                   {canWrite && o.status === "in_progress" ? (
-                    <button className="po-btn po-btn-small" onClick={() => changeStatus(o.id, "completed")}>
+                    <button
+                      className="po-btn po-btn-small"
+                      onClick={() => changeStatus(o.id, "completed")}
+                    >
                       Completar
                     </button>
                   ) : null}
                   {canWrite && o.status === "pending" ? (
-                    <button className="po-btn po-btn-small po-btn-danger" onClick={() => handleDelete(o.id)}>
+                    <button
+                      className="po-btn po-btn-small po-btn-danger"
+                      onClick={() => handleDelete(o.id)}
+                    >
                       Eliminar
                     </button>
                   ) : null}
@@ -312,23 +324,37 @@ function PrintOrders({ canWrite, canCreate }) {
               <input
                 placeholder="Buscar proyecto..."
                 value={projectSearch}
-                onChange={(e) => { setProjectSearch(e.target.value); setProjectOpen(true); setDraft((d) => ({ ...d, projectId: "" })); }}
+                onChange={(e) => {
+                  setProjectSearch(e.target.value);
+                  setProjectOpen(true);
+                  setDraft((d) => ({ ...d, projectId: "" }));
+                }}
                 onFocus={() => setProjectOpen(true)}
                 onBlur={() => setTimeout(() => setProjectOpen(false), 150)}
               />
               {projectOpen && projects.length > 0 ? (
-                <ul className="po-dropdown">
+                <ul className="po-dropdown po-dropdown-projects">
                   {projects
                     .filter((p) => {
                       if (!projectSearch) return true;
                       const q = projectSearch.toLowerCase();
-                      return (p.key ?? "").toLowerCase().includes(q) || p.title.toLowerCase().includes(q) || (p.requester ?? "").toLowerCase().includes(q);
+                      return (
+                        (p.key ?? "").toLowerCase().includes(q) ||
+                        p.title.toLowerCase().includes(q) ||
+                        (p.requester ?? "").toLowerCase().includes(q)
+                      );
                     })
                     .slice(0, 12)
                     .map((p) => (
                       <li key={p.id} onMouseDown={() => selectProject(p)}>
-                        {p.key ? <strong>{p.key}</strong> : null} {p.title}
-                        {p.requester ? <span className="po-dropdown-hint">{p.requester}</span> : null}
+                        <div className="po-project-main">
+                          {p.key && <strong>{p.key}</strong>}
+                          <span>{p.title}</span>
+                        </div>
+
+                        {p.requester && (
+                          <span className="po-dropdown-hint">{p.requester}</span>
+                        )}
                       </li>
                     ))}
                 </ul>
@@ -338,16 +364,24 @@ function PrintOrders({ canWrite, canCreate }) {
             <div className="po-modal-row">
               <div className="po-modal-field">
                 <span>Máquina</span>
-                <select value={draft.machineId} onChange={(e) => setDraft({ ...draft, machineId: e.target.value })}>
+                <select
+                  value={draft.machineId}
+                  onChange={(e) => setDraft({ ...draft, machineId: e.target.value })}
+                >
                   <option value="">Seleccionar...</option>
                   {machines.map((m) => (
-                    <option key={m.id} value={m.id}>{m.name}</option>
+                    <option key={m.id} value={m.id}>
+                      {m.name}
+                    </option>
                   ))}
                 </select>
               </div>
               <div className="po-modal-field">
                 <span>Entidad</span>
-                <input value={draft.entityName} onChange={(e) => setDraft({ ...draft, entityName: e.target.value })} />
+                <input
+                  value={draft.entityName}
+                  onChange={(e) => setDraft({ ...draft, entityName: e.target.value })}
+                />
               </div>
             </div>
 
@@ -357,97 +391,192 @@ function PrintOrders({ canWrite, canCreate }) {
                 <input
                   placeholder="Buscar pantone..."
                   value={pantoneSearch}
-                  onChange={(e) => { setPantoneSearch(e.target.value); setDraft((d) => ({ ...d, pantoneCode: e.target.value })); setPantoneOpen(true); }}
+                  onChange={(e) => {
+                    setPantoneSearch(e.target.value);
+                    setDraft((d) => ({ ...d, pantoneCode: e.target.value }));
+                    setPantoneOpen(true);
+                  }}
                   onFocus={() => setPantoneOpen(true)}
                   onBlur={() => setTimeout(() => setPantoneOpen(false), 150)}
                 />
-                {pantoneOpen ? (() => {
-                  const entityIds = new Set(pantones.map((p) => p.id));
-                  const source = [...pantones, ...allPantones.filter((p) => !entityIds.has(p.id))];
-                  const picked = source.some((p) => p.pantoneCode === pantoneSearch);
-                  const hits = source.filter((p) => {
-                    if (!pantoneSearch || picked) return true;
-                    const q = pantoneSearch.toLowerCase();
-                    return p.pantoneCode.toLowerCase().includes(q) || p.entityName.toLowerCase().includes(q);
-                  });
-                  return hits.length > 0 ? (
-                    <ul className="po-dropdown">
-                      {hits.map((p) => (
-                        <li key={p.id} onMouseDown={() => selectPantone(p.pantoneCode)}>
-                          {p.hexValue ? <span className="ptn-swatch-inline" style={{ background: p.hexValue }} /> : null}
-                          <strong>{p.pantoneCode}</strong>
-                          <span className="po-dropdown-hint">{p.entityName}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null;
-                })() : null}
+                {pantoneOpen
+                  ? (() => {
+                      const entityIds = new Set(pantones.map((p) => p.id));
+                      const source = [
+                        ...pantones,
+                        ...allPantones.filter((p) => !entityIds.has(p.id)),
+                      ];
+                      const picked = source.some((p) => p.pantoneCode === pantoneSearch);
+                      const hits = source.filter((p) => {
+                        if (!pantoneSearch || picked) return true;
+                        const q = pantoneSearch.toLowerCase();
+                        return (
+                          p.pantoneCode.toLowerCase().includes(q) ||
+                          p.entityName.toLowerCase().includes(q)
+                        );
+                      });
+                      return hits.length > 0 ? (
+                        <ul className="po-dropdown po-dropdown-pantone">
+                          {hits.map((p) => (
+                            <li
+                              key={p.id}
+                              onMouseDown={() => selectPantone(p.pantoneCode)}
+                            >
+                              <span
+                                className={`ptn-swatch-inline ${!p.hexValue ? "ptn-swatch-empty" : ""}`}
+                                style={
+                                  p.hexValue ? { background: p.hexValue } : undefined
+                                }
+                              />
+                              <strong>{p.pantoneCode}</strong>
+                              <span className="po-dropdown-hint ptn-dropdown-hint">
+                                {p.entityName}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null;
+                    })()
+                  : null}
               </div>
               <div className="po-modal-field">
                 <span>Pantalla</span>
-                <input value={draft.pantalla} onChange={(e) => setDraft({ ...draft, pantalla: e.target.value })} />
+                <input
+                  value={draft.pantalla}
+                  onChange={(e) => setDraft({ ...draft, pantalla: e.target.value })}
+                />
               </div>
             </div>
 
             <div className="po-modal-field">
               <span>Trabajo</span>
-              <input value={draft.trabajo} onChange={(e) => setDraft({ ...draft, trabajo: e.target.value })} />
+              <input
+                value={draft.trabajo}
+                onChange={(e) => setDraft({ ...draft, trabajo: e.target.value })}
+              />
             </div>
 
             <div className="po-modal-row">
               <div className="po-modal-field">
                 <span>Tipo de papel</span>
-                <input value={draft.papelType} onChange={(e) => setDraft({ ...draft, papelType: e.target.value })} placeholder="Ej: Bond 90 gm" />
+                <input
+                  value={draft.papelType}
+                  onChange={(e) => setDraft({ ...draft, papelType: e.target.value })}
+                  placeholder="Ej: Bond 90 gm"
+                />
               </div>
               <div className="po-modal-field">
                 <span>Tamano de papel</span>
-                <input value={draft.papelSize} onChange={(e) => setDraft({ ...draft, papelSize: e.target.value })} placeholder="Ej: 448x610 mm" />
+                <input
+                  value={draft.papelSize}
+                  onChange={(e) => setDraft({ ...draft, papelSize: e.target.value })}
+                  placeholder="Ej: 448x610 mm"
+                />
               </div>
             </div>
 
             <div className="po-modal-row">
               <div className="po-modal-field">
                 <span>Cantidad</span>
-                <input type="number" value={draft.cantidad} onChange={(e) => setDraft({ ...draft, cantidad: e.target.value })} />
+                <input
+                  type="number"
+                  value={draft.cantidad}
+                  onChange={(e) => setDraft({ ...draft, cantidad: e.target.value })}
+                />
               </div>
               <div className="po-modal-field">
                 <span>Laminas</span>
-                <input type="number" value={draft.laminas} onChange={(e) => setDraft({ ...draft, laminas: e.target.value })} />
+                <input
+                  type="number"
+                  value={draft.laminas}
+                  onChange={(e) => setDraft({ ...draft, laminas: e.target.value })}
+                />
               </div>
             </div>
 
             <div className="po-modal-row po-modal-checkboxes">
-              <label><input type="checkbox" checked={draft.frente} onChange={(e) => setDraft({ ...draft, frente: e.target.checked })} /> Frente</label>
-              <label><input type="checkbox" checked={draft.vuelta} onChange={(e) => setDraft({ ...draft, vuelta: e.target.checked })} /> Vuelta</label>
-              <label><input type="checkbox" checked={draft.pegado} onChange={(e) => setDraft({ ...draft, pegado: e.target.checked })} /> Pegado</label>
-              <label><input type="checkbox" checked={draft.copiante} onChange={(e) => setDraft({ ...draft, copiante: e.target.checked })} /> Copiante</label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={draft.frente}
+                  onChange={(e) => setDraft({ ...draft, frente: e.target.checked })}
+                />{" "}
+                Frente
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={draft.vuelta}
+                  onChange={(e) => setDraft({ ...draft, vuelta: e.target.checked })}
+                />{" "}
+                Vuelta
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={draft.pegado}
+                  onChange={(e) => setDraft({ ...draft, pegado: e.target.checked })}
+                />{" "}
+                Pegado
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={draft.copiante}
+                  onChange={(e) => setDraft({ ...draft, copiante: e.target.checked })}
+                />{" "}
+                Copiante
+              </label>
             </div>
 
             <div className="po-modal-row">
               <div className="po-modal-field">
                 <span>Corte</span>
-                <input value={draft.corte} onChange={(e) => setDraft({ ...draft, corte: e.target.value })} placeholder="Ej: 215x280 mm" />
+                <input
+                  value={draft.corte}
+                  onChange={(e) => setDraft({ ...draft, corte: e.target.value })}
+                  placeholder="Ej: 215x280 mm"
+                />
               </div>
               <div className="po-modal-field">
                 <span>Folio</span>
-                <input value={draft.folio} onChange={(e) => setDraft({ ...draft, folio: e.target.value })} />
+                <input
+                  value={draft.folio}
+                  onChange={(e) => setDraft({ ...draft, folio: e.target.value })}
+                />
               </div>
               <div className="po-modal-field">
                 <span>Paquetes D</span>
-                <input type="number" value={draft.paquetesD} onChange={(e) => setDraft({ ...draft, paquetesD: e.target.value })} />
+                <input
+                  type="number"
+                  value={draft.paquetesD}
+                  onChange={(e) => setDraft({ ...draft, paquetesD: e.target.value })}
+                />
               </div>
             </div>
 
             <div className="po-modal-field">
               <span>Notas</span>
-              <textarea rows="2" value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} />
+              <textarea
+                rows="2"
+                value={draft.notes}
+                onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
+              />
             </div>
 
             <div className="po-modal-actions">
-              <button className="po-btn po-btn-primary" disabled={saving || !draft.projectId || !draft.machineId || !draft.trabajo} onClick={submitCreate}>
+              <button
+                className="po-btn po-btn-primary"
+                disabled={
+                  saving || !draft.projectId || !draft.machineId || !draft.trabajo
+                }
+                onClick={submitCreate}
+              >
                 {saving ? "Guardando..." : "Generar orden"}
               </button>
-              <button className="po-btn" onClick={() => setShowCreate(false)}>Cancelar</button>
+              <button className="po-btn" onClick={() => setShowCreate(false)}>
+                Cancelar
+              </button>
             </div>
           </div>
         </div>

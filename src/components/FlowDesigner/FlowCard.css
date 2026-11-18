@@ -129,48 +129,62 @@
 }
 
 
+
 /* =========================================================
    ENTRA / SALE
    ========================================================= */
 
 .flow-io {
-    margin-top: 9px;
-}
-
-
-.flow-io>div {
     display: flex;
-
-    gap: 4px;
-
-    margin-bottom: 4px;
+    flex-direction: column;
+    gap: 7px;
+    margin-top: 10px;
+    width: 100%;
 }
 
+.flow-io-row {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr);
+    align-items: start;
+    column-gap: 3px;
+    width: 100%;
+}
 
-.flow-io span {
+.flow-io-label {
     color: var(--text-muted);
-
-    font-size: 9px;
-    font-weight: 600;
-
-    letter-spacing: 0.4px;
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    line-height: 1.5;
+    padding-top: 1px;
 }
 
+.flow-io-content {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
 
-.flow-io p {
-    width: 70px;
-
+/* Lista de datos */
+.flow-io-keys {
     margin: 0;
+    padding-left: 11px;
+    color: var(--text);
+    font-size: 10px;
+    line-height: 1.35;
+}
 
+.flow-io-keys li {
+    padding-left: 1px;
+    margin-bottom: 2px;
+}
+
+/* Notas */
+.flow-io-content p {
+    margin: 2px 0 0;
     color: var(--text-secondary);
-
     font-size: 9px;
-
-    white-space: nowrap;
-
-    overflow: hidden;
-
-    text-overflow: ellipsis;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
 }
 
 
