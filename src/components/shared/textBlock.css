@@ -21,11 +21,47 @@
 }
 
 .text-block-text {
-  margin: 0;
-
   color: var(--text-secondary);
 
   font-size: var(--size-small);
   line-height: 1.5;
-  white-space: pre-line;
+}
+
+.text-block-text > * {
+  margin: 0;
+}
+
+.text-block-text > * + * {
+  margin-top: 6px;
+}
+
+.text-block-text h5 {
+  color: var(--text);
+
+  font-size: var(--size-small);
+  font-weight: 600;
+}
+
+.text-block-text ul,
+.text-block-text ol {
+  padding-left: 18px;
+}
+
+.text-block-text strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.text-block-text code {
+  padding: 1px 4px;
+
+  border-radius: 3px;
+
+  background: var(--surface);
+
+  font-size: 0.95em;
+}
+
+.text-block-text a {
+  color: var(--accent);
 }

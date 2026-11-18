@@ -249,7 +249,7 @@ function TextEditor({ block, onChange, onRemove, onClose }) {
         <label className="format-field format-text-body">
           <span className="format-label">
             Texto
-            <Help text="Una aclaración que se lee entre los campos, en el formulario y en la captura. No pide ningún dato." />
+            <Help text="Una aclaración que se lee entre los campos, en el formulario y en la captura. No pide ningún dato. Acepta Markdown sencillo: **negritas**, *cursivas*, listas con - o 1., encabezados con # y enlaces [texto](https://…)." />
           </span>
           <textarea
             className="format-choices"
