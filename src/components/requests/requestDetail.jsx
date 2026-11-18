@@ -28,6 +28,7 @@ import RequesterInput from "./requesterInput.jsx";
 import { saveBlob } from "../shared/download.js";
 import "./requestDetail.css";
 import { formatFields } from "../shared/vocabulary.js";
+import { dayDate } from "../shared/format.js";
 
 /**
  * The steps of the walk that belong to a request. Step 1 has already happened if we are looking at
@@ -90,10 +91,19 @@ function firstPhaseAreasOf(flow) {
   return [...new Set(flow.phases[0].stages.map((stage) => stage.areaId))];
 }
 
-/** A captured value as readable text: booleans as sí/no and everything else as it is. */
-function readable(value) {
+/**
+ * A captured value as readable text: booleans as sí/no, a `date` or `datetime` field in the
+ * Mexican format, and everything else as it is.
+ */
+function readable(value, type) {
   if (value === null || value === undefined || value === "") {
     return "Sin valor todavía";
+  }
+  if (type === "date") {
+    return dayDate(value);
+  }
+  if (type === "datetime") {
+    return new Date(value).toLocaleString("es-MX");
   }
   if (value === true) {
     return "Sí";
@@ -671,7 +681,7 @@ function RequestDetail({ request, areas, onClose, onChanged }) {
             <label className="request-detail-field">
               <span className="request-detail-label">
                 Estatus
-                <Help text="El estatus se guarda al elegirlo, no con los demás cambios: tiene su propio registro con quién lo movió y cuándo (RF-EST-01). Se ofrecen los globales y los del área que la atiende." />
+                <Help text="El estatus se guarda al elegirlo, no con los demás cambios: tiene su propio registro con quién lo movió y cuándo. Se ofrecen los globales y los del área que la atiende." />
               </span>
               <select
                 value={detail.statusId}
@@ -690,7 +700,7 @@ function RequestDetail({ request, areas, onClose, onChanged }) {
             <label className={mark("priority", "request-detail-field")}>
               <span className="request-detail-label">
                 Urgencia
-                <Help text="Un número: mayor es más urgente. La imprenta y la producción priorizan por urgencia, nunca por orden de llegada (RF-FLW-08)." />
+                <Help text="Un número: mayor es más urgente. La imprenta y la producción priorizan por urgencia, nunca por orden de llegada." />
               </span>
               {isProject ? (
                 <p className="request-detail-value">{detail.priority}</p>
@@ -731,7 +741,7 @@ function RequestDetail({ request, areas, onClose, onChanged }) {
                   <div className="request-detail-field" key={field.code}>
                     <span className="request-detail-label">{field.name}</span>
                     <p className="request-detail-value">
-                      {readable(draft.data[field.code])}
+                      {readable(draft.data[field.code], field.type)}
                     </p>
                   </div>
                 ) : field.type === "document" && /^\d+$/.test(String(draft.data[field.code] ?? "")) ? (
@@ -811,7 +821,9 @@ function RequestDetail({ request, areas, onClose, onChanged }) {
         ) : (
           <div className="request-detail-noflow">
             <p>
-              {detail.areaName === null || detail.areaName === undefined
+              {isProject
+                ? `Su flujo pasó al proyecto ${detail.projectKey}.`
+                : detail.areaName === null || detail.areaName === undefined
                 ? "Sin flujo: todavía no pasa por ninguna área."
                 : `Sin flujo: la atiende ${detail.areaName} por el área asignada.`}
             </p>
@@ -925,7 +937,7 @@ function RequestDetail({ request, areas, onClose, onChanged }) {
             {dirty ? (
               <>
                 <span className="request-detail-dirty">
-                  {changed.length} {changed.length === 1 ? "cambio" : "cambios"} sin save
+                  {changed.length} {changed.length === 1 ? "cambio" : "cambios"} sin guardar
                 </span>
                 <button
                   className="request-detail-btn"

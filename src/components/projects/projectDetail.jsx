@@ -143,7 +143,7 @@ function myPartIn(stage, user) {
     return `La atiende ${stage.areaName}.`;
   }
   if (stage.assignedTo === user.id) {
-    return "Te toca esta etapa.";
+    return stage.status === "done" ? "Atendiste esta etapa." : "Te toca esta etapa.";
   }
   if (user.role === "admin") {
     return "Coordinas el proyecto.";
@@ -258,7 +258,7 @@ function ProjectHead({
           <label className="project-field">
             <span className="project-label">
               Urgencia
-              <Help text="Un número: mayor es más urgente. La imprenta y la producción priorizan por urgencia, nunca por orden de llegada (RF-FLW-08)." />
+              <Help text="Un número: mayor es más urgente. La imprenta y la producción priorizan por urgencia, nunca por orden de llegada." />
             </span>
             <input type="number" value={header.priority} onChange={(event) => write("priority", event.target.value)} />
           </label>
@@ -390,9 +390,11 @@ function StageList({ detail, phases, openStages, selected, busy, onSelect, onAdd
     <div className="project-list">
       <div className="project-list-head">
         <h3>Flujo</h3>
-        <button className="project-btn" type="button" onClick={onAdd} disabled={busy}>
-          + Etapa
-        </button>
+        {detail.closedAt === null ? (
+          <button className="project-btn" type="button" onClick={onAdd} disabled={busy}>
+            + Etapa
+          </button>
+        ) : null}
       </div>
 
       {phases.length === 0 ? <p className="project-note">Todavía sin etapas: agrega la primera.</p> : null}
