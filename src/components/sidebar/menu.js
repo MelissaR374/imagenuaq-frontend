@@ -1,7 +1,7 @@
 // Las pestañas del menú lateral y las reglas para mostrarlas:
 // - Las pestañas generales (Organigrama, Notificaciones) se muestran a cualquier usuario autenticado.
 // - Las pantallas operativas se gestionan dinámicamente mediante el catálogo de permisos por rol (RF-USR-02, RF-USR-05).
-// - Únicamente las funciones reservadas por seguridad a la coordinación (Empleados, Roles y permisos, Tipos de contrato) se restringen a admin.
+// - Únicamente las funciones reservadas por seguridad a la coordinación (Roles y permisos, Tipos de contrato) se restringen a admin. Empleados también la abre `user.role`, para cambiar roles.
 import {
   MdNotificationsNone,
   MdInbox,
@@ -71,7 +71,7 @@ export const menuSections = [
     title: "PERSONAL",
     items: [
       { label: "Ausencias", icon: MdEventBusy, permission: "absence.read" },
-      { label: "Empleados", icon: MdBadge, roles: ["admin"] },
+      { label: "Empleados", icon: MdBadge, roles: ["admin"], permission: "user.role" },
       { label: "Áreas y usuarios", icon: MdBusiness, permission: "area.manage" },
       { label: "Roles y permisos", icon: MdAdminPanelSettings, roles: ["admin"] },
       { label: "Tipos de contrato", icon: MdWork, roles: ["admin"] },
@@ -86,7 +86,7 @@ export const menuSections = [
       { label: "Catálogo de estatus", icon: MdLabel, permission: "status.manage" },
       { label: "Libros de Excel", icon: MdSchema, permission: "spreadsheet.read" },
       { label: "Retención de archivos", icon: MdAttachFile, permission: "document.manage" },
-      { label: "Pantones y maquinas", icon: MdPalette, permission: "print.manage" },
+      { label: "Pantones y máquinas", icon: MdPalette, permission: "print.manage" },
     ],
   },
 ];
@@ -116,7 +116,7 @@ export const descripciones = {
   "Catálogo de estatus":
     "Los estatus con que se muestran solicitudes y proyectos, globales y por área.",
   "Diseñador de flujos":
-    "Plantillas para definir como se va a tratar un proyecto, para agilizar la asignación de tareas",
+    "Plantillas para definir cómo se va a tratar un proyecto, para agilizar la asignación de tareas",
   Archivos: "Todas las carpetas de cada proyecto.",
   "Retención de archivos": "Cuánto tiempo se conservan los archivos.",
   "Mis tareas": "Las etapas de desarrollo de un proyecto a tu cargo",
@@ -130,7 +130,7 @@ export const descripciones = {
   Cotizaciones: "Las cotizaciones subidas a cada proyecto.",
   Proveedores: "El directorio de proveedores con sus datos de contacto.",
   "Órdenes de impresión": "Las órdenes de trabajo para las máquinas de impresión.",
-  "Pantones y maquinas": "Catalogo de colores Pantone y maquinas de impresion.",
+  "Pantones y máquinas": "Catálogo de colores Pantone y máquinas de impresión.",
 };
 
 /** Las etiquetas del menú en el orden que dejó el usuario al arrastrarlas; se guarda en este navegador. */
@@ -153,11 +153,15 @@ export function ordenar(items, orden) {
 
 /**
  * Si el elemento del menú se ve:
- * - Por `permission` si la define (gestión por catálogo de permisos de roles).
- * - Por `roles` si la define (exclusivo para admin).
+ * - Por `roles` si la define y el rol está en la lista (exclusivo para admin).
+ * - Por `permission` si la define (gestión por catálogo de permisos de roles). Con las dos,
+ *   basta cualquiera: «Empleados» la ve coordinación y quien tenga `user.role`.
  * - Si no define ninguna (pestañas generales), visible para cualquier usuario autenticado.
  */
 export function itemVisible(item, role, permissions) {
+  if (item.roles?.includes(role)) {
+    return true;
+  }
   if (item.permission) {
     return permissions.includes(item.permission);
   }

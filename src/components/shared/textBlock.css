@@ -1,0 +1,87 @@
+/* Un bloque de texto de un formato: una aclaración entre los campos, que no captura nada. */
+
+.text-block {
+  grid-column: 1 / -1;
+
+  padding: 10px 14px;
+
+  border-left: 3px solid var(--accent-line);
+  border-radius: 0 6px 6px 0;
+
+  background: var(--surface-secondary);
+}
+
+.text-block-title {
+  margin: 0 0 4px;
+
+  color: var(--text);
+
+  font-size: var(--size-body);
+  font-weight: 600;
+}
+
+.text-block-text {
+  color: var(--text-secondary);
+
+  font-size: var(--size-small);
+  line-height: 1.5;
+}
+
+.text-block-text > * {
+  margin: 0;
+}
+
+.text-block-text > * + * {
+  margin-top: 6px;
+}
+
+.text-block-text h3,
+.text-block-text h4,
+.text-block-text h5 {
+  color: var(--text);
+
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.text-block-text h3 {
+  font-size: 18px;
+}
+
+.text-block-text h4 {
+  font-size: 15px;
+}
+
+.text-block-text h5 {
+  font-size: 13px;
+}
+
+.text-block-text > * + h3,
+.text-block-text > * + h4,
+.text-block-text > * + h5 {
+  margin-top: 12px;
+}
+
+.text-block-text ul,
+.text-block-text ol {
+  padding-left: 18px;
+}
+
+.text-block-text strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.text-block-text code {
+  padding: 1px 4px;
+
+  border-radius: 3px;
+
+  background: var(--surface);
+
+  font-size: 0.95em;
+}
+
+.text-block-text a {
+  color: var(--accent);
+}

@@ -19,6 +19,7 @@ import * as api from "../../api/client.js";
 import { shortDate } from "../shared/format.js";
 import Help from "../shared/help.jsx";
 import "./importConfig.css";
+import { formatFields } from "../shared/vocabulary.js";
 
 /**
  * A test row's verdict, with its symbol. A row that is only missing a required value does come in:
@@ -112,7 +113,7 @@ function ImportRun({ book, step, onChanged, onGo = null }) {
         if (book.schemaVersionId !== null) {
           const { version } = await api.getSchemaVersion(book.schemaVersionId);
           if (!cancelled) {
-            setCampos([...version.fields.deliverables, ...version.fields.information]);
+            setCampos(formatFields(version.fields));
           }
         }
 

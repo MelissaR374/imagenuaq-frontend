@@ -1,8 +1,10 @@
 // Un campo de un formato, dibujado según su tipo. Lo usan la captura de solicitudes y la de
 // proyectos, así que el tipo se traduce a un <input> en un solo lugar.
 //
-// `field` es { code, name, type, note, required }. El tipo es un `data_types.code`: el
-// servidor lo convierte al guardar, así que aquí solo elegimos con qué se teclea más cómodo.
+// `field` trae code, name, type, note y si es obligatorio, y un `choice` trae además `choices` y
+// `multiple`. El tipo es un `data_types.code`: el servidor lo convierte al guardar, así que aquí
+// solo elegimos con qué se teclea más cómodo. Con `archivos`, un `document` pide un archivo y su
+// valor es el File. Sin él sigue siendo texto, que es como lo guardan los proyectos.
 //
 // La indicación del campo vive detrás del (?) de su etiqueta y no como texto corrido: un
 // formulario con un párrafo bajo cada campo se vuelve ilegible justo donde hay que leerlo.
@@ -24,9 +26,87 @@ const TIPOS = {
   datetime: "datetime-local",
 };
 
-function FieldInput({ field, value, onChange }) {
+function FieldInput({ field, value, onChange, archivos = false }) {
   const id = `campo-${field.code}`;
   const tipo = TIPOS[field.type] ?? "text";
+
+  const etiqueta = (
+    <label className="field-label" htmlFor={id}>
+      <TypeIcon type={field.type} />
+      <span className="field-name">{field.name}</span>
+      {field.required ? <span className="field-required"> *</span> : null}
+      {field.note ? <Help text={field.note} /> : null}
+    </label>
+  );
+
+  if (field.type === "choice" && field.multiple) {
+    const elegidas = Array.isArray(value) ? value : [];
+    return (
+      <fieldset className="field-input field-input-choices" id={id}>
+        <legend className="field-label">
+          <TypeIcon type={field.type} />
+          <span className="field-name">{field.name}</span>
+          {field.required ? <span className="field-required"> *</span> : null}
+          {field.note ? <Help text={field.note} /> : null}
+        </legend>
+        {(field.choices ?? []).map((opcion) => (
+          <label className="field-choice" key={opcion}>
+            <input
+              className="field-checkbox"
+              type="checkbox"
+              checked={elegidas.includes(opcion)}
+              onChange={(evento) =>
+                onChange(
+                  evento.target.checked
+                    ? [...elegidas, opcion]
+                    : elegidas.filter((elegida) => elegida !== opcion),
+                )
+              }
+            />
+            <span className="field-choice-name">{opcion}</span>
+          </label>
+        ))}
+      </fieldset>
+    );
+  }
+
+  if (field.type === "choice") {
+    return (
+      <div className="field-input">
+        {etiqueta}
+        <select
+          className="field-control"
+          id={id}
+          required={field.required}
+          value={value ?? ""}
+          onChange={(evento) => onChange(evento.target.value)}
+        >
+          <option value="">Elige una opción</option>
+          {(field.choices ?? []).map((opcion) => (
+            <option key={opcion} value={opcion}>
+              {opcion}
+            </option>
+          ))}
+        </select>
+      </div>
+    );
+  }
+
+  if (field.type === "document" && archivos) {
+    return (
+      <div className="field-input">
+        {etiqueta}
+        <input
+          className="field-control field-file"
+          id={id}
+          type="file"
+          required={field.required}
+          onChange={(evento) => onChange(evento.target.files?.[0] ?? null)}
+        />
+        {value instanceof File ? <span className="field-file-name">{value.name}</span> : null}
+      </div>
+    );
+  }
 
   if (field.type === "boolean") {
     return (
@@ -48,12 +128,7 @@ function FieldInput({ field, value, onChange }) {
 
   return (
     <div className="field-input">
-      <label className="field-label" htmlFor={id}>
-        <TypeIcon type={field.type} />
-        <span className="field-name">{field.name}</span>
-        {field.required ? <span className="field-required"> *</span> : null}
-        {field.note ? <Help text={field.note} /> : null}
-      </label>
+      {etiqueta}
 
       <input
         className="field-control"

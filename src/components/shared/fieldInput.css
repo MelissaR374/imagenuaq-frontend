@@ -146,3 +146,66 @@ form:invalid .field-control:required:invalid {
 
   font-size: 14px;
 }
+
+/* Solo acomodo: el diseño lo revisa quien lleva el CSS. */
+.field-input-choices {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.field-choice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+}
+
+/* =========================================================
+   ARCHIVO
+   El botón del navegador se viste como los botones
+   secundarios del sistema; el nombre elegido queda al lado.
+   ========================================================= */
+
+.field-control.field-file {
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+
+  color: var(--text-secondary);
+
+  cursor: pointer;
+}
+
+.field-file::file-selector-button {
+  height: 28px;
+  margin-right: 10px;
+  padding: 0 12px;
+
+  border: 1px solid var(--border);
+  border-radius: 4px;
+
+  background: var(--surface-secondary);
+  color: var(--accent-line);
+
+  font: inherit;
+  font-size: var(--size-small);
+  font-weight: 600;
+
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.field-file:hover::file-selector-button {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+
+.field-file-name {
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
+  overflow-wrap: anywhere;
+}

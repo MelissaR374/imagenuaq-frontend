@@ -310,6 +310,14 @@ function StatusCatalog() {
    * `sortOrder`, in tens, so a later insertion has room between two rows.
    */
   async function handleSave() {
+    const incomplete = Object.values(draft)
+      .flat()
+      .find((status) => status.label.trim() === "" || (String(status.id).startsWith("new:") && !status.code));
+    if (incomplete !== undefined) {
+      setError("Cada estatus necesita etiqueta y código antes de guardar.");
+      return;
+    }
+
     setError(null);
     setSavingNow(true);
 
@@ -345,11 +353,11 @@ function StatusCatalog() {
 
       setOpenId(null);
       setConfirmOff(false);
+      setReload(reload + 1);
     } catch (err) {
       setError(err.message);
     } finally {
       setSavingNow(false);
-      setReload(reload + 1);
     }
   }
 

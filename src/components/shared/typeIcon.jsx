@@ -16,6 +16,7 @@ import {
   MdToggleOn,
   MdLink,
   MdAttachFile,
+  MdChecklist,
 } from "react-icons/md";
 
 const SYMBOLS = {
@@ -31,6 +32,7 @@ const SYMBOLS = {
   boolean: MdToggleOn,
   url: MdLink,
   document: MdAttachFile,
+  choice: MdChecklist,
 };
 
 /**

@@ -1,0 +1,306 @@
+/* El formulario público con la misma piel que la captura interna: la tarjeta, el encabezado y el
+   pie de una solicitud abierta. Solo los controles crecen un poco en el teléfono. */
+
+.public-form-page {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 40px 16px 56px;
+  box-sizing: border-box;
+
+  background: var(--background);
+  color: var(--text);
+}
+
+.public-form {
+  width: 100%;
+  max-width: 960px;
+
+  border: 1px solid var(--border);
+  border-radius: 8px;
+
+  background: var(--surface);
+  box-shadow: 0 2px 8px rgba(24, 43, 62, 0.05);
+}
+
+/* =========================================================
+   EL ENCABEZADO
+========================================================= */
+
+.public-form-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  padding: 20px 28px;
+
+  border-bottom: 1px solid var(--border);
+}
+
+.public-form-logo {
+  flex-shrink: 0;
+
+  width: 40px;
+  height: 40px;
+
+  object-fit: contain;
+}
+
+.public-form-head-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  min-width: 0;
+}
+
+.public-form-eyebrow {
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.public-form-title {
+  margin: 0;
+
+  color: var(--text);
+
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+/* =========================================================
+   LAS SECCIONES
+========================================================= */
+
+.public-form-body {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Los campos en rejilla: dos o más columnas en escritorio, una en el teléfono. */
+.public-form-sec {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px 24px;
+  align-items: start;
+
+  padding: 20px 28px 24px;
+}
+
+.public-form-sec h2 {
+  grid-column: 1 / -1;
+}
+
+.public-form-sec + .public-form-sec {
+  border-top: 1px solid var(--border-light);
+}
+
+.public-form-sec h2 {
+  margin: 0;
+
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.public-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.public-form-label {
+  color: var(--text-secondary);
+
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* =========================================================
+   AVISOS, ERRORES Y EL PIE
+========================================================= */
+
+.public-form-note {
+  margin: 0;
+
+  color: var(--text-secondary);
+
+  font-size: var(--size-small);
+}
+
+.public-form > .public-form-note {
+  padding: 28px;
+}
+
+.public-form-error {
+  margin: 0 28px 14px;
+  padding-left: 9px;
+
+  border-left: 3px solid var(--danger);
+
+  color: var(--text);
+
+  font-size: var(--size-small);
+}
+
+.public-form-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  padding: 14px 28px;
+
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 8px 8px;
+
+  background: var(--surface);
+}
+
+.public-form-legend {
+  margin: 0;
+
+  color: var(--text-muted);
+
+  font-size: var(--size-small);
+}
+
+/* El envío: el único botón de la página, así que lleva el azul de acción. */
+.public-form-send {
+  height: 32px;
+  padding: 0 16px;
+
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+
+  background: var(--accent);
+  color: #ffffff;
+
+  font: inherit;
+  font-size: var(--size-small);
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.public-form-send:hover:not(:disabled) {
+  border-color: var(--accent-hover);
+  background: var(--accent-hover);
+}
+
+.public-form-send:focus-visible {
+  outline: 2px solid var(--accent-line);
+  outline-offset: 2px;
+}
+
+.public-form-send:disabled {
+  border-color: var(--border);
+
+  background: var(--surface-secondary);
+  color: var(--text-muted);
+
+  cursor: progress;
+}
+
+/* =========================================================
+   ENVIADO: el folio es lo único que hay que guardar
+========================================================= */
+
+.public-form-done {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+
+  padding: 28px;
+}
+
+.public-form-done h2 {
+  margin: 0 0 10px;
+
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.public-form-folio-label {
+  margin: 0;
+
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.public-form-folio {
+  margin-bottom: 6px;
+
+  color: var(--accent);
+
+  font-size: 24px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  user-select: all;
+}
+
+.public-form-done .public-form-error {
+  margin: 8px 0 0;
+}
+
+@media (max-width: 600px) {
+  .public-form-page {
+    padding: 0;
+  }
+
+  .public-form {
+    min-height: 100vh;
+
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .public-form-head,
+  .public-form-sec,
+  .public-form-done,
+  .public-form > .public-form-note {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .public-form-error {
+    margin: 0 14px 14px;
+  }
+
+  .public-form-foot {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    padding: 12px 14px;
+    border-radius: 0;
+  }
+
+  /* En el teléfono se llena con el pulgar: el control y el botón un poco más altos. */
+  .public-form .field-control,
+  .public-form-send {
+    height: 40px;
+  }
+
+  .public-form .field-control {
+    font-size: 14px;
+  }
+
+  .public-form textarea.field-control {
+    height: auto;
+  }
+}

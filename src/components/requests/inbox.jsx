@@ -500,7 +500,7 @@ function Inbox() {
 
         {filtered ? (
           <button className="inbox-clear" type="button" onClick={clearFilters}>
-            Quitar filters
+            Quitar filtros
           </button>
         ) : null}
       </div>

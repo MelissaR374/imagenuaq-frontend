@@ -231,7 +231,7 @@ function MachineTable({ search }) {
     <>
       <div className="pantones-toolbar">
         <button className="ptn-btn ptn-btn-primary" onClick={openCreate}>
-          <MdAdd /> Agregar maquina
+          <MdAdd /> Agregar máquina
         </button>
       </div>
 
@@ -272,7 +272,7 @@ function MachineTable({ search }) {
       {showForm ? (
         <div className="ptn-modal-backdrop" onClick={() => setShowForm(false)}>
           <div className="ptn-modal" onClick={(e) => e.stopPropagation()}>
-            <h3>{editingId ? "Editar maquina" : "Nueva maquina"}</h3>
+            <h3>{editingId ? "Editar máquina" : "Nueva máquina"}</h3>
             {formError ? <p className="pantones-error">{formError}</p> : null}
 
             <div className="ptn-modal-field">
@@ -305,13 +305,13 @@ function Pantones() {
             Pantones
           </button>
           <button className={`ptn-tab ${tab === "machines" ? "ptn-tab-active" : ""}`} onClick={() => { setTab("machines"); setSearch(""); }}>
-            Maquinas
+            Máquinas
           </button>
         </div>
         <div className="pantones-search">
           <MdSearch />
           <input
-            placeholder={tab === "pantones" ? "Buscar por entidad o codigo..." : "Buscar maquina..."}
+            placeholder={tab === "pantones" ? "Buscar por entidad o código..." : "Buscar máquina..."}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />

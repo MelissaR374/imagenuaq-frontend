@@ -1,5 +1,5 @@
 /* The list of request formats. Layout ported from the "Lienzo" prototype: tabs by whether they
-   are active, a light table and no buttons per row. */
+   are active, a light table, and one button per row to copy the public form link. */
 
 .schemas {
   padding-bottom: 30px;
@@ -269,4 +269,58 @@
   color: var(--text);
 
   font-size: var(--size-small);
+}
+
+/* =========================================================
+   COPY THE PUBLIC FORM LINK
+   Small and outlined, so it reads as a shortcut beside the
+   row and not as the row's main action.
+   ========================================================= */
+
+.schemas-cell-link {
+  width: 1%;
+
+  text-align: right;
+  white-space: nowrap;
+}
+
+.schemas-table td.schemas-cell-link {
+  vertical-align: middle;
+}
+
+.schemas-copy {
+  height: 26px;
+  padding: 0 10px;
+
+  border: 1px solid var(--border);
+  border-radius: 6px;
+
+  background: var(--surface);
+  color: var(--accent-line);
+
+  font: inherit;
+  font-size: var(--size-small);
+  font-weight: 600;
+
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.schemas-copy:hover {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+
+.schemas-copy:focus-visible {
+  outline: 2px solid var(--accent-line);
+  outline-offset: 2px;
+}
+
+.schemas-copy.is-copied {
+  border-color: var(--success);
+  background: var(--success-soft);
+  color: var(--success);
 }

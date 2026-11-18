@@ -249,7 +249,7 @@ function PrintOrders({ canWrite, canCreate }) {
               <th>Proyecto</th>
               <th>Entidad</th>
               <th>Trabajo</th>
-              <th>Maquina</th>
+              <th>Máquina</th>
               <th>Estatus</th>
               <th>Fecha</th>
               <th>Acciones</th>
@@ -303,7 +303,7 @@ function PrintOrders({ canWrite, canCreate }) {
       {showCreate ? (
         <div className="po-modal-backdrop" onClick={() => setShowCreate(false)}>
           <div className="po-modal po-modal-wide" onClick={(e) => e.stopPropagation()}>
-            <h3>Nueva orden de impresion</h3>
+            <h3>Nueva orden de impresión</h3>
 
             {createError ? <p className="print-orders-error">{createError}</p> : null}
 
@@ -337,7 +337,7 @@ function PrintOrders({ canWrite, canCreate }) {
 
             <div className="po-modal-row">
               <div className="po-modal-field">
-                <span>Maquina</span>
+                <span>Máquina</span>
                 <select value={draft.machineId} onChange={(e) => setDraft({ ...draft, machineId: e.target.value })}>
                   <option value="">Seleccionar...</option>
                   {machines.map((m) => (

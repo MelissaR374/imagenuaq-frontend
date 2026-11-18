@@ -192,7 +192,7 @@ function AbsenceTypes() {
               <th>Código</th>
               <th>Nombre</th>
               <th>Unidad</th>
-              <th>Consume saldo</th>
+              <th>Consume días de vacaciones</th>
               <th>Documento</th>
               <th>Activo</th>
               <th></th>

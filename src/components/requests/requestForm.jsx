@@ -5,11 +5,14 @@
 // The format comes first because it decides the rest of the form: the fields are drawn from the
 // chosen format, so this screen knows nothing about them. The server converts the values by each
 // field's type, so "1,000" and "15/03/2026" arrive right without anything here touching them.
+// Files go after the request exists, one upload per `document` field, into the request's folder.
 import { useEffect, useState } from "react";
 
 import * as api from "../../api/client.js";
 import FieldInput from "../shared/fieldInput.jsx";
 import Help from "../shared/help.jsx";
+import TextBlock from "../shared/textBlock.jsx";
+import { SECTIONS, formatFields, isTextBlock } from "../shared/vocabulary.js";
 import RequesterInput from "./requesterInput.jsx";
 import "./requestForm.css";
 
@@ -53,8 +56,8 @@ function RequestForm({ areas, onCreada, onCancelar }) {
   }, []);
 
   const format = formats.find((one) => String(one.id) === String(formatId)) ?? null;
-  const fields = format
-    ? [...format.fields.deliverables, ...format.fields.information]
+  const internalFields = format
+    ? formatFields(format.fields).filter((field) => field.internal === true)
     : [];
 
   async function save(event) {
@@ -62,16 +65,24 @@ function RequestForm({ areas, onCreada, onCancelar }) {
     setGuardando(true);
     setError(null);
 
+    const files = Object.entries(values).filter(([, value]) => value instanceof File);
+    const data = Object.fromEntries(
+      Object.entries(values).filter(([, value]) => !(value instanceof File)),
+    );
+
     try {
-      const { request } = await api.createRequest({
+      let { request } = await api.createRequest({
         schemaId: Number(formatId),
         title: header.title,
         requester: header.requester || undefined,
         areaId: header.areaId === "" ? undefined : Number(header.areaId),
         priority: Number(header.priority),
         source: header.source,
-        data: values,
+        data,
       });
+      for (const [code, file] of files) {
+        ({ request } = await api.uploadRequestFile(request.id, code, file));
+      }
       onCreada(request);
     } catch (failure) {
       setError(failure.message);
@@ -157,7 +168,7 @@ function RequestForm({ areas, onCreada, onCancelar }) {
         <label className="request-form-field">
           <span className="request-form-label">
             Urgencia
-            <Help text="Un número: mayor es más urgente. La imprenta y la producción priorizan por urgencia, nunca por orden de llegada (RF-FLW-08)." />
+            <Help text="Un número: mayor es más urgente. La imprenta y la producción priorizan por urgencia, nunca por orden de llegada." />
           </span>
           <input
             type="number"
@@ -167,7 +178,10 @@ function RequestForm({ areas, onCreada, onCancelar }) {
         </label>
 
         <label className="request-form-field">
-          <span className="request-form-label">Cómo llegó</span>
+          <span className="request-form-label">
+            Canal de recepción
+            <Help text="Por dónde llegó la solicitud: capturada aquí directamente, por correo o por el formulario." />
+          </span>
           <select
             value={header.source}
             onChange={(event) => setCabecera({ ...header, source: event.target.value })}
@@ -181,21 +195,56 @@ function RequestForm({ areas, onCreada, onCancelar }) {
         </label>
       </div>
 
-      {format ? (
+      {format
+        ? SECTIONS.map((section) => {
+            const shown = format.fields[section.key].filter((field) => field.internal !== true);
+            return shown.length === 0 ? null : (
+              <section className="request-form-sec" key={section.key}>
+                <h3>
+                  {section.title}
+                  <span className="request-form-sub">{section.help}</span>
+                </h3>
+                <div className="request-form-grid">
+                  {shown.map((field, index) =>
+                    isTextBlock(field) ? (
+                      <TextBlock block={field} key={`texto-${index}`} />
+                    ) : (
+                      <FieldInput
+                        key={field.code}
+                        field={field}
+                        value={values[field.code]}
+                        onChange={(value) => setValores({ ...values, [field.code]: value })}
+                        archivos
+                      />
+                    ),
+                  )}
+                </div>
+              </section>
+            );
+          })
+        : null}
+
+      {internalFields.length === 0 ? null : (
         <section className="request-form-sec">
-          <h3>Lo que pide {format.name}</h3>
+          <h3>
+            Datos internos
+            <span className="request-form-sub">
+              Los llena el equipo; el solicitante no los ve
+            </span>
+          </h3>
           <div className="request-form-grid">
-            {fields.map((field) => (
+            {internalFields.map((field) => (
               <FieldInput
                 key={field.code}
                 field={field}
                 value={values[field.code]}
                 onChange={(value) => setValores({ ...values, [field.code]: value })}
+                archivos
               />
             ))}
           </div>
         </section>
-      ) : null}
+      )}
 
       {error !== null ? <p className="request-form-error">{error}</p> : null}
 

@@ -1,25 +1,6 @@
-// A format opened at full screen: building its fields (RF-SOL-01) with the capture form beside
-// it, because a format is a builder and the only thing that says whether it is right is how it is
-// going to look.
-//
-// It is two sections and each one an array: `deliverables` is what has to be produced,
-// `information` what has to be declared. The fields are a list, not a table of inputs: one row per
-// field with its name, its key and its type, and the editor opens in its place.
-//
-// The `code` is the key the value is stored under, and the one the label, the print order and the
-// invoicing read it by, so it is snake_case and unique across both sections.
-//
-// **A key that already exists is reused, not redefined.** Choosing one from the vocabulary
-// (`GET /api/schemas/field-keys`) fills the name and the type and leaves them firm, because the
-// value is stored under that key across the whole system, and if it were another type here the
-// project would end up with two different things under one name. The server refuses to publish it
-// with another type, so showing it here is what saves the trip.
-//
-// A field's key is suggested from its name until somebody touches it: suggesting only while it was
-// empty left `c` when typing "Contacto".
-//
-// Publishing creates the next version and does not touch the previous one: the footer says so in
-// this format's own numbers, which is the only way for the warning to mean anything.
+// A format's builder (RF-SOL-01): which fields the requester's form asks and which are internal.
+// Internal fields are staff data and never required. A stage that produces one declares it (§2.14).
+// An existing key keeps its name and type (§2.13b). Publishing adds a version and leaves the rest.
 import { useEffect, useState } from "react";
 
 import * as api from "../../api/client.js";
@@ -27,20 +8,10 @@ import { shortDate } from "../shared/format.js";
 import Help from "../shared/help.jsx";
 import FieldInput from "../shared/fieldInput.jsx";
 import TypeIcon from "../shared/typeIcon.jsx";
+import FormLinks from "./formLinks.jsx";
+import TextBlock from "../shared/textBlock.jsx";
+import { GENERAL_BLOCK, SECTIONS, formatFields, isTextBlock } from "../shared/vocabulary.js";
 import "./schemaFormat.css";
-
-const SECTIONS = [
-  {
-    key: "deliverables",
-    titulo: "Entregables",
-    ayuda: "Lo que el área tiene que producir",
-  },
-  {
-    key: "information",
-    titulo: "Información",
-    ayuda: "Lo que el solicitante declara",
-  },
-];
 
 const EMPTY_FIELD = { code: "", name: "", type: "text", note: "", required: false };
 
@@ -66,6 +37,11 @@ function reuseText(published) {
     return "Esta clave ya se publicó antes: su nombre y su tipo vienen de ahí.";
   }
   return `Dato compartido con ${usedIn.join(", ")}: su nombre y su tipo vienen de ahí.`;
+}
+
+/** A choice field's options as they will be published: trimmed, no blank lines. */
+function cleanChoices(field) {
+  return (field.choices ?? []).map((choice) => choice.trim()).filter((choice) => choice !== "");
 }
 
 /** A field's editor, opened in place inside the list. */
@@ -142,7 +118,14 @@ function FieldEditor({
           {!locked ? (
             <select
               value={field.type}
-              onChange={(event) => onChange({ type: event.target.value })}
+              onChange={(event) => {
+                const type = event.target.value;
+                onChange(
+                  type === "choice"
+                    ? { type, choices: field.choices ?? [], multiple: field.multiple ?? false }
+                    : { type, choices: undefined, multiple: undefined },
+                );
+              }}
             >
               {types.map((type) => (
                 <option value={type.code} key={type.code}>
@@ -170,14 +153,62 @@ function FieldEditor({
           />
         </label>
 
-        <label className="format-check">
-          <input
-            type="checkbox"
-            checked={field.required === true}
-            onChange={(event) => onChange({ required: event.target.checked })}
-          />
-          Obligatorio
+        {field.type === "choice" ? (
+          <>
+            <label className="format-field">
+              <span className="format-label">
+                Opciones
+                <Help text="Una por renglón. Se guardan tal como las escribes aquí, aunque quien responde las teclee con otras mayúsculas." />
+              </span>
+              <textarea
+                className="format-choices"
+                value={(field.choices ?? []).join("\n")}
+                onChange={(event) => onChange({ choices: event.target.value.split("\n") })}
+                placeholder={"Hoja membretada\nTarjeta de presentación"}
+                rows={4}
+              />
+            </label>
+            <label className="format-check">
+              <input
+                type="checkbox"
+                checked={field.multiple === true}
+                onChange={(event) => onChange({ multiple: event.target.checked })}
+              />
+              Varias respuestas
+            </label>
+          </>
+        ) : null}
+
+        <label className="format-field">
+          <span className="format-label">
+            Lo llena
+            <Help text="Un dato interno lo llena el equipo y el formulario del solicitante no lo muestra. Si una etapa lo produce, decláralo también como su salida en el diseñador de flujos, para que su visto bueno lo exija." />
+          </span>
+          <select
+            value={field.internal === true ? "internal" : "form"}
+            onChange={(event) =>
+              onChange(
+                event.target.value === "internal"
+                  ? { internal: true, required: false }
+                  : { internal: undefined },
+              )
+            }
+          >
+            <option value="form">El solicitante, en el formulario</option>
+            <option value="internal">El equipo (dato interno)</option>
+          </select>
         </label>
+
+        {field.internal === true ? null : (
+          <label className="format-check">
+            <input
+              type="checkbox"
+              checked={field.required === true}
+              onChange={(event) => onChange({ required: event.target.checked })}
+            />
+            Obligatorio
+          </label>
+        )}
       </div>
 
       {repeated ? (
@@ -198,6 +229,62 @@ function FieldEditor({
         </button>
       </div>
     </div>
+  );
+}
+
+/** A text block's editor, opened in place inside the list like a field's. */
+function TextEditor({ block, onChange, onRemove, onClose }) {
+  return (
+    <div className="format-field-editor">
+      <div className="format-grid">
+        <label className="format-field">
+          <span className="format-label">Encabezado (opcional)</span>
+          <input
+            value={block.title}
+            onChange={(event) => onChange({ title: event.target.value })}
+            placeholder="Ej: Antes de pedir"
+          />
+        </label>
+
+        <label className="format-field format-text-body">
+          <span className="format-label">
+            Texto
+            <Help text="Una aclaración que se lee entre los campos, en el formulario y en la captura. No pide ningún dato. Acepta Markdown sencillo: **negritas**, *cursivas*, listas con - o 1., encabezados con # y enlaces [texto](https://…)." />
+          </span>
+          <textarea
+            className="format-choices"
+            value={block.text}
+            onChange={(event) => onChange({ text: event.target.value })}
+            placeholder="Ej: El tiraje mínimo es de 100 piezas. Los archivos van en PDF."
+            rows={4}
+          />
+        </label>
+      </div>
+
+      <div className="format-action-row">
+        <button className="format-quiet is-danger" type="button" onClick={onRemove}>
+          Quitar el texto
+        </button>
+        <button className="format-quiet" type="button" onClick={onClose}>
+          Listo
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** A field drawn as the capture form draws it, with a stand-in name or key while they are empty. */
+function PreviewField({ field, index }) {
+  return (
+    <FieldInput
+      field={{
+        ...field,
+        code: field.code === "" ? `sin-clave-${index}` : field.code,
+        name: field.name === "" ? "Campo sin nombre" : field.name,
+      }}
+      value=""
+      onChange={() => {}}
+    />
   );
 }
 
@@ -302,7 +389,7 @@ function SchemaFormat({ format, formats, types, vocabulary, onChanged, onClose }
     }
   }
 
-  const everyField = [...fields.deliverables, ...fields.information];
+  const everyField = formatFields(fields);
   const keys = everyField.map((field) => field.code);
   const repeatedKeys = [...new Set(keys.filter((code, i) => code !== "" && keys.indexOf(code) !== i))];
 
@@ -311,6 +398,14 @@ function SchemaFormat({ format, formats, types, vocabulary, onChanged, onClose }
     problem = "Un formato necesita al menos un campo.";
   } else if (everyField.some((field) => field.name.trim() === "" || field.code.trim() === "")) {
     problem = "Hay un campo sin nombre o sin clave.";
+  } else if (everyField.some((field) => field.type === "choice" && cleanChoices(field).length === 0)) {
+    problem = "Hay un campo de opciones sin opciones.";
+  } else if (
+    [...fields.deliverables, ...fields.information].some(
+      (entry) => isTextBlock(entry) && entry.text.trim() === "",
+    )
+  ) {
+    problem = "Hay un bloque de texto vacío.";
   } else if (repeatedKeys.length > 0) {
     problem = `Clave repetida: ${repeatedKeys.join(", ")}.`;
   } else if (isNew && (draftFormat.name.trim() === "" || draftFormat.code.trim() === "")) {
@@ -324,16 +419,19 @@ function SchemaFormat({ format, formats, types, vocabulary, onChanged, onClose }
   async function publish() {
     setOcupado(true);
     setError(null);
+    const clean = (list) =>
+      list.map((field) => (field.type === "choice" ? { ...field, choices: cleanChoices(field) } : field));
+    const toPublish = { deliverables: clean(fields.deliverables), information: clean(fields.information) };
     try {
       if (isNew) {
         const { schema } = await api.createSchema({
           code: draftFormat.code,
           name: draftFormat.name,
-          fields: fields,
+          fields: toPublish,
         });
         onChanged(schema.id);
       } else {
-        await api.createSchemaVersion(format.id, fields);
+        await api.createSchemaVersion(format.id, toPublish);
         onChanged(format.id);
       }
     } catch (failure) {
@@ -548,15 +646,92 @@ function SchemaFormat({ format, formats, types, vocabulary, onChanged, onClose }
 
         <div className="format-columns">
           <div>
+            <section className="format-sec format-general">
+              <h3>
+                {GENERAL_BLOCK.title}
+                <span className="format-sub">{GENERAL_BLOCK.help}</span>
+              </h3>
+              <ul className="format-fields">
+                {GENERAL_BLOCK.fields.map((general) => (
+                  <li className="format-field-row is-fixed" key={general.name}>
+                    <div className="format-field-head">
+                      <span className="format-field-name">{general.name}</span>
+                      <span className={general.internal ? "format-internal" : "format-required"}>
+                        {general.internal ? "Interno" : "En el formulario"}
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
+
             {SECTIONS.map((section) => (
               <section className="format-sec" key={section.key}>
                 <h3>
-                  {section.titulo}
-                  <span className="format-sub">{section.ayuda}</span>
+                  {section.title}
+                  <span className="format-sub">{section.help}</span>
                 </h3>
 
                 <ul className="format-fields">
                   {fields[section.key].map((field, index) => {
+                    if (isTextBlock(field)) {
+                      const isOpenText =
+                        editing !== null &&
+                        editing.section === section.key &&
+                        editing.index === index;
+                      return (
+                        <li
+                          className={`format-field-row is-text${isOpenText ? " is-open" : ""}`}
+                          key={index}
+                        >
+                          <div className="format-field-head">
+                            <span className="format-move">
+                              <button
+                                type="button"
+                                onClick={() => move(section.key, index, -1)}
+                                aria-label="Subir"
+                              >
+                                ↑
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => move(section.key, index, 1)}
+                                aria-label="Bajar"
+                              >
+                                ↓
+                              </button>
+                            </span>
+
+                            <button
+                              className="format-field-open"
+                              type="button"
+                              onClick={() =>
+                                setEditando(isOpenText ? null : { section: section.key, index })
+                              }
+                            >
+                              <span className="format-field-name">
+                                {field.title.trim() === "" ? "Texto aclaratorio" : field.title}
+                              </span>
+                              <span className="format-field-key">
+                                {field.text.trim() === "" ? "sin texto" : field.text}
+                              </span>
+                            </button>
+
+                            <span className="format-internal">Texto</span>
+                          </div>
+
+                          {isOpenText ? (
+                            <TextEditor
+                              block={field}
+                              onChange={(changes) => changeField(section.key, index, changes)}
+                              onRemove={() => removeField(section.key, index)}
+                              onClose={() => setEditando(null)}
+                            />
+                          ) : null}
+                        </li>
+                      );
+                    }
+
                     const published = publishedKeys.get(field.code);
                     const repeated = field.code !== "" && repeatedKeys.includes(field.code);
                     const isOpen =
@@ -611,13 +786,17 @@ function SchemaFormat({ format, formats, types, vocabulary, onChanged, onClose }
                             <TypeIcon type={field.type} />
                             {types.find((type) => type.code === field.type)?.name ?? field.type}
                           </span>
-                          <span
-                            className={
-                              field.required ? "format-required is-on" : "format-required"
-                            }
-                          >
-                            {field.required ? "Obligatorio" : "Opcional"}
-                          </span>
+                          {field.internal === true ? (
+                            <span className="format-internal">Interno</span>
+                          ) : (
+                            <span
+                              className={
+                                field.required ? "format-required is-on" : "format-required"
+                              }
+                            >
+                              {field.required ? "Obligatorio" : "Opcional"}
+                            </span>
+                          )}
                         </div>
 
                         {isOpen ? (
@@ -649,6 +828,14 @@ function SchemaFormat({ format, formats, types, vocabulary, onChanged, onClose }
                     + Agregar campo
                   </button>
 
+                  <button
+                    className="format-add"
+                    type="button"
+                    onClick={() => addField(section.key, { kind: "text", title: "", text: "" })}
+                  >
+                    + Agregar texto
+                  </button>
+
                   <select
                     value=""
                     onChange={(event) => {
@@ -678,13 +865,17 @@ function SchemaFormat({ format, formats, types, vocabulary, onChanged, onClose }
               </section>
             ))}
 
+            <p className="format-note format-later">
+              Lo que el equipo llena después (costo, número de guía, folio) va como dato interno.
+              <Help text="El formulario del solicitante no lo muestra. Si una etapa lo produce, decláralo también como su salida en el diseñador de flujos, para que su visto bueno no se dé hasta que tenga valor." />
+            </p>
+
             {isNew || versions.length <= 1 ? null : (
               <details className="format-versions">
                 <summary>Versiones anteriores ({versions.length - 1})</summary>
                 <ul>
                   {versions.slice(1).map((version) => {
-                    const total =
-                      version.fields.deliverables.length + version.fields.information.length;
+                    const total = formatFields(version.fields).length;
                     return (
                       <li key={version.id}>
                         <span className="format-label">Versión {version.version}</span>
@@ -699,33 +890,58 @@ function SchemaFormat({ format, formats, types, vocabulary, onChanged, onClose }
           </div>
 
           <section className="format-sec format-preview">
-            <h3>Así se ve al capturar</h3>
-            {everyField.length === 0 ? (
-              <p className="format-note">Agrega un campo y aparecerá aquí.</p>
-            ) : (
-              SECTIONS.map((section) =>
-                fields[section.key].length === 0 ? null : (
-                  <div className="format-preview-sec" key={section.key}>
-                    <h4>{section.titulo}</h4>
-                    <div className="format-grid">
-                      {fields[section.key].map((field, index) => (
-                        <FieldInput
-                          field={{
-                            ...field,
-                            code: field.code === "" ? `sin-clave-${index}` : field.code,
-                            name: field.name === "" ? "Campo sin nombre" : field.name,
-                          }}
-                          value=""
-                          onChange={() => {}}
-                          key={index}
-                        />
-                      ))}
-                    </div>
+            <h3>Lo que ve el solicitante</h3>
+            <div className="format-preview-sec">
+              <div className="format-grid">
+                {GENERAL_BLOCK.fields
+                  .filter((general) => !general.internal)
+                  .map((general) => (
+                    <label className="format-field" key={general.name}>
+                      <span className="format-label">{general.publicName}</span>
+                      <input disabled />
+                    </label>
+                  ))}
+              </div>
+            </div>
+            {SECTIONS.map((section) => {
+              const shown = fields[section.key].filter((field) => field.internal !== true);
+              return shown.length === 0 ? null : (
+                <div className="format-preview-sec" key={section.key}>
+                  <h4>{section.publicTitle}</h4>
+                  <div className="format-grid">
+                    {shown.map((field, index) =>
+                      isTextBlock(field) ? (
+                        <TextBlock block={field} key={index} />
+                      ) : (
+                        <PreviewField field={field} index={index} key={index} />
+                      ),
+                    )}
                   </div>
-                ),
-              )
-            )}
+                </div>
+              );
+            })}
+
+            <h3 className="format-preview-internal">Solo interno</h3>
+            <div className="format-preview-sec">
+              <div className="format-grid">
+                {GENERAL_BLOCK.fields
+                  .filter((general) => general.internal)
+                  .map((general) => (
+                    <label className="format-field" key={general.name}>
+                      <span className="format-label">{general.name}</span>
+                      <input disabled />
+                    </label>
+                  ))}
+                {everyField
+                  .filter((field) => field.internal === true)
+                  .map((field, index) => (
+                    <PreviewField field={field} index={index} key={`internal-${index}`} />
+                  ))}
+              </div>
+            </div>
           </section>
+
+          {isNew || format.version === null ? null : <FormLinks format={format} />}
         </div>
       </div>
 
@@ -774,12 +990,12 @@ function SchemaFormat({ format, formats, types, vocabulary, onChanged, onClose }
               : isNew
                 ? "Crear formato"
                 : `Publicar versión ${next}`}
-            {isNew ? null : (
-              <Help
-                text={`Crea la versión ${next} con estos campos. La ${format.version} queda intacta, porque lo capturado con ella se sigue leyendo como se capturó.`}
-              />
-            )}
           </button>
+          {isNew ? null : (
+            <Help
+              text={`Crea la versión ${next} con estos campos. La ${format.version} queda intacta, porque lo capturado con ella se sigue leyendo como se capturó.`}
+            />
+          )}
         </div>
       </footer>
     </section>

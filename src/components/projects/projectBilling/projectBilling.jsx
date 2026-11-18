@@ -17,7 +17,8 @@ import {
 } from "react-icons/md";
 
 import * as api from "../../../api/client.js";
-import { orDash } from "../../shared/format.js";
+import { orDash, shortDate } from "../../shared/format.js";
+import { FLAG_LABELS } from "../../billing/financeFlags.js";
 import { saveBlob } from "../../shared/download.js";
 import { zip } from "../../shared/zip.js";
 import FilePreview from "../../documents/filePreview.jsx";
@@ -57,7 +58,7 @@ function label(status) {
 
 function fmtDate(value) {
   if (!value) return null;
-  return new Date(value).toLocaleDateString();
+  return shortDate(value);
 }
 
 /** MIME types the preview can show, as in the Archivos screen. */
@@ -525,7 +526,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
         <div className="project-billing-flags">
           {data.flags.map((flag) => (
             <span key={flag} className="project-billing-flag">
-              <MdWarningAmber /> {flag.replaceAll("_", " ")}
+              <MdWarningAmber /> {FLAG_LABELS[flag] ?? flag}
             </span>
           ))}
         </div>

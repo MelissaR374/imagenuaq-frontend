@@ -12,6 +12,7 @@ import {
 } from "react-icons/md";
 
 import * as api from "../../api/client.js";
+import { isoDay } from "../shared/format.js";
 import "./contractTypes.css";
 
 function crearConfiguracion(contrato) {
@@ -55,8 +56,24 @@ function ContractTypes() {
           api.listContractTypes(),
           api.listAbsenceTypes().catch(() => ({ types: [] })),
         ]);
+        const lista = ctRes.contractTypes ?? [];
+        const derechos = await Promise.all(
+          lista.map((contrato) => api.listEntitlements(contrato.id).catch(() => ({ entitlements: [] }))),
+        );
         if (cancelado) return;
-        setContratos(ctRes.contractTypes ?? []);
+        const cargadas = {};
+        lista.forEach((contrato, indice) => {
+          const vigentes = (derechos[indice].entitlements ?? []).filter((e) => !e.validTo);
+          const vac = vigentes.find((e) => e.absenceTypeCode === "vacaciones");
+          const inc = vigentes.find((e) => e.absenceTypeCode === "incapacidad");
+          cargadas[contrato.id] = {
+            ...crearConfiguracion(contrato),
+            ...(vac ? { vacationDays: vac.amount } : {}),
+            ...(inc ? { sickDays: inc.amount } : {}),
+          };
+        });
+        setContratos(lista);
+        setConfiguraciones(cargadas);
         setAbsenceTypes(atRes.types ?? []);
         setError("");
       } catch (err) {
@@ -192,7 +209,7 @@ function ContractTypes() {
 
     setGuardando(true);
     try {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = isoDay();
       const vacType = absenceTypes.find((t) => t.code === "vacaciones");
       const incType = absenceTypes.find((t) => t.code === "incapacidad");
 

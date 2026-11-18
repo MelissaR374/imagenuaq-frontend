@@ -2,8 +2,8 @@
 // versions, and a published version is not edited: "editing" is publishing the next one, so what
 // was captured with the previous one keeps reading as it was captured.
 //
-// The list is light on purpose: no buttons per row, because a format opens and everything that can
-// be done to it lives inside, next to what it will change. The versions are said in one quiet line
+// The list is light on purpose: a format opens and everything that can be done to it lives inside,
+// next to what it will change. A row only copies its public form link, for quick access. The versions are said in one quiet line
 // under the name: they matter when updating and when looking back, not when choosing.
 //
 // What each format is used by -- how many requests were captured with it and how many Excel
@@ -14,8 +14,10 @@ import { useEffect, useState } from "react";
 
 import * as api from "../../api/client.js";
 import { shortDate } from "../shared/format.js";
+import { formLink } from "../../config.js";
 import SchemaFormat from "./schemaFormat.jsx";
 import "./schemas.css";
+import { formatFields, isTextBlock } from "../shared/vocabulary.js";
 
 const TABS = [
   {
@@ -36,10 +38,10 @@ function fieldTally(format) {
   if (format.fields === null || format.fields === undefined) {
     return "Sin versión publicada";
   }
-  const deliverables = format.fields.deliverables;
-  const information = format.fields.information;
-  const total = deliverables.length + information.length;
-  const required = [...deliverables, ...information].filter((campo) => campo.required).length;
+  const deliverables = format.fields.deliverables.filter((entry) => !isTextBlock(entry));
+  const fields = formatFields(format.fields);
+  const total = fields.length;
+  const required = fields.filter((campo) => campo.required).length;
 
   return `${total} ${total === 1 ? "campo" : "campos"} · ${required} ${
     required === 1 ? "obligatorio" : "obligatorios"
@@ -66,6 +68,24 @@ function usage(format) {
 }
 
 function FormatRow({ format, onOpen }) {
+  const [copy, setCopy] = useState(null);
+
+  async function copyLink(event) {
+    event.stopPropagation();
+    try {
+      const { links } = await api.listFormLinks(format.id);
+      const link = links.find((one) => one.token);
+      if (!link) {
+        setCopy("Sin enlace que copiar");
+        return;
+      }
+      await navigator.clipboard.writeText(formLink(link.token));
+      setCopy("Copiado");
+    } catch (failure) {
+      setCopy(failure.message);
+    }
+  }
+
   return (
     <tr className="schemas-row" onClick={() => onOpen(format)}>
       <td className="schemas-cell-main">
@@ -79,6 +99,17 @@ function FormatRow({ format, onOpen }) {
       </td>
       <td>{fieldTally(format)}</td>
       <td>{usage(format)}</td>
+      <td className="schemas-cell-link">
+        {format.linkCount > 0 ? (
+          <button
+            className={copy === "Copiado" ? "schemas-copy is-copied" : "schemas-copy"}
+            type="button"
+            onClick={copyLink}
+          >
+            {copy ?? "Copiar enlace"}
+          </button>
+        ) : null}
+      </td>
     </tr>
   );
 }
@@ -234,6 +265,7 @@ function Schemas() {
               <th>Formato</th>
               <th>Qué pide</th>
               <th>En uso</th>
+              <th>Formulario</th>
             </tr>
           </thead>
           <tbody>
@@ -243,7 +275,7 @@ function Schemas() {
 
             {!loading && visible.length === 0 ? (
               <tr>
-                <td colSpan={3}>
+                <td colSpan={4}>
                   <p className="schemas-empty">
                     {text === ""
                       ? `Nada en «${activeTab.label}».`
