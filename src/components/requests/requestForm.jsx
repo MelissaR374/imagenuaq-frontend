@@ -168,7 +168,7 @@ function RequestForm({ areas, onCreada, onCancelar }) {
         <label className="request-form-field">
           <span className="request-form-label">
             Urgencia
-            <Help text="Un número: mayor es más urgente. La imprenta y la producción priorizan por urgencia, nunca por orden de llegada (RF-FLW-08)." />
+            <Help text="Un número: mayor es más urgente. La imprenta y la producción priorizan por urgencia, nunca por orden de llegada." />
           </span>
           <input
             type="number"

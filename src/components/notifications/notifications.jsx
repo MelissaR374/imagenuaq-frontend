@@ -352,7 +352,7 @@ function Notifications({onUnreadChange}){
           <span className="notifications-kicker">
             {totalSinLeer} SIN LEER
           </span>
-          <h1>¿Que hay de nuevo?</h1>
+          <h1>¿Qué hay de nuevo?</h1>
         </div>
         
         <div className="notifications-actions">

@@ -308,7 +308,7 @@ function Aplicacion() {
             canWrite={usuario.role === "admin" || permisos.includes("print.write")}
             canCreate={usuario.role === "admin" || permisos.includes("print.create")}
           />
-        ) : activa === "Pantones y maquinas" ? (
+        ) : activa === "Pantones y máquinas" ? (
           <Pantones />
         ) : activa === "Formatos de solicitud" ? (
           <Schemas />

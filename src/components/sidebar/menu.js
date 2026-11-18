@@ -86,7 +86,7 @@ export const menuSections = [
       { label: "Catálogo de estatus", icon: MdLabel, permission: "status.manage" },
       { label: "Libros de Excel", icon: MdSchema, permission: "spreadsheet.read" },
       { label: "Retención de archivos", icon: MdAttachFile, permission: "document.manage" },
-      { label: "Pantones y maquinas", icon: MdPalette, permission: "print.manage" },
+      { label: "Pantones y máquinas", icon: MdPalette, permission: "print.manage" },
     ],
   },
 ];
@@ -116,7 +116,7 @@ export const descripciones = {
   "Catálogo de estatus":
     "Los estatus con que se muestran solicitudes y proyectos, globales y por área.",
   "Diseñador de flujos":
-    "Plantillas para definir como se va a tratar un proyecto, para agilizar la asignación de tareas",
+    "Plantillas para definir cómo se va a tratar un proyecto, para agilizar la asignación de tareas",
   Archivos: "Todas las carpetas de cada proyecto.",
   "Retención de archivos": "Cuánto tiempo se conservan los archivos.",
   "Mis tareas": "Las etapas de desarrollo de un proyecto a tu cargo",
@@ -130,7 +130,7 @@ export const descripciones = {
   Cotizaciones: "Las cotizaciones subidas a cada proyecto.",
   Proveedores: "El directorio de proveedores con sus datos de contacto.",
   "Órdenes de impresión": "Las órdenes de trabajo para las máquinas de impresión.",
-  "Pantones y maquinas": "Catalogo de colores Pantone y maquinas de impresion.",
+  "Pantones y máquinas": "Catálogo de colores Pantone y máquinas de impresión.",
 };
 
 /** Las etiquetas del menú en el orden que dejó el usuario al arrastrarlas; se guarda en este navegador. */
