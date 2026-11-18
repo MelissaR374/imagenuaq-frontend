@@ -5,7 +5,7 @@
 const INLINE =
   /\*\*([^*]+)\*\*|`([^`]+)`|\[([^\]]+)\]\(([^)\s]+)\)|\*([^*\s][^*]*)\*|_([^_\s][^_]*)_/;
 
-/** The addresses a link may open. Anything else is left as plain text. */
+/** The addresses a link may open. The reader keeps any other link as plain text. */
 const SAFE_HREF = /^(https?:\/\/|mailto:)/i;
 
 /**

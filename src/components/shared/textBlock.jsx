@@ -1,5 +1,5 @@
-// A format's text block as every form draws it: an optional heading and its text, read as simple
-// Markdown (markdown.js) and drawn as React elements, never as raw HTML.
+// A format's text block as every form draws it: an optional heading and its text.
+// The text is simple Markdown (markdown.js), drawn as React elements and never as raw HTML.
 import { parseMarkdown } from "./markdown.js";
 import "./textBlock.css";
 
