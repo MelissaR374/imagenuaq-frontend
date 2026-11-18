@@ -206,6 +206,7 @@ function Users({ admin }) {
 
     try {
       await api.deleteUser(usuario.id);
+      if (editando?.id === usuario.id) handleCancelarEdicion();
       setRecarga(recarga + 1);
     } catch (err) {
       setError(err.message);
@@ -581,6 +582,7 @@ function Users({ admin }) {
                 <button
                   className="users-action"
                   type="button"
+                  disabled={Boolean(usuario.deletedAt)}
                   onClick={() => handleReinvitar(usuario)}
                 >
                   Reinvitar
