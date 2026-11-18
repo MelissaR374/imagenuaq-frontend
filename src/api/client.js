@@ -139,6 +139,10 @@ export const deleteUser = (id) => request(`/users/${id}`, { method: "DELETE" });
 /** Una invitación nueva, solo si la cuenta todavía no se ha activado. */
 export const reinviteUser = (id) => request(`/users/${id}/invite`, { method: "POST" });
 
+/** Cambia el rol de otra persona; pide `user.role`. */
+export const setUserRole = (id, roleId) =>
+  request(`/users/${id}/role`, { method: "PUT", body: { roleId } });
+
 export const listRoles = () => request("/roles");
 
 /** El catálogo completo de permisos, no los de un rol en particular. */

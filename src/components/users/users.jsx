@@ -1,6 +1,7 @@
 // Pestaña "Personal": la lista de la gente que trabaja aquí y el formulario para dar de
-// alta a alguien nuevo o corregir sus datos. Solo la ven los administradores. Los estilos
-// van en users.css. El rol no se cambia al editar: el servidor lo ignora en PATCH.
+// alta a alguien nuevo o corregir sus datos. Dar de alta, editar y dar de baja son de
+// coordinación. El rol se cambia en la columna Rol con el permiso `user.role` (RF-USR-02),
+// que también abre esta pestaña; el servidor ignora el rol en PATCH. Los estilos van en users.css.
 //
 // Al crear una cuenta el servidor devuelve un token de invitación y no lo guarda: esa
 // respuesta es la única vez que se puede ver, por eso se muestra en una tarjeta aparte.
@@ -37,8 +38,12 @@ const FORMULARIO_VACIO = {
   birthday: "",
 };
 
-/** `admin` es quien está usando la pantalla, no una de las personas de la lista. */
-function Users({ admin }) {
+/**
+ * `admin` es quien está usando la pantalla, no una de las personas de la lista.
+ * `canChangeRole` dice si tiene `user.role`.
+ */
+function Users({ admin, canChangeRole }) {
+  const isAdmin = admin.role === "admin";
   const [usuarios, setUsuarios] = useState([]);
   const [total, setTotal] = useState(0);
   const [offset, setOffset] = useState(0);
@@ -216,6 +221,22 @@ function Users({ admin }) {
   const desde = total === 0 ? 0 : offset + 1;
   const hasta = Math.min(offset + PAGE, total);
 
+  async function handleCambiarRol(usuario, roleId) {
+    const rol = roles.find((uno) => String(uno.id) === roleId);
+    const nombre = ROLES_EN_ESPANOL[rol.name] ?? rol.name;
+    const seguro = window.confirm(`¿Cambiar el rol de ${usuario.fullName} a ${nombre}?`);
+    if (!seguro) return;
+
+    setError(null);
+
+    try {
+      await api.setUserRole(usuario.id, Number(roleId));
+      setRecarga(recarga + 1);
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
   async function handleCopiar(cual) {
     const texto = cual === "enlace" ? activationLink(invitacion.token) : invitacion.token;
 
@@ -302,6 +323,7 @@ function Users({ admin }) {
         </aside>
       )}
 
+      {isAdmin ? (
       <form
         className="user-form"
         ref={formRef}
@@ -368,7 +390,7 @@ function Users({ admin }) {
             ))}
           </select>
           {editando && (
-            <p className="user-form-hint">El rol no se cambia desde aquí.</p>
+            <p className="user-form-hint">El rol se cambia en la columna Rol de la tabla.</p>
           )}
         </div>
 
@@ -469,6 +491,7 @@ function Users({ admin }) {
           </button>
         )}
       </form>
+      ) : null}
 
       <div className="users-filters">
         <div className="users-filter">
@@ -548,7 +571,7 @@ function Users({ admin }) {
             <th>Correo</th>
             <th>Rol</th>
             <th>Áreas</th>
-            <th>Acciones</th>
+            {isAdmin ? <th>Acciones</th> : null}
           </tr>
         </thead>
 
@@ -560,7 +583,27 @@ function Users({ admin }) {
               <td className="users-cell-email">{usuario.email}</td>
 
               <td className="users-cell-role">
-                {ROLES_EN_ESPANOL[usuario.role] ?? usuario.role}
+                {canChangeRole &&
+                usuario.id !== admin.id &&
+                !usuario.deletedAt &&
+                (isAdmin || usuario.role !== "admin") ? (
+                  <select
+                    className="users-role-select"
+                    aria-label={`Rol de ${usuario.fullName}`}
+                    value={String(usuario.roleId)}
+                    onChange={(event) => handleCambiarRol(usuario, event.target.value)}
+                  >
+                    {roles
+                      .filter((rol) => isAdmin || rol.name !== "admin")
+                      .map((rol) => (
+                        <option key={rol.id} value={rol.id}>
+                          {ROLES_EN_ESPANOL[rol.name] ?? rol.name}
+                        </option>
+                      ))}
+                  </select>
+                ) : (
+                  ROLES_EN_ESPANOL[usuario.role] ?? usuario.role
+                )}
               </td>
 
               <td className="users-cell-areas">
@@ -569,6 +612,7 @@ function Users({ admin }) {
                   : usuario.areas.map((area) => area.name).join(", ")}
               </td>
 
+              {isAdmin ? (
               <td className="users-cell-actions">
                 <button
                   className="users-action"
@@ -597,6 +641,7 @@ function Users({ admin }) {
                   Dar de baja
                 </button>
               </td>
+              ) : null}
             </tr>
           ))}
         </tbody>

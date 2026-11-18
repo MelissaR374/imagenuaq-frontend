@@ -286,7 +286,7 @@ function Aplicacion() {
             onFoto={cambiarFoto}
           />
         ) : activa === "Empleados" ? (
-          <Users admin={usuario} />
+          <Users admin={usuario} canChangeRole={permisos.includes("user.role")} />
         ) : activa === "Áreas y usuarios" ? (
           <Areas />
         ) : activa === "Roles y permisos" ? (
