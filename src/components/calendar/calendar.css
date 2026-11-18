@@ -2,21 +2,21 @@
    the tokens in App.css, plus one colour per kind of event. Notes are post-its. */
 
 .calendar {
-  --calendar-stage: var(--accent);
-  --calendar-stage-soft: var(--accent-soft);
-  --calendar-festivo: #be185d;
-  --calendar-festivo-soft: #fdeef5;
-  --calendar-general: #0f766e;
-  --calendar-general-soft: #e8f6f4;
-  --calendar-vehicle: #6d28d9;
-  --calendar-vehicle-soft: #f3eefd;
-  --calendar-absence: var(--text-secondary);
-  --calendar-absence-soft: var(--surface-secondary);
-  --calendar-closure: var(--warning);
-  --calendar-closure-soft: var(--warning-soft);
-  --calendar-note: #fff2a8;
-  --calendar-note-edge: #f2dc6b;
-  --calendar-note-text: #4a3d00;
+  --calendar-due: var(--accent);
+  --calendar-stage: #2aa9b8;
+  --calendar-stage-soft: #d3f0f3;
+  --calendar-festivo: #e3262e;
+  --calendar-general: #23a566;
+  --calendar-general-soft: #d4f1e1;
+  --calendar-vehicle: #ec7a1c;
+  --calendar-vehicle-soft: #fde2c8;
+  --calendar-absence: #8a8a8a;
+  --calendar-absence-soft: #e4e4e4;
+  --calendar-closure: #7d4f9e;
+  --calendar-closure-soft: #f3edf8;
+  --calendar-note: #f9c823;
+  --calendar-note-edge: #dda600;
+  --calendar-note-text: #3f3000;
 
   --fc-border-color: var(--border);
   --fc-page-bg-color: var(--surface);
@@ -39,14 +39,19 @@
 }
 
 .dark-mode .calendar {
-  --calendar-festivo: #f472b6;
-  --calendar-festivo-soft: #3b2232;
-  --calendar-general: #5eead4;
-  --calendar-general-soft: #1d3634;
-  --calendar-vehicle: #c4b5fd;
-  --calendar-vehicle-soft: #2b2443;
-  --calendar-note: #e9d77a;
-  --calendar-note-edge: #c9b452;
+  --calendar-stage: #5fd0dc;
+  --calendar-stage-soft: #173a3f;
+  --calendar-festivo: #e3262e;
+  --calendar-general: #5bd394;
+  --calendar-general-soft: #183a28;
+  --calendar-vehicle: #f5a35c;
+  --calendar-vehicle-soft: #3f2a17;
+  --calendar-absence: #a8a8a8;
+  --calendar-absence-soft: #303030;
+  --calendar-closure: #c3a0de;
+  --calendar-closure-soft: #2a2233;
+  --calendar-note: #f5c518;
+  --calendar-note-edge: #c99400;
   --calendar-note-text: #2d2500;
 }
 
@@ -216,7 +221,7 @@
 }
 
 .calendar-key.is-due .calendar-key-mark {
-  border-color: var(--calendar-stage);
+  border-color: var(--calendar-due);
   background: var(--surface);
 }
 
@@ -231,8 +236,8 @@
 }
 
 .calendar-key.is-global .calendar-key-mark {
-  border-color: var(--calendar-festivo);
-  background: var(--calendar-festivo);
+  border-color: var(--calendar-general);
+  background: var(--calendar-general);
 }
 
 .calendar-key.is-vehicle .calendar-key-mark {
@@ -435,7 +440,7 @@
 }
 
 .calendar-month .fc .calendar-ev.is-waiting {
-  border-left-color: var(--warning);
+  border-left-style: dashed;
 }
 
 .calendar-month .fc .calendar-ev.is-in-closure {
@@ -450,11 +455,11 @@
 }
 
 .calendar-month .fc .calendar-ev.is-due {
-  border: 1px solid var(--calendar-stage);
+  border: 1px solid var(--calendar-due);
   border-left-width: 3px;
 
   background: var(--surface);
-  color: var(--calendar-stage);
+  color: var(--calendar-due);
   font-weight: 600;
 }
 
@@ -485,7 +490,8 @@
 .calendar-month .fc .calendar-ev.is-festivo {
   border-left-color: var(--calendar-festivo);
 
-  background: var(--calendar-festivo-soft);
+  background: var(--calendar-festivo);
+  color: #ffffff;
   font-weight: 600;
 }
 
