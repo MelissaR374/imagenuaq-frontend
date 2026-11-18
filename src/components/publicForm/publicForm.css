@@ -1,25 +1,89 @@
-/* Solo acomodo: el diseño lo revisa quien lleva el CSS. */
+/* El formulario público, que abre gente de fuera y casi siempre desde el teléfono. Usa los tokens de
+   la app; lo único que alza la voz es la franja azul con el nombre del formato. Los controles y la
+   letra crecen solo aquí, para no tocar la densidad de las pantallas internas. */
+
 .public-form-page {
   min-height: 100vh;
   display: flex;
   justify-content: center;
-  padding: 24px 16px;
+  align-items: flex-start;
+  padding: 40px 16px 56px;
   box-sizing: border-box;
+
+  background: var(--background);
+  color: var(--text);
 }
 
 .public-form {
   width: 100%;
-  max-width: 720px;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
+  max-width: 680px;
+  overflow: hidden;
+
+  border: 1px solid var(--border);
+  border-radius: 12px;
+
+  background: var(--surface);
 }
 
-.public-form-body,
+/* =========================================================
+   LA FRANJA: la marca y el nombre del formato
+========================================================= */
+
+.public-form-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  padding: 28px 32px 30px;
+
+  background: var(--accent);
+  color: #ffffff;
+}
+
+.public-form-brand {
+  font-size: 13px;
+  font-weight: 500;
+  opacity: 0.8;
+}
+
+.public-form-title {
+  margin: 0;
+
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.2px;
+  overflow-wrap: anywhere;
+}
+
+/* =========================================================
+   EL CUERPO
+========================================================= */
+
+.public-form-body {
+  display: flex;
+  flex-direction: column;
+}
+
 .public-form-sec {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
+
+  padding: 26px 32px;
+}
+
+.public-form-sec + .public-form-sec {
+  border-top: 1px solid var(--border-light);
+}
+
+.public-form-sec h2 {
+  margin: 0;
+
+  color: var(--text);
+
+  font-size: 17px;
+  font-weight: 600;
 }
 
 .public-form-field {
@@ -28,24 +92,106 @@
   gap: 6px;
 }
 
+.public-form-label {
+  color: var(--text-secondary);
+
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Los campos compartidos, más holgados aquí que en la app: se llenan con el pulgar. */
+.public-form .field-name {
+  font-size: 13px;
+}
+
+.public-form .field-control {
+  height: 42px;
+  padding: 0 13px;
+
+  border-radius: 7px;
+
+  font-size: 14px;
+}
+
+.public-form textarea.field-control {
+  height: auto;
+  min-height: 96px;
+  padding: 10px 13px;
+}
+
+.public-form .field-control:focus {
+  border-color: var(--accent-line);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.public-form .text-block-text {
+  font-size: 13px;
+}
+
+/* =========================================================
+   AVISOS, ERRORES Y EL PIE
+========================================================= */
+
+.public-form-note {
+  margin: 0;
+
+  color: var(--text-secondary);
+
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.public-form > .public-form-note {
+  padding: 32px;
+}
+
+.public-form-error {
+  margin: 0 32px 18px;
+  padding: 10px 14px;
+
+  border-left: 3px solid var(--danger);
+  border-radius: 0 6px 6px 0;
+
+  background: var(--danger-soft);
+  color: var(--text);
+
+  font-size: 13px;
+}
+
 .public-form-foot {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  padding: 18px 32px;
+
+  border-top: 1px solid var(--border);
+
+  background: var(--surface-secondary);
+}
+
+.public-form-legend {
+  margin: 0;
+
+  color: var(--text-muted);
+
+  font-size: 12px;
 }
 
 /* El envío: el único botón de la página, así que lleva el azul de acción. */
 .public-form-send {
-  height: 38px;
-  padding: 0 22px;
+  height: 42px;
+  padding: 0 26px;
 
   border: 1px solid var(--accent);
-  border-radius: 6px;
+  border-radius: 7px;
 
   background: var(--accent);
   color: #ffffff;
 
   font: inherit;
-  font-size: var(--size-body);
+  font-size: 14px;
   font-weight: 600;
 
   cursor: pointer;
@@ -69,7 +215,96 @@
   cursor: progress;
 }
 
+/* =========================================================
+   ENVIADO: el folio es lo único que hay que guardar
+========================================================= */
+
+.public-form-done {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+
+  padding: 32px;
+}
+
+.public-form-done h2 {
+  margin: 0 0 14px;
+
+  font-size: 19px;
+  font-weight: 600;
+}
+
+.public-form-folio-label {
+  margin: 0;
+
+  color: var(--text-secondary);
+
+  font-size: 13px;
+}
+
+.public-form-folio {
+  margin-bottom: 10px;
+
+  color: var(--accent);
+
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  font-variant-numeric: tabular-nums;
+  user-select: all;
+}
+
+.public-form-done .public-form-error {
+  margin: 8px 0 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .public-form-send,
+  .public-form .field-control {
+    transition: none;
+  }
+}
+
 @media (max-width: 600px) {
+  .public-form-page {
+    padding: 0;
+  }
+
+  .public-form {
+    min-height: 100vh;
+
+    border: 0;
+    border-radius: 0;
+  }
+
+  .public-form-head {
+    padding: 22px 18px 24px;
+  }
+
+  .public-form-title {
+    font-size: 22px;
+  }
+
+  .public-form-sec,
+  .public-form-done {
+    padding: 22px 18px;
+  }
+
+  .public-form > .public-form-note {
+    padding: 22px 18px;
+  }
+
+  .public-form-error {
+    margin: 0 18px 16px;
+  }
+
+  .public-form-foot {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    padding: 16px 18px;
+  }
+
   .public-form-send {
     width: 100%;
   }

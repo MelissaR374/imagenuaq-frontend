@@ -79,9 +79,10 @@ function PublicForm({ token }) {
         {sent !== null ? (
           <section className="public-form-done">
             <h2>Recibimos tu solicitud</h2>
-            <p>
-              Tu folio es <strong className="public-form-folio">{sent.folio}</strong>. Guárdalo
-              para dar seguimiento.
+            <p className="public-form-folio-label">Tu folio</p>
+            <strong className="public-form-folio">{sent.folio}</strong>
+            <p className="public-form-note">
+              Guárdalo: con él das seguimiento a tu solicitud con la coordinación.
             </p>
             {sent.fileError !== null ? (
               <p className="public-form-error">
@@ -144,6 +145,9 @@ function PublicForm({ token }) {
             {error !== null ? <p className="public-form-error">{error}</p> : null}
 
             <footer className="public-form-foot">
+              <p className="public-form-legend">
+                <span className="field-required">*</span> Obligatorio
+              </p>
               <button className="public-form-send" type="submit" disabled={sending}>
                 {sending ? "Enviando…" : "Enviar solicitud"}
               </button>
