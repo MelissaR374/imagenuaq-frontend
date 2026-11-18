@@ -4,6 +4,7 @@
 import { useEffect, useState } from "react";
 
 import * as api from "../../api/client.js";
+import logo from "../../assets/imagenuaq.svg";
 import FieldInput from "../shared/fieldInput.jsx";
 import { themeClass } from "../shared/theme.js";
 import TextBlock from "../shared/textBlock.jsx";
@@ -72,8 +73,11 @@ function PublicForm({ token }) {
     <div className={`app-container public-form-page ${theme}`}>
       <main className="public-form">
         <header className="public-form-head">
-          <span className="public-form-brand">Imagen UAQ</span>
-          <h1 className="public-form-title">{form?.name ?? "Formulario"}</h1>
+          <img className="public-form-logo" src={logo} alt="Imagen UAQ" />
+          <div className="public-form-head-text">
+            <span className="public-form-eyebrow">Solicitud a Imagen UAQ</span>
+            <h1 className="public-form-title">{form?.name ?? "Formulario"}</h1>
+          </div>
         </header>
 
         {sent !== null ? (

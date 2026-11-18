@@ -1,6 +1,5 @@
-/* El formulario público, que abre gente de fuera y casi siempre desde el teléfono. Usa los tokens de
-   la app; lo único que alza la voz es la franja azul con el nombre del formato. Los controles y la
-   letra crecen solo aquí, para no tocar la densidad de las pantallas internas. */
+/* El formulario público con la misma piel que la captura interna: la tarjeta, el encabezado y el
+   pie de una solicitud abierta. Solo los controles crecen un poco en el teléfono. */
 
 .public-form-page {
   min-height: 100vh;
@@ -17,47 +16,67 @@
 .public-form {
   width: 100%;
   max-width: 680px;
-  overflow: hidden;
 
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 8px;
 
   background: var(--surface);
+  box-shadow: 0 2px 8px rgba(24, 43, 62, 0.05);
 }
 
 /* =========================================================
-   LA FRANJA: la marca y el nombre del formato
+   EL ENCABEZADO
 ========================================================= */
 
 .public-form-head {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  align-items: center;
+  gap: 14px;
 
-  padding: 28px 32px 30px;
+  padding: 18px 20px;
 
-  background: var(--accent);
-  color: #ffffff;
+  border-bottom: 1px solid var(--border);
 }
 
-.public-form-brand {
-  font-size: 13px;
-  font-weight: 500;
-  opacity: 0.8;
+.public-form-logo {
+  flex-shrink: 0;
+
+  width: 40px;
+  height: 40px;
+
+  object-fit: contain;
+}
+
+.public-form-head-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  min-width: 0;
+}
+
+.public-form-eyebrow {
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
 }
 
 .public-form-title {
   margin: 0;
 
-  font-size: 26px;
+  color: var(--text);
+
+  font-size: 18px;
   font-weight: 600;
-  line-height: 1.2;
-  letter-spacing: -0.2px;
+  line-height: 1.25;
   overflow-wrap: anywhere;
 }
 
 /* =========================================================
-   EL CUERPO
+   LAS SECCIONES
 ========================================================= */
 
 .public-form-body {
@@ -68,9 +87,9 @@
 .public-form-sec {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 14px;
 
-  padding: 26px 32px;
+  padding: 16px 20px 18px;
 }
 
 .public-form-sec + .public-form-sec {
@@ -80,10 +99,12 @@
 .public-form-sec h2 {
   margin: 0;
 
-  color: var(--text);
+  color: var(--text-muted);
 
-  font-size: 17px;
+  font-size: var(--size-caps);
   font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
 }
 
 .public-form-field {
@@ -95,37 +116,8 @@
 .public-form-label {
   color: var(--text-secondary);
 
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
-}
-
-/* Los campos compartidos, más holgados aquí que en la app: se llenan con el pulgar. */
-.public-form .field-name {
-  font-size: 13px;
-}
-
-.public-form .field-control {
-  height: 42px;
-  padding: 0 13px;
-
-  border-radius: 7px;
-
-  font-size: 14px;
-}
-
-.public-form textarea.field-control {
-  height: auto;
-  min-height: 96px;
-  padding: 10px 13px;
-}
-
-.public-form .field-control:focus {
-  border-color: var(--accent-line);
-  box-shadow: 0 0 0 3px var(--accent-soft);
-}
-
-.public-form .text-block-text {
-  font-size: 13px;
 }
 
 /* =========================================================
@@ -137,38 +129,36 @@
 
   color: var(--text-secondary);
 
-  font-size: 14px;
-  line-height: 1.55;
+  font-size: var(--size-small);
 }
 
 .public-form > .public-form-note {
-  padding: 32px;
+  padding: 20px;
 }
 
 .public-form-error {
-  margin: 0 32px 18px;
-  padding: 10px 14px;
+  margin: 0 20px 14px;
+  padding-left: 9px;
 
   border-left: 3px solid var(--danger);
-  border-radius: 0 6px 6px 0;
 
-  background: var(--danger-soft);
   color: var(--text);
 
-  font-size: 13px;
+  font-size: var(--size-small);
 }
 
 .public-form-foot {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
 
-  padding: 18px 32px;
+  padding: 12px 20px;
 
   border-top: 1px solid var(--border);
+  border-radius: 0 0 8px 8px;
 
-  background: var(--surface-secondary);
+  background: var(--surface);
 }
 
 .public-form-legend {
@@ -176,28 +166,25 @@
 
   color: var(--text-muted);
 
-  font-size: 12px;
+  font-size: var(--size-small);
 }
 
 /* El envío: el único botón de la página, así que lleva el azul de acción. */
 .public-form-send {
-  height: 42px;
-  padding: 0 26px;
+  height: 32px;
+  padding: 0 16px;
 
   border: 1px solid var(--accent);
-  border-radius: 7px;
+  border-radius: 6px;
 
   background: var(--accent);
   color: #ffffff;
 
   font: inherit;
-  font-size: 14px;
+  font-size: var(--size-small);
   font-weight: 600;
 
   cursor: pointer;
-  transition:
-    border-color 0.15s ease,
-    background-color 0.15s ease;
 }
 
 .public-form-send:hover:not(:disabled) {
@@ -211,7 +198,11 @@
 }
 
 .public-form-send:disabled {
-  opacity: 0.6;
+  border-color: var(--border);
+
+  background: var(--surface-secondary);
+  color: var(--text-muted);
+
   cursor: progress;
 }
 
@@ -223,47 +214,42 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 6px;
+  gap: 4px;
 
-  padding: 32px;
+  padding: 20px;
 }
 
 .public-form-done h2 {
-  margin: 0 0 14px;
+  margin: 0 0 10px;
 
-  font-size: 19px;
+  font-size: 16px;
   font-weight: 600;
 }
 
 .public-form-folio-label {
   margin: 0;
 
-  color: var(--text-secondary);
+  color: var(--text-muted);
 
-  font-size: 13px;
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
 }
 
 .public-form-folio {
-  margin-bottom: 10px;
+  margin-bottom: 6px;
 
   color: var(--accent);
 
-  font-size: 34px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
+  font-size: 24px;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
   user-select: all;
 }
 
 .public-form-done .public-form-error {
   margin: 8px 0 0;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .public-form-send,
-  .public-form .field-control {
-    transition: none;
-  }
 }
 
 @media (max-width: 600px) {
@@ -276,36 +262,39 @@
 
     border: 0;
     border-radius: 0;
+    box-shadow: none;
   }
 
-  .public-form-head {
-    padding: 22px 18px 24px;
-  }
-
-  .public-form-title {
-    font-size: 22px;
-  }
-
+  .public-form-head,
   .public-form-sec,
-  .public-form-done {
-    padding: 22px 18px;
-  }
-
+  .public-form-done,
   .public-form > .public-form-note {
-    padding: 22px 18px;
+    padding-left: 14px;
+    padding-right: 14px;
   }
 
   .public-form-error {
-    margin: 0 18px 16px;
+    margin: 0 14px 14px;
   }
 
   .public-form-foot {
     flex-direction: column-reverse;
     align-items: stretch;
-    padding: 16px 18px;
+    padding: 12px 14px;
+    border-radius: 0;
   }
 
+  /* En el teléfono se llena con el pulgar: el control y el botón un poco más altos. */
+  .public-form .field-control,
   .public-form-send {
-    width: 100%;
+    height: 40px;
+  }
+
+  .public-form .field-control {
+    font-size: 14px;
+  }
+
+  .public-form textarea.field-control {
+    height: auto;
   }
 }
