@@ -30,6 +30,7 @@ const FILTERS = [
   { id: "all", label: "Todas", status: null },
   { id: "requested", label: "Solicitadas", status: "requested" },
   { id: "approved", label: "Aprobadas", status: "approved" },
+  { id: "taken", label: "Gozadas", status: "taken" },
   { id: "rejected", label: "Rechazadas", status: "rejected" },
   { id: "cancelled", label: "Canceladas", status: "cancelled" },
 ];
@@ -65,13 +66,11 @@ function Absences({ canDetail, canApprove, canWrite, canRequestOthers, userId })
 
   useEffect(() => {
     let cancelled = false;
-    const status = FILTERS.find((f) => f.id === activeFilter)?.status ?? null;
-    const params = status ? { status } : {};
-    api.listAbsences(params)
+    api.listAbsences({})
       .then((data) => { if (!cancelled) { setAbsences(data); setError(null); } })
       .catch((err) => { if (!cancelled) setError(err.message); });
     return () => { cancelled = true; };
-  }, [activeFilter, version]);
+  }, [version]);
 
   useEffect(() => {
     if (!showCreate) return;
@@ -91,7 +90,10 @@ function Absences({ canDetail, canApprove, canWrite, canRequestOthers, userId })
   const loading = absences === null && error === null;
   const list = Array.isArray(absences) ? absences : [];
 
+  const activeStatus = FILTERS.find((f) => f.id === activeFilter)?.status ?? null;
+
   const filtered = list.filter((a) => {
+    if (activeStatus && a.status !== activeStatus) return false;
     if (!search.trim()) return true;
     const hay = [a.userName, a.typeLabel, a.reason, a.typeCode]
       .filter(Boolean)
