@@ -40,6 +40,7 @@ function VehicleBookingForm({ booking, day = null, busy, error, onSave, onDelete
   const [projects, setProjects] = useState([]);
   const [projectQuery, setProjectQuery] = useState(null);
   const [projectError, setProjectError] = useState("");
+  const [timeError, setTimeError] = useState("");
   const [projectOpen, setProjectOpen] = useState(false);
   const [active, setActive] = useState(0);
 
@@ -72,6 +73,11 @@ function VehicleBookingForm({ booking, day = null, busy, error, onSave, onDelete
       setProjectError("Elige el proyecto de la lista o borra el texto.");
       return;
     }
+    if (fields.endTime <= fields.startTime) {
+      setTimeError("La hora de regreso debe ser después de la de salida.");
+      return;
+    }
+    setTimeError("");
     onSave({
       vehicleId: Number(fields.vehicleId),
       kind: fields.kind,
@@ -259,6 +265,7 @@ function VehicleBookingForm({ booking, day = null, busy, error, onSave, onDelete
         <textarea value={fields.notes} maxLength={2000} onChange={(e) => write("notes", e.target.value)} />
       </label>
 
+      {timeError ? <p className="calendar-error" role="alert">{timeError}</p> : null}
       {error === null ? null : <p className="calendar-error">{error}</p>}
 
       <div className="calendar-form-actions">

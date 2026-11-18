@@ -128,9 +128,13 @@ function Absences({ canDetail, canApprove, canWrite, canRequestOthers, userId })
   }
 
   async function submitCreate() {
+    setCreateWarning(null);
+    if (draft.startsAt && draft.endsAt && draft.endsAt < draft.startsAt) {
+      setCreateError("La fecha final no puede ser anterior a la inicial.");
+      return;
+    }
     setSaving(true);
     setCreateError(null);
-    setCreateWarning(null);
     try {
       const payload = {
         userId: Number(draft.userId),
