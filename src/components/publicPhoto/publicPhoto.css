@@ -1,0 +1,509 @@
+/* El portal de fotografía con la misma piel que el formulario público: una tarjeta con el logo
+   arriba y secciones separadas por líneas. Pensado primero para el celular. */
+
+.public-photo-page {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 0;
+  box-sizing: border-box;
+
+  background: var(--background);
+  color: var(--text);
+  font-family: "Poppins", sans-serif;
+}
+
+.public-photo {
+  width: 100%;
+  min-height: 100vh;
+
+  background: var(--surface);
+}
+
+/* =========================================================
+   EL ENCABEZADO CON EL LOGO
+========================================================= */
+
+.public-photo-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  padding: 18px 16px;
+
+  border-bottom: 1px solid var(--border);
+}
+
+.public-photo-logo {
+  flex-shrink: 0;
+
+  width: 44px;
+  height: 44px;
+
+  object-fit: contain;
+}
+
+.public-photo-head-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  min-width: 0;
+}
+
+.public-photo-eyebrow {
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.public-photo-title {
+  margin: 0;
+
+  color: var(--text);
+
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+/* =========================================================
+   LAS SECCIONES
+========================================================= */
+
+.public-photo-sec,
+.public-photo-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+
+  margin: 0;
+  padding: 20px 16px 22px;
+}
+
+.public-photo-sec + .public-photo-sec,
+.public-photo-sec + .public-photo-form,
+.public-photo-form + .public-photo-sec {
+  border-top: 1px solid var(--border-light);
+}
+
+.public-photo-sec h2,
+.public-photo-form h2 {
+  margin: 0;
+
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.public-photo-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.public-photo-field > span,
+.public-photo-packages legend {
+  color: var(--text-secondary);
+
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* En el teléfono se llena con el pulgar: controles más altos y texto de 16 px para que iOS no acerque. */
+.public-photo .field-control {
+  height: 44px;
+
+  font-size: 16px;
+}
+
+.public-photo-code {
+  display: flex;
+  gap: 8px;
+}
+
+.public-photo-code-input {
+  flex: 1;
+  min-width: 0;
+
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+/* =========================================================
+   EL AVANCE DEL FOLIO
+========================================================= */
+
+.public-photo-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+
+  margin: 0;
+  padding: 0;
+
+  list-style: none;
+}
+
+.public-photo-step,
+.public-photo-step-done {
+  padding: 4px 10px;
+
+  border: 1px solid var(--border);
+  border-radius: 999px;
+
+  color: var(--text-muted);
+
+  font-size: var(--size-small);
+}
+
+.public-photo-step-done {
+  border-color: var(--success);
+
+  background: var(--success-soft);
+  color: var(--success);
+
+  font-weight: 600;
+}
+
+/* =========================================================
+   LOS PAQUETES
+========================================================= */
+
+.public-photo-packages {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  margin: 0;
+  padding: 0;
+
+  border: 0;
+}
+
+.public-photo-packages legend {
+  margin-bottom: 6px;
+  padding: 0;
+}
+
+.public-photo-package {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+
+  padding: 12px 14px;
+
+  border: 1px solid var(--border);
+  border-radius: 8px;
+
+  background: var(--surface);
+
+  cursor: pointer;
+}
+
+.public-photo-package:has(input:checked) {
+  border-color: var(--accent);
+
+  background: var(--accent-soft);
+}
+
+.public-photo-package input {
+  margin-top: 3px;
+
+  accent-color: var(--accent);
+}
+
+.public-photo-package-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  color: var(--text);
+
+  font-size: var(--size-body);
+}
+
+/* =========================================================
+   LAS MUESTRAS PARA ELEGIR
+========================================================= */
+
+.public-photo-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+
+  margin: 0;
+  padding: 0;
+
+  list-style: none;
+}
+
+.public-photo-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+
+  width: 100%;
+  padding: 0;
+
+  overflow: hidden;
+
+  border: 2px solid var(--border);
+  border-radius: 8px;
+
+  background: var(--surface-secondary);
+  color: var(--text-secondary);
+
+  font: inherit;
+  font-size: var(--size-small);
+
+  cursor: pointer;
+}
+
+.public-photo-pick-on {
+  border-color: var(--accent);
+
+  color: var(--accent);
+}
+
+.public-photo-pick-img {
+  display: block;
+
+  width: 100%;
+  aspect-ratio: 3 / 2;
+
+  object-fit: cover;
+}
+
+.public-photo-pick-mark {
+  padding: 8px;
+
+  font-weight: 600;
+  text-align: center;
+}
+
+.public-photo-pick-on .public-photo-pick-mark {
+  background: var(--accent);
+  color: #ffffff;
+}
+
+/* =========================================================
+   LAS DESCARGAS
+========================================================= */
+
+/* Cada foto editada es una tarjeta: la miniatura, su nombre y tamaño, y el botón para bajarla. */
+.public-photo-downloads {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+
+  margin: 0;
+  padding: 0;
+
+  list-style: none;
+}
+
+.public-photo-final {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  padding: 8px;
+
+  border: 1px solid var(--border);
+  border-radius: 8px;
+
+  background: var(--surface);
+}
+
+.public-photo-final-img {
+  display: block;
+
+  width: 100%;
+  aspect-ratio: 3 / 2;
+
+  border-radius: 5px;
+
+  background: var(--surface-secondary);
+
+  object-fit: cover;
+}
+
+.public-photo-final-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  min-width: 0;
+}
+
+.public-photo-final-name {
+  overflow: hidden;
+
+  color: var(--text);
+
+  font-size: var(--size-small);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.public-photo-download {
+  width: 100%;
+  margin-top: auto;
+}
+
+.public-photo-chosen {
+  display: block;
+
+  border: 2px solid var(--accent);
+  border-radius: 8px;
+}
+
+/* =========================================================
+   BOTONES, AVISOS Y ERRORES
+========================================================= */
+
+.public-photo-actions {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 8px;
+}
+
+/* La acción principal lleva el azul; la secundaria va sin fondo. */
+.public-photo-btn,
+.public-photo-btn-link {
+  min-height: 44px;
+  padding: 0 18px;
+
+  border-radius: 6px;
+
+  font: inherit;
+  font-size: var(--size-body);
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.public-photo-btn {
+  border: 1px solid var(--accent);
+
+  background: var(--accent);
+  color: #ffffff;
+}
+
+.public-photo-btn:hover:not(:disabled) {
+  border-color: var(--accent-hover);
+  background: var(--accent-hover);
+}
+
+.public-photo-btn-link {
+  border: 1px solid var(--border);
+
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.public-photo-btn-link:hover:not(:disabled) {
+  border-color: var(--accent-line);
+  color: var(--accent);
+}
+
+.public-photo-btn:focus-visible,
+.public-photo-btn-link:focus-visible,
+.public-photo-pick:focus-visible {
+  outline: 2px solid var(--accent-line);
+  outline-offset: 2px;
+}
+
+.public-photo-btn:disabled,
+.public-photo-btn-link:disabled {
+  border-color: var(--border);
+
+  background: var(--surface-secondary);
+  color: var(--text-muted);
+
+  cursor: progress;
+}
+
+.public-photo > .public-photo-btn-link {
+  margin: 4px 16px 24px;
+}
+
+.public-photo-note {
+  margin: 0;
+
+  color: var(--text-secondary);
+
+  font-size: var(--size-small);
+  line-height: 1.5;
+}
+
+.public-photo-error {
+  margin: 0 16px;
+  padding-left: 9px;
+
+  border-left: 3px solid var(--danger);
+
+  color: var(--text);
+
+  font-size: var(--size-small);
+}
+
+.public-photo-sec .public-photo-error {
+  margin: 0;
+}
+
+/* =========================================================
+   PANTALLAS MÁS ANCHAS: la tarjeta flota al centro
+========================================================= */
+
+@media (min-width: 720px) {
+  .public-photo-page {
+    padding: 40px 16px 56px;
+  }
+
+  .public-photo {
+    max-width: 720px;
+    min-height: 0;
+
+    border: 1px solid var(--border);
+    border-radius: 8px;
+
+    box-shadow: 0 2px 8px rgba(24, 43, 62, 0.05);
+  }
+
+  .public-photo-head,
+  .public-photo-sec,
+  .public-photo-form {
+    padding-left: 28px;
+    padding-right: 28px;
+  }
+
+  .public-photo-error {
+    margin: 0 28px;
+  }
+
+  .public-photo > .public-photo-btn-link {
+    margin: 4px 28px 24px;
+  }
+
+  .public-photo-grid,
+  .public-photo-downloads {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .public-photo-actions {
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+}
