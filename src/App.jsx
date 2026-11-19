@@ -2,6 +2,7 @@
 // La sesión se recupera con GET /api/auth/me y no del token, que parece válido siete días aunque la
 // cuenta ya no exista. El interruptor del encabezado cambia entre Coordinación y Fotografía.
 import { useEffect, useState } from "react";
+import { flushSync } from "react-dom";
 import { MdLightMode, MdDarkMode, MdBusiness, MdPhotoCamera } from "react-icons/md";
 
 import Login from "./components/login/login.jsx";
@@ -273,8 +274,11 @@ function Aplicacion() {
     setPestana(nombre);
   }
 
+  /** Cambia el tema con un fundido de toda la página, para que nada cambie de golpe. */
   function cambiarTema() {
-    setModoOscuro((actual) => !actual);
+    const cambiar = () => flushSync(() => setModoOscuro((actual) => !actual));
+    if (!document.startViewTransition || matchMedia("(prefers-reduced-motion: reduce)").matches) cambiar();
+    else document.startViewTransition(cambiar);
   }
 
   return (
