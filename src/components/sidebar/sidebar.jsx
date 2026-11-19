@@ -8,9 +8,10 @@ import { MdLogout, MdMenu } from "react-icons/md";
 
 /**
  * `foto` es el object URL de la foto de perfil, o null para mostrar las iniciales. Qué elementos
- * se ven lo decide `itemVisible` con el `role` y los `permisos` de la sesión.
+ * se ven lo decide `itemVisible` con el `role` y los `permisos` de la sesión. `secciones` es el menú
+ * del modo abierto.
  */
-function Sidebar({ usuario, foto = null, role = "admin", permisos = [], activeItem = "Proyectos", onNavigate, onLogout, refrescoNotificaciones = 0}) {
+function Sidebar({ usuario, foto = null, role = "admin", permisos = [], activeItem = "Proyectos", onNavigate, onLogout, refrescoNotificaciones = 0, secciones = menuSections}) {
   
   const [isClosed, setIsClosed] = useState(false);
   const [sinLeer, setSinLeer] = useState(0);
@@ -108,7 +109,7 @@ function Sidebar({ usuario, foto = null, role = "admin", permisos = [], activeIt
       
 
       <nav className="sidebar-menu">
-        {menuSections.map((section, sectionIndex) => {
+        {secciones.map((section, sectionIndex) => {
           const visibleItems = ordenar(
             section.items.filter((item) => itemVisible(item, role, permisos)),
             orden,

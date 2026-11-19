@@ -1,7 +1,6 @@
-// Las pestañas del menú lateral y las reglas para mostrarlas:
-// - Las pestañas generales (Organigrama, Notificaciones) se muestran a cualquier usuario autenticado.
-// - Las pantallas operativas se gestionan dinámicamente mediante el catálogo de permisos por rol (RF-USR-02, RF-USR-05).
-// - Únicamente las funciones reservadas por seguridad a la coordinación (Roles y permisos, Tipos de contrato) se restringen a admin. Empleados también la abre `user.role`, para cambiar roles.
+// Las pestañas del menú lateral en los modos Coordinación y Fotografía, y las reglas para mostrarlas.
+// Las generales las ve todo usuario. Las demás dependen del catálogo de permisos por rol (RF-USR-02,
+// RF-USR-05). Solo Roles y permisos y Tipos de contrato quedan reservadas a admin.
 import {
   MdNotificationsNone,
   MdInbox,
@@ -28,6 +27,9 @@ import {
   MdPalette,
   MdStore,
   MdLocalShipping,
+  MdPhotoCamera,
+  MdQrCodeScanner,
+  MdTimer,
 } from "react-icons/md";
 
 export const menuSections = [
@@ -91,6 +93,27 @@ export const menuSections = [
   },
 ];
 
+/** Las pestañas del modo Fotografía, el servicio de fotos de graduación (RF-PRY-06). */
+export const photoSections = [
+  {
+    title: "FOTOGRAFÍA",
+    items: [
+      { label: "Grupos", icon: MdPhotoCamera, permission: "photo.read" },
+      { label: "Escanear folio", icon: MdQrCodeScanner, permission: "photo.read" },
+    ],
+  },
+  {
+    title: "CONFIGURACIÓN",
+    items: [
+      { label: "Catálogo de precios", icon: MdAttachMoney, permission: "photo.manage" },
+      { label: "Conservación de fotos", icon: MdTimer, permission: "photo.manage" },
+    ],
+  },
+];
+
+/** Las pestañas de los dos modos juntas, para buscar una por su nombre. */
+const allItems = () => [...menuSections, ...photoSections].flatMap((section) => section.items);
+
 /**
  * Lo que es cada vista, en una frase declarativa: el encabezado nombra la pantalla y la
  * sitúa en el proceso, sin instrucciones ni controles.
@@ -131,6 +154,10 @@ export const descripciones = {
   Proveedores: "El directorio de proveedores con sus datos de contacto.",
   "Órdenes de impresión": "Las órdenes de trabajo para las máquinas de impresión.",
   "Pantones y máquinas": "Catálogo de colores Pantone y máquinas de impresión.",
+  Grupos: "Los grupos de las sesiones de fotos, con sus folios, cobros y entregas.",
+  "Escanear folio": "El folio de una hoja, abierto con la cámara o con su código.",
+  "Catálogo de precios": "Los paquetes del servicio de fotografía y su precio.",
+  "Conservación de fotos": "Cuántos días se pueden descargar las fotos antes de borrarse.",
 };
 
 /** Las etiquetas del menú en el orden que dejó el usuario al arrastrarlas; se guarda en este navegador. */
@@ -173,16 +200,33 @@ export function itemVisible(item, role, permissions) {
 
 /** Las pestañas que abre el permiso `code`, para decirlo en «Roles y permisos». */
 export function tabsFor(code) {
-  return menuSections
-    .flatMap((section) => section.items)
+  return allItems()
     .filter((item) => item.permission === code)
     .map((item) => item.label);
 }
 
 /** Si la pestaña `label` se ve; una que no está en el menú, como «Mi perfil», siempre se ve. */
 export function canSee(label, role, permissions) {
-  const item = menuSections
-    .flatMap((section) => section.items)
-    .find((candidate) => candidate.label === label);
+  const item = allItems().find((candidate) => candidate.label === label);
   return !item || itemVisible(item, role, permissions);
+}
+
+/** Si la pestaña `label` es del modo Fotografía. */
+export function isPhotoTab(label) {
+  return photoSections.some((section) => section.items.some((item) => item.label === label));
+}
+
+/**
+ * Los modos que puede abrir alguien: Fotografía con `photo.read`, Coordinación si ve alguna
+ * pestaña de trabajo más allá de las generales que ven todos.
+ *
+ * @returns {{ coordination: boolean, photo: boolean }}
+ */
+export function modesFor(role, permissions) {
+  return {
+    coordination: menuSections
+      .flatMap((section) => section.items)
+      .some((item) => (item.permission || item.roles) && itemVisible(item, role, permissions)),
+    photo: permissions.includes("photo.read"),
+  };
 }

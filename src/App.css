@@ -32,6 +32,14 @@
   --accent-line: #356fa8;
   --accent-soft: #eaf1f9;
 
+  /* El rosa del logo, para lo que marca en qué subsistema se está. */
+  --brand: #b0005f;
+  --brand-hover: #94004f;
+  --brand-line: #f4a3cf;
+  --brand-soft: #fdf1f7;
+  --brand-soft-hover: #f9dfec;
+  --brand-border: #f0c4db;
+
   /* Semánticos: ámbar avisa, rojo es error, verde es terminado. */
   --warning: #b45309;
   --warning-soft: #fdf4e7;
@@ -84,6 +92,13 @@
   --accent-hover: #5295e4;
   --accent-line: #5b8dc4;
   --accent-soft: #223449;
+
+  --brand: #b0005f;
+  --brand-hover: #c81a75;
+  --brand-line: #7a2a55;
+  --brand-soft: #33202b;
+  --brand-soft-hover: #432a38;
+  --brand-border: #5c3249;
 
   --warning: #e0a35c;
   --warning-soft: #352a1c;
@@ -179,6 +194,98 @@
   display: flex;
   align-items: center;
   gap: 15px;
+}
+
+/* Interruptor entre Coordinación y Fotografía. Solo acomodo: el diseño lo revisa quien lleva el CSS. */
+/* El interruptor de subsistemas: botones unidos en una sola pieza. El elegido va lleno del rosa del
+   logo; los demás se aclaran al pasar el ratón. Crece solo si se agrega un subsistema. */
+.mode-switch {
+  display: inline-flex;
+
+  overflow: hidden;
+
+  border: 1px solid var(--brand-border);
+  border-radius: 8px;
+
+  background: var(--brand-soft);
+}
+
+.mode-switch-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  height: 38px;
+  padding: 0 20px;
+
+  border: 0;
+  border-left: 1px solid var(--brand-border);
+
+  background: var(--brand-soft);
+  color: var(--text);
+
+  font: inherit;
+  font-size: var(--size-small);
+  font-weight: 500;
+  white-space: nowrap;
+
+  cursor: pointer;
+
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.mode-switch-btn:first-child {
+  border-left: 0;
+}
+
+.mode-switch-icon {
+  font-size: 16px;
+}
+
+.mode-switch-btn:hover:not(.active) {
+  background: var(--brand-soft-hover);
+}
+
+.mode-switch-btn.active {
+  border-left-color: var(--brand);
+
+  background: var(--brand);
+  color: #ffffff;
+
+  font-weight: 600;
+
+  cursor: default;
+}
+
+.mode-switch-btn.active + .mode-switch-btn {
+  border-left-color: var(--brand);
+}
+
+.mode-switch-btn:focus-visible {
+  position: relative;
+
+  outline: 2px solid var(--brand-line);
+  outline-offset: -2px;
+}
+
+/* En pantallas angostas quedan solo los iconos; el nombre sigue para el lector de pantalla. */
+@media (max-width: 700px) {
+  .mode-switch-btn span {
+    position: absolute;
+
+    width: 1px;
+    height: 1px;
+
+    overflow: hidden;
+
+    clip: rect(0 0 0 0);
+  }
+
+  .mode-switch-btn {
+    padding: 0 10px;
+  }
 }
 
 .theme-toggle {
