@@ -73,3 +73,17 @@ export const FORM_PARAM = "form";
 export function formLink(token) {
   return `${FRONTEND_DOMAIN}/?${FORM_PARAM}=${encodeURIComponent(token)}`;
 }
+
+/** Nombre del parámetro donde viaja el código de un folio del servicio de fotografía. */
+export const PHOTO_PARAM = "photo";
+
+/**
+ * La liga al portal de un folio de fotografía, la que va en el QR de su hoja. Sin código abre la
+ * caja para teclearlo. Ver components/publicPhoto/publicPhoto.jsx.
+ *
+ * @param {string} [code]
+ * @returns {string}
+ */
+export function photoLink(code = "") {
+  return `${FRONTEND_DOMAIN}/?${PHOTO_PARAM}=${encodeURIComponent(code)}`;
+}
