@@ -1,0 +1,224 @@
+/* Las hojas de un grupo de fotografía. En pantalla se ven como tarjetas; al imprimir, photoSheets.jsx
+   las copia con esta misma hoja de estilos a una ventana aparte, sin el CSS de la aplicación, y
+   ahí cada par de hojas llena una página vertical. */
+
+.photo-sheets,
+.photo-sheet-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.photo-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+
+  max-width: 720px;
+  padding: 28px 32px;
+
+  border: 1px solid #e1e6ec;
+  border-radius: 8px;
+
+  background: #ffffff;
+  color: #26364d;
+}
+
+.photo-sheet-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  padding-bottom: 14px;
+
+  border-bottom: 2px solid #12559b;
+}
+
+.photo-sheet-logo {
+  width: 56px;
+  height: 56px;
+
+  object-fit: contain;
+}
+
+.photo-sheet-head h2 {
+  margin: 0;
+
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.photo-sheet-head p {
+  margin: 2px 0 0;
+
+  color: #68758a;
+
+  font-size: 13px;
+}
+
+.photo-sheet-ids {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+}
+
+.photo-sheet-label {
+  margin: 0;
+
+  color: #8994a5;
+
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.photo-sheet-folio {
+  margin: 0 0 12px;
+
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.photo-sheet-code {
+  margin: 0;
+
+  color: #12559b;
+
+  font-family: "Courier New", monospace;
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.photo-sheet-qr {
+  width: 200px;
+  height: 200px;
+}
+
+.photo-sheet-help {
+  margin: 0;
+
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.photo-sheet-manual {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+
+  padding: 16px;
+
+  border: 1px dashed #c3ccd8;
+  border-radius: 8px;
+}
+
+.photo-sheet-line {
+  margin: 0;
+  padding-bottom: 6px;
+
+  border-bottom: 1px solid #c3ccd8;
+
+  font-size: 13px;
+}
+
+/* Dos hojas por página vertical: cada par es un bloque que termina en salto de página, y cada hoja
+   mide poco menos de media página. El tamaño del papel lo pone la ventana de impresión. */
+
+@media print {
+  /* Chrome no corta páginas dentro de un contenedor flex: al imprimir todo es bloque. */
+  .photo-sheets,
+  .photo-sheet-page {
+    display: block;
+  }
+
+  .photo-sheet-page {
+    break-inside: avoid;
+    break-after: page;
+  }
+
+  .photo-sheet-page:last-child {
+    break-after: auto;
+  }
+
+  .photo-sheet {
+    box-sizing: border-box;
+    height: 136mm;
+    max-width: none;
+    gap: 3mm;
+    padding: 5mm 7mm;
+
+    overflow: hidden;
+
+    border: 0;
+    border-radius: 0;
+
+    break-inside: avoid;
+  }
+
+  .photo-sheets-letter .photo-sheet {
+    height: 128mm;
+  }
+
+  .photo-sheet:first-child {
+    border-bottom: 1px dashed #8994a5;
+  }
+
+  .photo-sheet-head {
+    gap: 3mm;
+    padding-bottom: 2mm;
+  }
+
+  .photo-sheet-logo {
+    width: 11mm;
+    height: 11mm;
+  }
+
+  .photo-sheet-head h2 {
+    font-size: 12pt;
+  }
+
+  .photo-sheet-head p,
+  .photo-sheet-help,
+  .photo-sheet-line {
+    font-size: 8.5pt;
+  }
+
+  .photo-sheet-label {
+    font-size: 7pt;
+  }
+
+  .photo-sheet-folio {
+    margin-bottom: 2mm;
+
+    font-size: 14pt;
+  }
+
+  .photo-sheet-code {
+    font-size: 20pt;
+  }
+
+  .photo-sheet-qr {
+    width: 32mm;
+    height: 32mm;
+  }
+
+  .photo-sheet-manual {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4mm 6mm;
+
+    padding: 3mm 4mm;
+  }
+
+  .photo-sheet-manual > .photo-sheet-label,
+  .photo-sheet-manual > .photo-sheet-line:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .photo-sheet-line {
+    padding-bottom: 1mm;
+  }
+}

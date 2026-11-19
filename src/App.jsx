@@ -1,15 +1,12 @@
-// Decide si se ve la pantalla de entrada o la aplicación, y qué pestaña está abierta.
-//
-// La sesión se recupera preguntándole al servidor con GET /api/auth/me, no leyendo el
-// token: el token sigue pareciendo válido durante siete días aunque la cuenta ya no exista.
-// Un enlace de solo lectura (?shared=) muestra su carpeta sin pedir sesión, y el de un formulario
-// público (?form=) lo deja llenar igual.
+// Decide si se ve la entrada, un enlace público o la aplicación, y qué pestaña está abierta.
+// La sesión se recupera con GET /api/auth/me y no del token, que parece válido siete días aunque la
+// cuenta ya no exista. El interruptor del encabezado cambia entre Coordinación y Fotografía.
 import { useEffect, useState } from "react";
-import { MdLightMode, MdDarkMode } from "react-icons/md";
+import { MdLightMode, MdDarkMode, MdBusiness, MdPhotoCamera } from "react-icons/md";
 
 import Login from "./components/login/login.jsx";
 import Sidebar from "./components/sidebar/sidebar.jsx";
-import { canSee, descripciones } from "./components/sidebar/menu.js";
+import { canSee, descripciones, isPhotoTab, menuSections, modesFor, photoSections } from "./components/sidebar/menu.js";
 import Users from "./components/users/users.jsx";
 import Areas from "./components/areas/areas.jsx";
 import Roles from "./components/roles/roles.jsx";
@@ -41,10 +38,14 @@ import Absences from "./components/absences/absences.jsx";
 import AbsenceTypes from "./components/absences/absenceTypes.jsx";
 import PrintOrders from "./components/print/printOrders.jsx";
 import Pantones from "./components/print/pantones.jsx";
-
+import PhotoGroups from "./components/photos/photoGroups.jsx";
+import PhotoScan from "./components/photos/photoScan.jsx";
+import PhotoPackages from "./components/photos/photoPackages.jsx";
+import PhotoRetention from "./components/photos/photoRetention.jsx";
+import PublicPhoto from "./components/publicPhoto/publicPhoto.jsx";
 
 import * as api from "./api/client.js";
-import { FORM_PARAM, MICROSOFT_PARAM, SHARED_PARAM } from "./config.js";
+import { FORM_PARAM, MICROSOFT_PARAM, PHOTO_PARAM, SHARED_PARAM } from "./config.js";
 import "./App.css";
 
 /** El token de un enlace de solo lectura, si la página se abrió con uno. */
@@ -53,12 +54,30 @@ const TOKEN_COMPARTIDO = new URLSearchParams(window.location.search).get(SHARED_
 /** El token de un formulario público, si la página se abrió con uno. */
 const TOKEN_FORMULARIO = new URLSearchParams(window.location.search).get(FORM_PARAM);
 
+/** El código de un folio de fotografía ("" si la liga no trae uno), o null si no es el portal. */
+const CODIGO_FOTO = new URLSearchParams(window.location.search).get(PHOTO_PARAM);
+
 /** La última pestaña abierta en este navegador, para volver a ella al recargar. */
 function leerPestana() {
   try {
     return localStorage.getItem("pestana");
   } catch {
     return null;
+  }
+}
+
+/** Los subsistemas del interruptor del encabezado, en su orden. Uno nuevo es una entrada más. */
+const MODOS = [
+  { clave: "coordinacion", nombre: "Coordinación", icono: MdBusiness },
+  { clave: "fotografia", nombre: "Fotografía", icono: MdPhotoCamera },
+];
+
+/** El último modo abierto en este navegador: "coordinacion" o "fotografia". */
+function leerModo() {
+  try {
+    return localStorage.getItem("modo") === "fotografia" ? "fotografia" : "coordinacion";
+  } catch {
+    return "coordinacion";
   }
 }
 
@@ -81,9 +100,14 @@ function reemplazarFoto(blob) {
   };
 }
 
+/**
+ * Los enlaces que no piden sesión. ?shared= abre una carpeta de solo lectura y ?form= un
+ * formulario público. ?photo= abre el portal de un folio de fotografía.
+ */
 function App() {
   if (TOKEN_COMPARTIDO) return <SharedFolder token={TOKEN_COMPARTIDO} />;
   if (TOKEN_FORMULARIO) return <PublicForm token={TOKEN_FORMULARIO} />;
+  if (CODIGO_FOTO !== null) return <PublicPhoto initialCode={CODIGO_FOTO} />;
   return <Aplicacion />;
 }
 
@@ -112,6 +136,16 @@ function Aplicacion() {
       return;
     }
   }, [pestana]);
+  const [modo, setModo] = useState(leerModo);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("modo", modo);
+    } catch {
+      return;
+    }
+  }, [modo]);
+
   const [proyectoPorAbrir, setProyectoPorAbrir] = useState(null);
   
   const [pestanaProyectoPorAbrir, setPestanaProyectoPorAbrir] =
@@ -206,12 +240,23 @@ function Aplicacion() {
   if (!usuario) return <Login onEntrar={setUsuario} />;
 
   const rol = ROLES[usuario.role] ?? "trabajador";
+  const modos = modesFor(rol, permisos);
+  const enFotos = permisosListos ? modos.photo && (modo === "fotografia" || !modos.coordination) : modo === "fotografia";
+  const delModo = pestana === "Mi perfil" || isPhotoTab(pestana) === enFotos;
   const activa =
-    pestana && descripciones[pestana] && (!permisosListos || canSee(pestana, rol, permisos))
+    pestana && delModo && descripciones[pestana] && (!permisosListos || canSee(pestana, rol, permisos))
       ? pestana
-      : !permisosListos || canSee("Mis tareas", rol, permisos)
-        ? "Mis tareas"
-        : "Notificaciones";
+      : enFotos
+        ? "Grupos"
+        : !permisosListos || canSee("Mis tareas", rol, permisos)
+          ? "Mis tareas"
+          : "Notificaciones";
+
+  /** Cambia entre Coordinación y Fotografía, abriendo la primera pestaña del modo. */
+  function cambiarModo(nuevo) {
+    setModo(nuevo);
+    setPestana(nuevo === "fotografia" ? "Grupos" : null);
+  }
 
   const puedeAbrirProyectos = canSee("Proyectos", rol, permisos);
 
@@ -247,6 +292,7 @@ function Aplicacion() {
         }}
         onLogout={cerrarSesion}
         refrescoNotificaciones={refrescoNotificaciones}
+        secciones={enFotos ? photoSections : menuSections}
       />
 
       <main className="main-content">
@@ -259,6 +305,26 @@ function Aplicacion() {
           </div>
 
           <div className="header-actions">
+            {modos.photo && modos.coordination ? (
+              <div className="mode-switch" role="group" aria-label="Sistema">
+                {MODOS.map((opcion) => {
+                  const Icono = opcion.icono;
+                  const activo = opcion.clave === (enFotos ? "fotografia" : "coordinacion");
+                  return (
+                    <button
+                      key={opcion.clave}
+                      className={`mode-switch-btn ${activo ? "active" : ""}`}
+                      type="button"
+                      aria-pressed={activo}
+                      onClick={() => cambiarModo(opcion.clave)}
+                    >
+                      <Icono className="mode-switch-icon" aria-hidden="true" />
+                      <span>{opcion.nombre}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
             <button
               className="theme-toggle"
               type="button"
@@ -369,6 +435,14 @@ function Aplicacion() {
             canBook={usuario.role === "admin" || permisos.includes("vehicle.book")}
             canManage={usuario.role === "admin" || permisos.includes("vehicle.manage")}
           />
+        ) : activa === "Grupos" ? (
+          <PhotoGroups canManage={permisos.includes("photo.manage")} />
+        ) : activa === "Escanear folio" ? (
+          <PhotoScan canManage={permisos.includes("photo.manage")} />
+        ) : activa === "Catálogo de precios" ? (
+          <PhotoPackages />
+        ) : activa === "Conservación de fotos" ? (
+          <PhotoRetention />
         ) : activa === "Calendario" ? (
           <Calendar
             isAdmin={usuario.role === "admin"}

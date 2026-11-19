@@ -1,0 +1,610 @@
+/* Las pantallas de Fotografía con la piel de la aplicación: tarjetas blancas con borde, campos como
+   los de la captura y el azul de acción para el botón principal. Las hojas se imprimen con el logo. */
+
+.photos {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.photos-toolbar,
+.photos-actions,
+.photos-inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+/* =========================================================
+   TARJETAS Y FORMULARIOS
+========================================================= */
+
+.photos-card,
+.folio-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+
+  padding: 18px 20px;
+
+  border: 1px solid var(--border);
+  border-radius: 8px;
+
+  background: var(--surface);
+  box-shadow: 0 2px 8px rgba(24, 43, 62, 0.05);
+}
+
+.photos-card h2,
+.photos-card h3 {
+  margin: 0;
+
+  color: var(--text);
+
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.photos-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px 20px;
+  align-items: start;
+
+  max-width: 820px;
+}
+
+.photos-form > h2,
+.photos-form > h3,
+.photos-form > .photos-note,
+.photos-form > .photos-error,
+.photos-form > .photos-checks,
+.photos-form > .photos-actions,
+.photos-form > .photos-btn {
+  grid-column: 1 / -1;
+}
+
+.photos-form > .photos-btn {
+  justify-self: start;
+}
+
+.photos-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.photos-field > span,
+.photos-checks legend {
+  color: var(--text-secondary);
+
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Los controles con el mismo aspecto que .field-control de la captura. */
+.photos input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.photos select {
+  height: 36px;
+  padding: 0 11px;
+
+  border: 1px solid var(--border);
+  border-radius: 5px;
+
+  background: var(--surface);
+  color: var(--text);
+
+  font-family: inherit;
+  font-size: var(--size-body);
+
+  outline: none;
+  box-sizing: border-box;
+}
+
+.photos-field input:not([type="checkbox"]),
+.photos-field select {
+  width: 100%;
+}
+
+.photos input:focus,
+.photos select:focus {
+  border-color: #3b73b9;
+  box-shadow: 0 0 0 2px rgba(59, 115, 185, 0.08);
+}
+
+.photos input:disabled,
+.photos select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.photos input::placeholder {
+  color: var(--text-muted);
+}
+
+.photos-search {
+  min-width: 240px;
+}
+
+.photos-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  margin: 0;
+  padding: 0;
+
+  border: 0;
+}
+
+.photos-checks legend {
+  margin-bottom: 6px;
+  padding: 0;
+}
+
+.photos-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  padding: 6px 12px;
+
+  border: 1px solid var(--border);
+  border-radius: 999px;
+
+  color: var(--text);
+
+  font-size: var(--size-small);
+
+  cursor: pointer;
+}
+
+.photos-check:has(input:checked) {
+  border-color: var(--accent-line);
+
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.photos-check input {
+  accent-color: var(--accent);
+}
+
+.photos-upload {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 6px;
+
+  padding: 12px 14px;
+
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+
+  background: var(--surface-secondary);
+  color: var(--text-secondary);
+
+  font-size: var(--size-small);
+  font-weight: 600;
+}
+
+/* =========================================================
+   BOTONES
+========================================================= */
+
+.photos-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  height: 32px;
+  padding: 0 14px;
+
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+
+  background: var(--accent);
+  color: #ffffff;
+
+  font: inherit;
+  font-size: var(--size-small);
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.photos-btn:hover:not(:disabled) {
+  border-color: var(--accent-hover);
+  background: var(--accent-hover);
+}
+
+.photos-btn:disabled {
+  border-color: var(--border);
+
+  background: var(--surface-secondary);
+  color: var(--text-muted);
+
+  cursor: not-allowed;
+}
+
+.photos-btn-link {
+  padding: 4px 6px;
+
+  border: 0;
+  border-radius: 4px;
+
+  background: transparent;
+  color: var(--accent);
+
+  font: inherit;
+  font-size: var(--size-small);
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.photos-btn-link:hover:not(:disabled) {
+  background: var(--accent-soft);
+}
+
+.photos-btn-link:disabled {
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+.photos-btn:focus-visible,
+.photos-btn-link:focus-visible {
+  outline: 2px solid var(--accent-line);
+  outline-offset: 2px;
+}
+
+/* =========================================================
+   TEXTO, AVISOS Y ESTADOS
+========================================================= */
+
+.photos-note {
+  margin: 0;
+
+  color: var(--text-secondary);
+
+  font-size: var(--size-small);
+}
+
+.photos-error {
+  margin: 0;
+  padding-left: 9px;
+
+  border-left: 3px solid var(--danger);
+
+  color: var(--text);
+
+  font-size: var(--size-small);
+}
+
+.photos-facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 18px;
+
+  margin: 0;
+
+  font-size: var(--size-body);
+}
+
+.photos-facts dt {
+  color: var(--text-muted);
+}
+
+.photos-facts dd {
+  margin: 0;
+
+  color: var(--text);
+}
+
+.photo-status {
+  display: inline-block;
+
+  padding: 2px 8px;
+
+  border: 1px solid var(--border);
+  border-radius: 999px;
+
+  background: var(--surface-secondary);
+  color: var(--text-secondary);
+
+  font-size: var(--size-caps);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.photo-status-paid,
+.photo-status-proofs,
+.photo-status-selected {
+  border-color: var(--accent-line);
+
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.photo-status-ready,
+.photo-status-printed {
+  border-color: var(--warning);
+
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.photo-flag {
+  display: inline-block;
+  margin-left: 8px;
+
+  padding: 2px 8px;
+
+  border: 1px solid var(--danger);
+  border-radius: 999px;
+
+  background: var(--danger-soft);
+  color: var(--danger);
+
+  font-size: var(--size-caps);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.photo-status-delivered {
+  border-color: var(--success);
+
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+/* =========================================================
+   TABLAS
+========================================================= */
+
+.photos-table {
+  width: 100%;
+
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  border-collapse: separate;
+  border-spacing: 0;
+
+  overflow: hidden;
+
+  background: var(--surface);
+
+  font-size: var(--size-body);
+}
+
+.photos-table th {
+  padding: 10px 12px;
+
+  border-bottom: 1px solid var(--border);
+
+  background: var(--surface-secondary);
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.photos-table td {
+  padding: 9px 12px;
+
+  border-bottom: 1px solid var(--border-light);
+
+  color: var(--text);
+
+  text-align: left;
+  vertical-align: middle;
+}
+
+.photos-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.photos-table tbody tr:hover td,
+.photos-row-open td {
+  background: var(--accent-soft);
+}
+
+.photos-row-closed td {
+  color: var(--text-muted);
+}
+
+.photos-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.photos-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+
+@media (min-width: 1100px) {
+  .photos-split {
+    grid-template-columns: minmax(0, 3fr) minmax(360px, 2fr);
+    align-items: start;
+  }
+}
+
+/* =========================================================
+   EL FOLIO ABIERTO
+========================================================= */
+
+.folio-panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+
+  padding-bottom: 12px;
+
+  border-bottom: 1px solid var(--border);
+}
+
+.folio-panel-title {
+  margin: 0;
+
+  color: var(--text);
+
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.folio-panel-sec {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.folio-panel-sec + .folio-panel-sec {
+  padding-top: 14px;
+
+  border-top: 1px solid var(--border-light);
+}
+
+.folio-panel-sec h3 {
+  margin: 0;
+
+  color: var(--text-muted);
+
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.folio-panel-sec .photos-form {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.folio-panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+
+  padding-top: 14px;
+
+  border-top: 1px solid var(--border);
+}
+
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+
+  margin: 0;
+  padding: 0;
+
+  list-style: none;
+}
+
+.photo-tile {
+  position: relative;
+
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  padding: 6px;
+
+  border: 1px solid var(--border);
+  border-radius: 8px;
+
+  background: var(--surface-secondary);
+}
+
+.photo-tile-selected {
+  border: 2px solid var(--accent);
+}
+
+.photo-tile-img {
+  width: 100%;
+  aspect-ratio: 3 / 2;
+
+  border-radius: 5px;
+
+  object-fit: cover;
+}
+
+.photo-tile-name {
+  overflow: hidden;
+
+  color: var(--text-secondary);
+
+  font-size: var(--size-caps);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.photo-tile-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+
+  padding: 2px 8px;
+
+  border-radius: 999px;
+
+  background: var(--accent);
+  color: #ffffff;
+
+  font-size: var(--size-caps);
+  font-weight: 600;
+}
+
+.photos-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  margin: 0;
+  padding: 0;
+
+  list-style: none;
+}
+
+.photos-list-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+
+  padding: 8px 10px;
+
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+
+  font-size: var(--size-body);
+}
+
+/* =========================================================
+   ESCANEAR FOLIO
+========================================================= */
+
+.photo-scan {
+  align-items: flex-start;
+}
+
+.photo-scan .qr-scan-video {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+
+  background: #000000;
+}
+
+.photo-code-input {
+  min-width: 16ch;
+
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}

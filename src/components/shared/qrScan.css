@@ -1,0 +1,14 @@
+/* Solo acomodo: el diseño lo revisa quien lleva el CSS. */
+.qr-scan {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 420px;
+}
+
+.qr-scan-video {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+}

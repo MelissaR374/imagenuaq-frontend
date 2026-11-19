@@ -992,3 +992,111 @@ export const lookupPantones = (entity) => request(withQuery("/print/pantones/loo
 export const createPantone = (input) => request("/print/pantones", { method: "POST", body: input });
 export const updatePantone = (id, input) => request(`/print/pantones/${id}`, { method: "PATCH", body: input });
 export const deletePantone = (id) => request(`/print/pantones/${id}`, { method: "DELETE" });
+
+/** Cuántos días se pueden descargar las fotos: lo copia cada grupo nuevo. */
+export const getPhotoRetention = () => request("/photos/retention");
+export const setPhotoRetention = (days) => request("/photos/retention", { method: "PUT", body: { days } });
+
+/** El catálogo de precios del servicio de fotografía, activos y retirados. */
+export const listPhotoPackages = () => request("/photos/packages");
+export const createPhotoPackage = (input) => request("/photos/packages", { method: "POST", body: input });
+/** Edita un paquete o lo retira con `isActive: false`. Lo ya cobrado no cambia. */
+export const updatePhotoPackage = (id, input) => request(`/photos/packages/${id}`, { method: "PATCH", body: input });
+
+export const listPhotoGroups = () => request("/photos/groups");
+export const getPhotoGroup = (id) => request(`/photos/groups/${id}`);
+/** Crea el grupo y sus `size` folios, cada uno con su código. */
+export const createPhotoGroup = (input) => request("/photos/groups", { method: "POST", body: input });
+export const updatePhotoGroup = (id, input) => request(`/photos/groups/${id}`, { method: "PATCH", body: input });
+export const listPhotoFolios = (groupId) => request(`/photos/groups/${groupId}/folios`);
+export const addPhotoFolios = (groupId, count) =>
+  request(`/photos/groups/${groupId}/folios`, { method: "POST", body: { count } });
+/** Los folios con su código, para imprimir las hojas. */
+export const listPhotoSheets = (groupId) => request(`/photos/groups/${groupId}/sheets`);
+
+/** El folio de un código tecleado o leído con el escáner (acepta también la liga completa). */
+export const lookupPhotoFolio = (code) => request(withQuery("/photos/folios/lookup", { code }));
+export const getPhotoFolio = (id) => request(`/photos/folios/${id}`);
+export const updatePhotoFolio = (id, input) => request(`/photos/folios/${id}`, { method: "PATCH", body: input });
+export const recordPhotoPayment = (id, input) => request(`/photos/folios/${id}/payment`, { method: "POST", body: input });
+/** `step` es "ready", "printed" o "delivered". */
+export const advancePhotoFolio = (id, step) => request(`/photos/folios/${id}/${step}`, { method: "POST" });
+export const deletePhotoFile = (fileId) => request(`/photos/files/${fileId}`, { method: "DELETE" });
+
+/** El tamaño de cada parte al subir o bajar una foto: chico para pasar sin problema por un túnel de Cloudflare. */
+const PHOTO_CHUNK = 8 * 1024 * 1024;
+
+/**
+ * Sube una foto en partes de PHOTO_CHUNK. `kind` es "proof" (muestra) o "final" (editada). Si una
+ * parte falla, cancela la subida en el servidor.
+ */
+export async function uploadPhoto(folioId, kind, file) {
+  const { uploadId } = await request(`/photos/folios/${folioId}/uploads`, {
+    method: "POST",
+    body: { kind, name: file.name, mime: file.type || null },
+  });
+  try {
+    for (let part = 1, start = 0; start < file.size || part === 1; part += 1, start += PHOTO_CHUNK) {
+      const response = await fetch(`${API_URL}/photos/uploads/${uploadId}/${part}`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${getToken()}`, "Content-Type": "application/octet-stream" },
+        body: file.slice(start, start + PHOTO_CHUNK),
+      });
+      if (!response.ok) throw await toError(response);
+    }
+    return await request(`/photos/uploads/${uploadId}/complete`, { method: "POST" });
+  } catch (failure) {
+    request(`/photos/uploads/${uploadId}`, { method: "DELETE" }).catch(() => {});
+    throw failure;
+  }
+}
+
+/**
+ * Baja un archivo en pedazos de PHOTO_CHUNK con encabezados Range y los junta en un Blob. Si el
+ * servidor manda el archivo entero, lo toma tal cual.
+ */
+async function fetchInChunks(url, headers = {}) {
+  const pieces = [];
+  let start = 0;
+  let total;
+  let type = "";
+  do {
+    let response;
+    try {
+      response = await fetch(url, { headers: { ...headers, Range: `bytes=${start}-${start + PHOTO_CHUNK - 1}` } });
+    } catch {
+      throw new ApiError("No se pudo conectar con el servidor. Intenta de nuevo.", 0);
+    }
+    if (!response.ok) throw await toError(response);
+    type = response.headers.get("Content-Type") || type;
+    const piece = await response.blob();
+    if (response.status !== 206) return piece;
+    pieces.push(piece);
+    total = Number(response.headers.get("Content-Range")?.split("/")[1]);
+    start += piece.size;
+  } while (start < total && Number.isFinite(total));
+  return new Blob(pieces, { type });
+}
+
+/** Una foto como Blob para la mesa: la vista previa con marca de agua, o la original con `original`. */
+export function getPhotoBlob(fileId, original = false) {
+  return fetchInChunks(`${API_URL}/photos/files/${fileId}/${original ? "content" : "preview"}`, {
+    Authorization: `Bearer ${getToken()}`,
+  });
+}
+
+/** El folio que abre un código, como lo ve su dueño. Sin sesión: el código es la credencial. */
+export const getPortalFolio = (code) => request(`/photo/${encodeURIComponent(code)}`, { auth: false });
+export const registerPortalFolio = (code, input) =>
+  request(`/photo/${encodeURIComponent(code)}/registration`, { method: "PUT", body: input, auth: false });
+/** Guarda la elección entre las muestras. Con `lock: true` la envía a edición. */
+export const selectPortalPhotos = (code, fileIds, lock = false) =>
+  request(`/photo/${encodeURIComponent(code)}/selection`, { method: "PUT", body: { fileIds, lock }, auth: false });
+/** La dirección de una vista previa, para un <img>: no necesita token. */
+export const portalPreviewUrl = (code, fileId) => `${API_URL}/photo/${encodeURIComponent(code)}/previews/${fileId}`;
+/** La miniatura de una foto editada, para un <img>: no necesita token ni cuenta como descarga. */
+export const portalThumbnailUrl = (code, fileId) => `${API_URL}/photo/${encodeURIComponent(code)}/thumbnails/${fileId}`;
+
+/** Una foto editada del propio folio como Blob, bajada en pedazos. */
+export const downloadPortalPhoto = (code, fileId) =>
+  fetchInChunks(`${API_URL}/photo/${encodeURIComponent(code)}/files/${fileId}`);
