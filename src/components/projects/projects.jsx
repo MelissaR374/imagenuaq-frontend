@@ -156,10 +156,11 @@ function ProjectRow({ project, onOpen }) {
 }
 
 /**
- * @param {{ user: object, permissions?: string[], openId?: number|null }} props `openId` opens
- *   that project on arrival, as when «Mis tareas» sends someone to one.
+ * @param {{ user: object, permissions?: string[], openId?: number|null, openStageId?: number|null }} props
+ *   `openId` opens that project on arrival, as when «Mis tareas» sends someone to one, and
+ *   `openStageId` selects that stage in it, as when a notification does.
  */
-function Projects({ user, permissions = [], openId = null, initialTab = "stages" }) {
+function Projects({ user, permissions = [], openId = null, initialTab = "stages", openStageId = null }) {
   const [projects, setProjects] = useState([]);
   const [areas, setAreas] = useState([]);
   const [statuses, setStatuses] = useState([]);
@@ -336,6 +337,7 @@ function Projects({ user, permissions = [], openId = null, initialTab = "stages"
       <ProjectDetail
         project={opened}
         initialTab={initialTab}
+        openStageId={openStageId}
         areas={areas}
         statuses={statuses}
         vocabulary={vocabulary}

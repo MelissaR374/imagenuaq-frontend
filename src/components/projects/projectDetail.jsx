@@ -931,12 +931,12 @@ function ProjectFiles({ projectId }) {
 
 function ProjectDetail({
   project, areas, statuses: initialStatuses, vocabulary, user, permissions = [],
-  place, onPrevious, onNext, onClose, onChanged, initialTab = "stages",
+  place, onPrevious, onNext, onClose, onChanged, initialTab = "stages", openStageId = null,
 }) {
   const [detail, setDetail] = useState(null);
   const [statuses, setStatuses] = useState(initialStatuses ?? []);
   const [people, setPeople] = useState([]);
-  const [selected, setSelected] = useState(null);
+  const [selected, setSelected] = useState(openStageId);
   const [tab, setTab] = useState(initialTab);
   const [newStage, setNewStage] = useState(null);
   const [newStageMembers, setNewStageMembers] = useState([]);
@@ -1001,8 +1001,9 @@ function ProjectDetail({
   const stages = detail === null ? [] : latestAttempts(detail.stages);
   const phases = phasesOf(stages);
   const openStages = stages.filter((stage) => OPEN_STATES.includes(stage.status));
+  const selectedAttempt = detail === null ? undefined : detail.stages.find((stage) => stage.id === selected);
   const selectedStage =
-    stages.find((stage) => stage.id === selected) ?? openStages[0] ?? stages[0] ?? null;
+    stages.find((stage) => stage.flowStageId === selectedAttempt?.flowStageId) ?? openStages[0] ?? stages[0] ?? null;
   const stageAreaId = selectedStage === null ? null : selectedStage.areaId;
   const newStageAreaId = newStage === null ? null : newStage.areaId;
 
