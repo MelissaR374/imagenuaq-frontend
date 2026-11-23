@@ -407,6 +407,61 @@
 }
 
 
+/* Liga a la etapa, al proyecto o a las ausencias del aviso. */
+
+.notification-link {
+    display: inline-flex;
+    align-items: center;
+
+    margin-top: 6px;
+    padding: 3px 10px;
+
+    border: 1px solid transparent;
+    border-radius: 999px;
+
+    background: var(--accent-soft);
+    color: var(--accent);
+
+    font-family: inherit;
+    font-size: 10px;
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition:
+        background-color 0.2s ease,
+        border-color 0.2s ease,
+        color 0.2s ease;
+}
+
+
+.notification-link::after {
+    content: "→";
+
+    margin-left: 5px;
+
+    transition: transform 0.2s ease;
+}
+
+
+.notification-link:hover {
+    border-color: var(--accent-line);
+
+    color: var(--accent-hover);
+}
+
+
+.notification-link:hover::after {
+    transform: translateX(2px);
+}
+
+
+.notification-link:focus-visible {
+    outline: 2px solid var(--accent-line);
+    outline-offset: 2px;
+}
+
+
 /* =========================================================
    SIN RESULTADOS
 ========================================================= */
