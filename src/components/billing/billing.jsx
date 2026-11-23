@@ -1,5 +1,5 @@
-// Finance overview: projects with their invoicing standing, filterable by flag (RF-FIN-07), and
-// the invoices of every project as a second view of the same tab.
+// Finance overview: projects with their invoicing standing, filterable by flag (RF-FIN-07), the ones
+// finance marked complete apart, and the invoices of every project as a second view of the same tab.
 import { useEffect, useState } from "react";
 
 import {
@@ -22,13 +22,16 @@ const FILTERS = [
   { id: "all", label: "Todos", flag: null },
   { id: "costed_no_quote", label: "Falta cotización", flag: "costed_no_quote" },
   { id: "missing_invoices", label: "Faltan facturas", flag: "missing_invoices" },
+  { id: "correction_requested", label: "Con corrección", flag: "correction_requested" },
   { id: "receipts", label: "Con recibo", flag: null },
+  { id: "completed", label: "Completados", flag: null },
 ];
 
 /** @param {{ onOpenRecord: (record: object) => void, onOpenProject: ((id: number) => void) | null }} props */
 function Billing({ onOpenRecord, onOpenProject }) {
   const [view, setView] = useState("projects");
   const [projects, setProjects] = useState(null);
+  const [completed, setCompleted] = useState([]);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
@@ -36,10 +39,11 @@ function Billing({ onOpenRecord, onOpenProject }) {
   useEffect(() => {
     let cancelled = false;
 
-    api.listFinanceProjects({})
-      .then((data) => {
+    Promise.all([api.listFinanceProjects({}), api.listFinanceProjects({ completed: true })])
+      .then(([open, done]) => {
         if (!cancelled) {
-          setProjects(data.projects ?? []);
+          setProjects(open.projects ?? []);
+          setCompleted(done.projects ?? []);
           setError(null);
         }
       })
@@ -55,7 +59,7 @@ function Billing({ onOpenRecord, onOpenProject }) {
   const list = projects ?? [];
   const activeFlag = FILTERS.find((f) => f.id === activeFilter)?.flag ?? null;
 
-  const filtered = list.filter((p) => {
+  const filtered = (activeFilter === "completed" ? completed : list).filter((p) => {
     if (activeFilter === "receipts" && p.receipts === 0) return false;
     if (activeFlag && !p.flags?.includes(activeFlag)) return false;
 
@@ -76,6 +80,8 @@ function Billing({ onOpenRecord, onOpenProject }) {
     if (id === "costed_no_quote") return missingQuote;
     if (id === "missing_invoices") return missingInvoice;
     if (id === "receipts") return list.filter((p) => p.receipts > 0).length;
+    if (id === "correction_requested") return list.filter((p) => p.flags?.includes("correction_requested")).length;
+    if (id === "completed") return completed.length;
     return 0;
   }
 

@@ -6,7 +6,7 @@ export const FLAG_LABELS = {
   costed_no_quote: "Sin cotización",
   delivered_no_invoice: "Entregado sin factura",
   invoice_not_in_oficio: "Factura sin oficio",
-  oficio_unanswered: "Oficio sin respuesta",
   payment_no_folio: "Pago sin folio",
+  correction_requested: "Corrección solicitada",
   no_finance_records: "Sin registros",
 };

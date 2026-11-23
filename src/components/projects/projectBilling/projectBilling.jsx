@@ -1,5 +1,6 @@
-// Finance tab inside a project: quotes, invoices, oficios, payments, receipts with inline CRUD.
-// RF-FIN-01 to RF-FIN-18. Interview 008: expected-vs-uploaded invoices setter in the summary bar.
+// Finance tab inside a project: quotes, invoices, oficios, payments, receipts with inline CRUD. No
+// record has stages: finance asks for a correction, and marks the project complete. RF-FIN-01 to
+// RF-FIN-18. Interview 008: expected-vs-uploaded invoices setter in the summary bar.
 import { useEffect, useState } from "react";
 import {
   MdOutlineDescription,
@@ -14,6 +15,8 @@ import {
   MdDelete,
   MdCheck,
   MdClose,
+  MdFeedback,
+  MdTaskAlt,
 } from "react-icons/md";
 
 import * as api from "../../../api/client.js";
@@ -33,28 +36,19 @@ const MXN = new Intl.NumberFormat("es-MX", {
   maximumFractionDigits: 2,
 });
 
-const STATUS_LABELS = {
-  issued: "Emitida",
-  in_review: "En revisión",
-  approved: "Aprobada",
-  rejected: "Rechazada",
-  uploaded: "Subida",
-  sent: "Enviada",
-  in_payment: "En pago",
-  paid: "Pagada",
-  signed: "Firmado",
-  answered: "Contestado",
-  draft: "Borrador",
-  pending_validation: "Pendiente",
-  validated: "Validado",
-  cancelled: "Cancelado",
+const DIRECTION_LABELS = {
   incoming: "Ingreso",
   outgoing: "Egreso",
 };
 
-function label(status) {
-  return STATUS_LABELS[status] ?? status ?? "—";
-}
+/** Route kind of each record, as `requestCorrection` takes it. */
+const CORRECTION_KINDS = {
+  quote: "quotes",
+  invoice: "invoices",
+  oficio: "oficios",
+  payment: "payments",
+  receipt: "receipts",
+};
 
 function fmtDate(value) {
   if (!value) return null;
@@ -101,6 +95,26 @@ const ATTACHMENTS = [
   { kind: "payments", folder: "pagos", fileId: (r) => r.proofFileId },
   { kind: "receipts", folder: "recibos", fileId: (r) => r.fileId },
 ];
+
+/** "Corrección solicitada" on a record finance asked to correct, with the note as its tooltip. */
+function CorrectionChip({ record }) {
+  if (!record.correctionRequestedAt) return null;
+  return (
+    <span className="project-billing-correction" title={record.correctionNote ?? ""}>
+      <MdFeedback /> Corrección solicitada
+    </span>
+  );
+}
+
+/** Finance's "Pedir corrección" button on a record. */
+function CorrectionButton({ show, onClick }) {
+  if (!show) return null;
+  return (
+    <button type="button" className="project-billing-sm-btn" onClick={onClick}>
+      Pedir corrección
+    </button>
+  );
+}
 
 /** "Descargar todo" for one block; hidden when none of its records has a file. */
 function ZipButton({ count, busy, onClick, label = "Descargar todo" }) {
@@ -152,10 +166,10 @@ function ProjectBilling({ projectId, permissions = [] }) {
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [editingExpected, setEditingExpected] = useState(false);
   const [expectedDraft, setExpectedDraft] = useState("");
+  const [correcting, setCorrecting] = useState(null);
 
   const canWrite = permissions.includes("finance.write") || permissions.includes("project.write");
   const canDecide = permissions.includes("finance.write");
-  const canValidate = permissions.includes("finance.validate");
   const canSetExpected = permissions.includes("finance.request");
 
   useEffect(() => {
@@ -183,6 +197,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
     setEditing(null);
     setCreating(null);
     setConfirmDelete(null);
+    setCorrecting(null);
     setActionError(null);
   }
 
@@ -278,16 +293,6 @@ function ProjectBilling({ projectId, permissions = [] }) {
     finally { setSaving(false); }
   }
 
-  async function handleSetInvoiceStatus(id, status, paymentFolio) {
-    setSaving(true);
-    try {
-      await api.setInvoiceStatus(id, { status, paymentFolio: paymentFolio || undefined });
-      flash(`Factura marcada como ${label(status).toLowerCase()}`);
-      reload();
-    } catch (err) { setActionError(err.message); }
-    finally { setSaving(false); }
-  }
-
   async function handleCreateOficio(draft) {
     setSaving(true);
     try {
@@ -316,16 +321,6 @@ function ProjectBilling({ projectId, permissions = [] }) {
         note: draft.note || undefined,
       });
       flash("Oficio actualizado");
-      reload();
-    } catch (err) { setActionError(err.message); }
-    finally { setSaving(false); }
-  }
-
-  async function handleAdvanceOficio(id, status) {
-    setSaving(true);
-    try {
-      await api.advanceOficio(id, { status });
-      flash(`Oficio avanzado a ${label(status).toLowerCase()}`);
       reload();
     } catch (err) { setActionError(err.message); }
     finally { setSaving(false); }
@@ -400,21 +395,22 @@ function ProjectBilling({ projectId, permissions = [] }) {
     finally { setSaving(false); }
   }
 
-  async function handleSubmitReceipt(id) {
+  async function handleRequestCorrection() {
+    if (!correcting.note.trim()) return;
     setSaving(true);
     try {
-      await api.submitReceipt(id);
-      flash("Recibo enviado a validación");
+      await api.requestCorrection(CORRECTION_KINDS[correcting.kind], correcting.id, correcting.note.trim());
+      flash("Corrección solicitada; se avisó a quien lo subió");
       reload();
     } catch (err) { setActionError(err.message); }
     finally { setSaving(false); }
   }
 
-  async function handleValidateReceipt(id, decision) {
+  async function handleToggleComplete() {
     setSaving(true);
     try {
-      await api.validateReceipt(id, { decision });
-      flash(decision === "approved" ? "Recibo validado" : "Recibo rechazado");
+      await api.setFinanceComplete(projectId, !data.financeCompletedAt);
+      flash(data.financeCompletedAt ? "Proyecto reabierto para finanzas" : "Proyecto marcado como completo");
       reload();
     } catch (err) { setActionError(err.message); }
     finally { setSaving(false); }
@@ -511,6 +507,16 @@ function ProjectBilling({ projectId, permissions = [] }) {
       <header className="project-billing-header">
         <MdOutlineDescription />
         <h3>Finanzas del proyecto</h3>
+        {data.financeCompletedAt ? (
+          <span className="project-billing-completed">
+            <MdTaskAlt /> Completo desde {fmtDate(data.financeCompletedAt)}
+          </span>
+        ) : null}
+        {canDecide ? (
+          <button type="button" className="project-billing-complete-btn" disabled={saving} onClick={handleToggleComplete}>
+            {data.financeCompletedAt ? "Reabrir" : "Marcar como completo"}
+          </button>
+        ) : null}
         <ZipButton
           count={attachmentsOf(ATTACHMENTS.map((a) => a.kind)).length}
           busy={zipping !== null}
@@ -593,11 +599,37 @@ function ProjectBilling({ projectId, permissions = [] }) {
         </div>
       ) : null}
 
+      {correcting ? (
+        <div className="project-billing-confirm-overlay" onClick={() => setCorrecting(null)}>
+          <div className="project-billing-confirm-panel" onClick={(e) => e.stopPropagation()}>
+            <label className="project-billing-field">
+              <span>¿Qué hay que corregir?</span>
+              <textarea
+                className="project-billing-correction-note"
+                value={correcting.note}
+                onChange={(e) => setCorrecting({ ...correcting, note: e.target.value })}
+                autoFocus
+              />
+            </label>
+            <div className="project-billing-form-actions">
+              <button type="button" className="project-billing-save-btn" disabled={saving || !correcting.note.trim()} onClick={handleRequestCorrection}>
+                Pedir corrección
+              </button>
+              <button type="button" className="project-billing-cancel-btn" disabled={saving} onClick={() => setCorrecting(null)}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <QuotesBlock
         zipButton={<ZipButton count={attachmentsOf(["quotes"]).length} busy={zipping !== null} onClick={() => handleDownloadZip(["quotes"], "cotizaciones")} />}
         quotes={quotes}
         providers={providers}
         canWrite={canWrite}
+        canCorrect={canDecide}
+        onCorrect={(id) => setCorrecting({ kind: "quote", id, note: "" })}
         creating={creating}
         editing={editing}
         setEditing={setEditing}
@@ -616,7 +648,8 @@ function ProjectBilling({ projectId, permissions = [] }) {
         quotes={quotes}
         providers={providers}
         canWrite={canWrite}
-        canDecide={canDecide}
+        canCorrect={canDecide}
+        onCorrect={(id) => setCorrecting({ kind: "invoice", id, note: "" })}
         creating={creating}
         editing={editing}
         setEditing={setEditing}
@@ -625,7 +658,6 @@ function ProjectBilling({ projectId, permissions = [] }) {
         onStartEdit={(inv) => { setEditing({ kind: "invoice", id: inv.id, draft: { providerId: inv.providerId ?? "", quoteId: inv.quoteId ?? "", amount: inv.amount, material: inv.material ?? "", invoiceFolio: inv.invoiceFolio ?? "", fiscalFolio: inv.fiscalFolio ?? "", destination: inv.destination ?? "" } }); setCreating(null); }}
         onCreate={handleCreateInvoice}
         onUpdate={handleUpdateInvoice}
-        onSetStatus={handleSetInvoiceStatus}
         onDelete={(id) => setConfirmDelete({ kind: "invoice", id })}
         onCancel={() => { setCreating(null); setEditing(null); }}
       />
@@ -635,6 +667,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
         oficios={oficios}
         invoices={invoices}
         canWrite={canDecide}
+        onCorrect={(id) => setCorrecting({ kind: "oficio", id, note: "" })}
         creating={creating}
         editing={editing}
         setEditing={setEditing}
@@ -643,7 +676,6 @@ function ProjectBilling({ projectId, permissions = [] }) {
         onStartEdit={(o) => { setEditing({ kind: "oficio", id: o.id, draft: { folio: o.folio ?? "", recipient: o.recipient ?? "", amount: o.amount, note: o.note ?? "" } }); setCreating(null); }}
         onCreate={handleCreateOficio}
         onUpdate={handleUpdateOficio}
-        onAdvance={handleAdvanceOficio}
         onDelete={(id) => setConfirmDelete({ kind: "oficio", id })}
         onCancel={() => { setCreating(null); setEditing(null); }}
       />
@@ -655,6 +687,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
         invoices={invoices}
         providers={providers}
         canWrite={canDecide}
+        onCorrect={(id) => setCorrecting({ kind: "payment", id, note: "" })}
         creating={creating}
         editing={editing}
         setEditing={setEditing}
@@ -672,7 +705,8 @@ function ProjectBilling({ projectId, permissions = [] }) {
         receipts={receipts}
         quotes={quotes}
         canWrite={canWrite}
-        canValidate={canValidate}
+        canCorrect={canDecide}
+        onCorrect={(id) => setCorrecting({ kind: "receipt", id, note: "" })}
         creating={creating}
         editing={editing}
         setEditing={setEditing}
@@ -681,8 +715,6 @@ function ProjectBilling({ projectId, permissions = [] }) {
         onStartEdit={(r) => { setEditing({ kind: "receipt", id: r.id, draft: { requester: r.requester ?? "", amount: r.amount, reference: r.reference ?? "", concept: r.concept ?? "" } }); setCreating(null); }}
         onCreate={handleCreateReceipt}
         onUpdate={handleUpdateReceipt}
-        onSubmit={handleSubmitReceipt}
-        onValidate={handleValidateReceipt}
         onDelete={(id) => setConfirmDelete({ kind: "receipt", id })}
         onCancel={() => { setCreating(null); setEditing(null); }}
       />
@@ -690,7 +722,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
   );
 }
 
-function QuotesBlock({ zipButton, quotes, providers, canWrite, creating, editing, setEditing, saving, onStartCreate, onStartEdit, onCreate, onUpdate, onDelete, onCancel }) {
+function QuotesBlock({ zipButton, quotes, providers, canWrite, canCorrect, onCorrect, creating, editing, setEditing, saving, onStartCreate, onStartEdit, onCreate, onUpdate, onDelete, onCancel }) {
   const [draft, setDraft] = useState({ providerId: "", entity: "", amount: "", description: "", _file: null });
 
   function resetDraft() {
@@ -747,12 +779,13 @@ function QuotesBlock({ zipButton, quotes, providers, canWrite, creating, editing
             }
             return (
               <tr key={q.id}>
-                <td>{orDash(q.providerName ?? q.entity)}</td>
+                <td>{orDash(q.providerName ?? q.entity)} <CorrectionChip record={q} /></td>
                 <td>{MXN.format(q.amount)}</td>
                 <td>{fmtDate(q.createdAt) ?? "—"}</td>
                 <td className="project-billing-actions">
                   <FileButton fileId={q.fileId} />
-                  {canWrite && (q.status === "issued" || q.status === "in_review") ? (
+                  <CorrectionButton show={canCorrect} onClick={() => onCorrect(q.id)} />
+                  {canWrite ? (
                     <>
                       <button type="button" className="project-billing-icon-btn" onClick={() => onStartEdit(q)} title="Editar"><MdEdit /></button>
                       <button type="button" className="project-billing-icon-btn danger" onClick={() => onDelete(q.id)} title="Eliminar"><MdDelete /></button>
@@ -771,9 +804,8 @@ function QuotesBlock({ zipButton, quotes, providers, canWrite, creating, editing
   );
 }
 
-function InvoicesBlock({ zipButton, invoices, quotes, providers, canWrite, canDecide, creating, editing, setEditing, saving, onStartCreate, onStartEdit, onCreate, onUpdate, onSetStatus, onDelete, onCancel }) {
+function InvoicesBlock({ zipButton, invoices, quotes, providers, canWrite, canCorrect, onCorrect, creating, editing, setEditing, saving, onStartCreate, onStartEdit, onCreate, onUpdate, onDelete, onCancel }) {
   const [draft, setDraft] = useState({ quoteId: "", providerId: "", amount: "", material: "", invoiceFolio: "", fiscalFolio: "", destination: "", _file: null });
-  const [statusForm, setStatusForm] = useState(null);
 
   function resetDraft() {
     setDraft({ quoteId: "", providerId: "", amount: "", material: "", invoiceFolio: "", fiscalFolio: "", destination: "", _file: null });
@@ -796,19 +828,18 @@ function InvoicesBlock({ zipButton, invoices, quotes, providers, canWrite, canDe
             <th>Folio</th>
             <th>Proveedor</th>
             <th>Monto</th>
-            <th>Estado</th>
             <th>Oficio</th>
             <th />
           </tr>
         </thead>
         <tbody>
           {creating === "invoice" ? (
-            <InlineForm colSpan={6} saving={saving} onSave={() => onCreate(draft)} onCancel={onCancel}>
+            <InlineForm colSpan={5} saving={saving} onSave={() => onCreate(draft)} onCancel={onCancel}>
               <label className="project-billing-field">
                 <span>Cotización</span>
                 <select value={draft.quoteId} onChange={(e) => setDraft({ ...draft, quoteId: e.target.value })}>
                   <option value="">Opcional</option>
-                  {quotes.filter((q) => q.status !== "rejected").map((q) => <option key={q.id} value={q.id}>{orDash(q.providerName)} — {MXN.format(q.amount)}</option>)}
+                  {quotes.map((q) => <option key={q.id} value={q.id}>{orDash(q.providerName)} — {MXN.format(q.amount)}</option>)}
                 </select>
               </label>
               <label className="project-billing-field">
@@ -848,7 +879,7 @@ function InvoicesBlock({ zipButton, invoices, quotes, providers, canWrite, canDe
             if (editing?.kind === "invoice" && editing.id === inv.id) {
               const ed = editing.draft;
               return (
-                <InlineForm key={inv.id} colSpan={6} saving={saving} onSave={() => onUpdate(inv.id, ed)} onCancel={onCancel}>
+                <InlineForm key={inv.id} colSpan={5} saving={saving} onSave={() => onUpdate(inv.id, ed)} onCancel={onCancel}>
                   <label className="project-billing-field">
                     <span>Proveedor</span>
                     <select value={ed.providerId} onChange={(e) => setEditing({ ...editing, draft: { ...ed, providerId: e.target.value } })}>
@@ -880,50 +911,27 @@ function InvoicesBlock({ zipButton, invoices, quotes, providers, canWrite, canDe
               );
             }
 
-            const canEdit = canWrite && inv.status === "uploaded";
-
             return (
               <tr key={inv.id}>
-                <td>{orDash(inv.invoiceFolio)}</td>
+                <td>{orDash(inv.invoiceFolio)} <CorrectionChip record={inv} /></td>
                 <td>{orDash(inv.providerName)}</td>
                 <td>{MXN.format(inv.amount)}</td>
-                <td>
-                  <span className={`project-billing-status ${inv.status}`}>{label(inv.status)}</span>
-                  {statusForm?.id === inv.id ? (
-                    <span className="project-billing-status-form">
-                      <input placeholder="Folio de pago" value={statusForm.folio} onChange={(e) => setStatusForm({ ...statusForm, folio: e.target.value })} />
-                      <button type="button" className="project-billing-sm-btn" disabled={saving} onClick={() => { onSetStatus(inv.id, statusForm.target, statusForm.folio); setStatusForm(null); }}>
-                        Confirmar
-                      </button>
-                      <button type="button" className="project-billing-sm-btn" onClick={() => setStatusForm(null)}>×</button>
-                    </span>
-                  ) : null}
-                </td>
                 <td>{orDash(inv.oficioFolio)}</td>
                 <td className="project-billing-actions">
                   <FileButton fileId={inv.fileId} />
-                  {canEdit ? (
+                  <CorrectionButton show={canCorrect} onClick={() => onCorrect(inv.id)} />
+                  {canWrite ? (
                     <>
                       <button type="button" className="project-billing-icon-btn" onClick={() => onStartEdit(inv)} title="Editar"><MdEdit /></button>
                       <button type="button" className="project-billing-icon-btn danger" onClick={() => onDelete(inv.id)} title="Eliminar"><MdDelete /></button>
                     </>
-                  ) : null}
-                  {canDecide && (inv.status === "uploaded" || inv.status === "sent") ? (
-                    <button type="button" className="project-billing-sm-btn" onClick={() => setStatusForm({ id: inv.id, target: "in_payment", folio: "" })}>
-                      Marcar en pago
-                    </button>
-                  ) : null}
-                  {canDecide && inv.status === "in_payment" ? (
-                    <button type="button" className="project-billing-sm-btn success" onClick={() => onSetStatus(inv.id, "paid")}>
-                      Marcar pagada
-                    </button>
                   ) : null}
                 </td>
               </tr>
             );
           })}
           {invoices.length === 0 && creating !== "invoice" ? (
-            <tr><td colSpan={6} className="project-billing-empty">Sin facturas</td></tr>
+            <tr><td colSpan={5} className="project-billing-empty">Sin facturas</td></tr>
           ) : null}
         </tbody>
       </table>
@@ -931,14 +939,12 @@ function InvoicesBlock({ zipButton, invoices, quotes, providers, canWrite, canDe
   );
 }
 
-function OficiosBlock({ zipButton, oficios, invoices, canWrite, creating, editing, setEditing, saving, onStartCreate, onStartEdit, onCreate, onUpdate, onAdvance, onDelete, onCancel }) {
+function OficiosBlock({ zipButton, oficios, invoices, canWrite, onCorrect, creating, editing, setEditing, saving, onStartCreate, onStartEdit, onCreate, onUpdate, onDelete, onCancel }) {
   const [draft, setDraft] = useState({ folio: "", recipient: "", amount: "", note: "", invoiceIds: [], _file: null });
 
   function resetDraft() {
     setDraft({ folio: "", recipient: "", amount: "", note: "", invoiceIds: [], _file: null });
   }
-
-  const NEXT_STEP = { issued: "sent", sent: "signed", signed: "answered", answered: "paid" };
 
   return (
     <div className="project-billing-block">
@@ -957,14 +963,12 @@ function OficiosBlock({ zipButton, oficios, invoices, canWrite, creating, editin
             <th>Folio</th>
             <th>Destinatario</th>
             <th>Monto</th>
-            <th>Estado</th>
-            <th>Días sin respuesta</th>
             <th />
           </tr>
         </thead>
         <tbody>
           {creating === "oficio" ? (
-            <InlineForm colSpan={6} saving={saving} onSave={() => onCreate(draft)} onCancel={onCancel}>
+            <InlineForm colSpan={4} saving={saving} onSave={() => onCreate(draft)} onCancel={onCancel}>
               <input placeholder="Folio *" required value={draft.folio} onChange={(e) => setDraft({ ...draft, folio: e.target.value })} />
               <input placeholder="Destinatario" value={draft.recipient} onChange={(e) => setDraft({ ...draft, recipient: e.target.value })} />
               <input placeholder="Monto *" type="number" required value={draft.amount} onChange={(e) => setDraft({ ...draft, amount: e.target.value })} />
@@ -996,7 +1000,7 @@ function OficiosBlock({ zipButton, oficios, invoices, canWrite, creating, editin
             if (editing?.kind === "oficio" && editing.id === o.id) {
               const ed = editing.draft;
               return (
-                <InlineForm key={o.id} colSpan={6} saving={saving} onSave={() => onUpdate(o.id, ed)} onCancel={onCancel}>
+                <InlineForm key={o.id} colSpan={4} saving={saving} onSave={() => onUpdate(o.id, ed)} onCancel={onCancel}>
                   <input placeholder="Folio" value={ed.folio} onChange={(e) => setEditing({ ...editing, draft: { ...ed, folio: e.target.value } })} />
                   <input placeholder="Destinatario" value={ed.recipient} onChange={(e) => setEditing({ ...editing, draft: { ...ed, recipient: e.target.value } })} />
                   <input placeholder="Monto *" type="number" value={ed.amount} onChange={(e) => setEditing({ ...editing, draft: { ...ed, amount: e.target.value } })} />
@@ -1004,33 +1008,26 @@ function OficiosBlock({ zipButton, oficios, invoices, canWrite, creating, editin
                 </InlineForm>
               );
             }
-            const next = NEXT_STEP[o.status];
             return (
-              <tr key={o.id} className={o.daysUnanswered > 30 ? "project-billing-warn-row" : ""}>
-                <td>{orDash(o.folio)}</td>
+              <tr key={o.id}>
+                <td>{orDash(o.folio)} <CorrectionChip record={o} /></td>
                 <td>{orDash(o.recipient)}</td>
                 <td>{MXN.format(o.amount)}</td>
-                <td><span className={`project-billing-status ${o.status}`}>{label(o.status)}</span></td>
-                <td>{o.daysUnanswered ?? "—"}</td>
                 <td className="project-billing-actions">
                   <FileButton fileId={o.stampedFileId} />
+                  <CorrectionButton show={canWrite} onClick={() => onCorrect(o.id)} />
                   {canWrite ? (
-                    <button type="button" className="project-billing-icon-btn" onClick={() => onStartEdit(o)} title="Editar"><MdEdit /></button>
-                  ) : null}
-                  {canWrite && o.status === "issued" ? (
-                    <button type="button" className="project-billing-icon-btn danger" onClick={() => onDelete(o.id)} title="Eliminar"><MdDelete /></button>
-                  ) : null}
-                  {canWrite && next ? (
-                    <button type="button" className="project-billing-sm-btn" onClick={() => onAdvance(o.id, next)}>
-                      → {label(next)}
-                    </button>
+                    <>
+                      <button type="button" className="project-billing-icon-btn" onClick={() => onStartEdit(o)} title="Editar"><MdEdit /></button>
+                      <button type="button" className="project-billing-icon-btn danger" onClick={() => onDelete(o.id)} title="Eliminar"><MdDelete /></button>
+                    </>
                   ) : null}
                 </td>
               </tr>
             );
           })}
           {oficios.length === 0 && creating !== "oficio" ? (
-            <tr><td colSpan={6} className="project-billing-empty">Sin oficios</td></tr>
+            <tr><td colSpan={4} className="project-billing-empty">Sin oficios</td></tr>
           ) : null}
         </tbody>
       </table>
@@ -1038,7 +1035,7 @@ function OficiosBlock({ zipButton, oficios, invoices, canWrite, creating, editin
   );
 }
 
-function PaymentsBlock({ zipButton, payments, oficios, invoices, providers, canWrite, creating, editing, setEditing, saving, onStartCreate, onStartEdit, onCreate, onUpdate, onDelete, onCancel }) {
+function PaymentsBlock({ zipButton, payments, oficios, invoices, providers, canWrite, onCorrect, creating, editing, setEditing, saving, onStartCreate, onStartEdit, onCreate, onUpdate, onDelete, onCancel }) {
   const [draft, setDraft] = useState({ direction: "incoming", amount: "", oficioId: "", invoiceId: "", providerId: "", paidOn: "", trackingFolio: "", note: "", _file: null });
 
   function resetDraft() {
@@ -1111,12 +1108,13 @@ function PaymentsBlock({ zipButton, payments, oficios, invoices, providers, canW
             }
             return (
               <tr key={pay.id}>
-                <td>{label(pay.direction)}</td>
+                <td>{DIRECTION_LABELS[pay.direction] ?? pay.direction} <CorrectionChip record={pay} /></td>
                 <td>{MXN.format(pay.amount)}</td>
                 <td>{fmtDate(pay.paidOn) ?? "—"}</td>
                 <td>{orDash(pay.trackingFolio)}</td>
                 <td className="project-billing-actions">
                   <FileButton fileId={pay.proofFileId} />
+                  <CorrectionButton show={canWrite} onClick={() => onCorrect(pay.id)} />
                   {canWrite ? (
                     <>
                       <button type="button" className="project-billing-icon-btn" onClick={() => onStartEdit(pay)} title="Editar"><MdEdit /></button>
@@ -1136,7 +1134,7 @@ function PaymentsBlock({ zipButton, payments, oficios, invoices, providers, canW
   );
 }
 
-function ReceiptsBlock({ zipButton, receipts, quotes, canWrite, canValidate, creating, editing, setEditing, saving, onStartCreate, onStartEdit, onCreate, onUpdate, onSubmit, onValidate, onDelete, onCancel }) {
+function ReceiptsBlock({ zipButton, receipts, quotes, canWrite, canCorrect, onCorrect, creating, editing, setEditing, saving, onStartCreate, onStartEdit, onCreate, onUpdate, onDelete, onCancel }) {
   const [draft, setDraft] = useState({ quoteId: "", requester: "", amount: "", reference: "", concept: "", _file: null });
 
   function resetDraft() {
@@ -1160,14 +1158,13 @@ function ReceiptsBlock({ zipButton, receipts, quotes, canWrite, canValidate, cre
             <th>Solicitante</th>
             <th>Monto</th>
             <th>Referencia</th>
-            <th>Estado</th>
             <th>Concepto</th>
             <th />
           </tr>
         </thead>
         <tbody>
           {creating === "receipt" ? (
-            <InlineForm colSpan={6} saving={saving} onSave={() => onCreate(draft)} onCancel={onCancel}>
+            <InlineForm colSpan={5} saving={saving} onSave={() => onCreate(draft)} onCancel={onCancel}>
               <select value={draft.quoteId} onChange={(e) => setDraft({ ...draft, quoteId: e.target.value })}>
                 <option value="">Cotización (opcional)</option>
                 {quotes.map((q) => <option key={q.id} value={q.id}>{orDash(q.providerName)} — {MXN.format(q.amount)}</option>)}
@@ -1183,7 +1180,7 @@ function ReceiptsBlock({ zipButton, receipts, quotes, canWrite, canValidate, cre
             if (editing?.kind === "receipt" && editing.id === r.id) {
               const ed = editing.draft;
               return (
-                <InlineForm key={r.id} colSpan={6} saving={saving} onSave={() => onUpdate(r.id, ed)} onCancel={onCancel}>
+                <InlineForm key={r.id} colSpan={5} saving={saving} onSave={() => onUpdate(r.id, ed)} onCancel={onCancel}>
                   <input placeholder="Solicitante" value={ed.requester} onChange={(e) => setEditing({ ...editing, draft: { ...ed, requester: e.target.value } })} />
                   <input placeholder="Monto *" type="number" value={ed.amount} onChange={(e) => setEditing({ ...editing, draft: { ...ed, amount: e.target.value } })} />
                   <input placeholder="Referencia" value={ed.reference} onChange={(e) => setEditing({ ...editing, draft: { ...ed, reference: e.target.value } })} />
@@ -1193,24 +1190,17 @@ function ReceiptsBlock({ zipButton, receipts, quotes, canWrite, canValidate, cre
             }
             return (
               <tr key={r.id}>
-                <td>{orDash(r.requester)}</td>
+                <td>{orDash(r.requester)} <CorrectionChip record={r} /></td>
                 <td>{MXN.format(r.amount)}</td>
                 <td>{orDash(r.reference)}</td>
-                <td><span className={`project-billing-status ${r.status}`}>{label(r.status)}</span></td>
                 <td>{orDash(r.concept)}</td>
                 <td className="project-billing-actions">
                   <FileButton fileId={r.fileId} />
-                  {canWrite && r.status === "draft" ? (
+                  <CorrectionButton show={canCorrect} onClick={() => onCorrect(r.id)} />
+                  {canWrite ? (
                     <>
                       <button type="button" className="project-billing-icon-btn" onClick={() => onStartEdit(r)} title="Editar"><MdEdit /></button>
                       <button type="button" className="project-billing-icon-btn danger" onClick={() => onDelete(r.id)} title="Eliminar"><MdDelete /></button>
-                      <button type="button" className="project-billing-sm-btn" onClick={() => onSubmit(r.id)}>Enviar</button>
-                    </>
-                  ) : null}
-                  {canValidate && r.status === "pending_validation" ? (
-                    <>
-                      <button type="button" className="project-billing-sm-btn success" onClick={() => onValidate(r.id, "approved")}>Validar</button>
-                      <button type="button" className="project-billing-sm-btn danger" onClick={() => onValidate(r.id, "rejected")}>Rechazar</button>
                     </>
                   ) : null}
                 </td>
@@ -1218,7 +1208,7 @@ function ReceiptsBlock({ zipButton, receipts, quotes, canWrite, canValidate, cre
             );
           })}
           {receipts.length === 0 && creating !== "receipt" ? (
-            <tr><td colSpan={6} className="project-billing-empty">Sin recibos</td></tr>
+            <tr><td colSpan={5} className="project-billing-empty">Sin recibos</td></tr>
           ) : null}
         </tbody>
       </table>

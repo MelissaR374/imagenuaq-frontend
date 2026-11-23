@@ -643,3 +643,20 @@
 .project-billing-zip-btn + .project-billing-add-btn {
     margin-left: 0;
 }
+
+/* Solo acomodo: el diseño lo revisa quien lleva el CSS. */
+.project-billing-correction,
+.project-billing-completed {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.project-billing-complete-btn {
+    margin-left: auto;
+}
+
+.project-billing-correction-note {
+    width: 100%;
+    min-height: 80px;
+}
