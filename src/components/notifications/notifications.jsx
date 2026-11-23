@@ -68,6 +68,9 @@ function adaptarNotificacion(notification) {
     descripcion: notification.message,
     fecha: notification.createdAt,
     leida: notification.isRead ?? Boolean(notification.readAt),
+    fuente: notification.sourceType,
+    proyectoId: notification.projectId ?? null,
+    etapaId: notification.sourceType === "project_stages" ? notification.sourceId : null,
   };
 }
 
@@ -149,8 +152,11 @@ function obtenerTiempoRelativo(fecha){
   return `hace ${dias} días`;
 }
 
-/** El historial de notificaciones; `onUnreadChange` avisa a la barra lateral que cambió el conteo. */
-function Notifications({onUnreadChange}){
+/**
+ * El historial de notificaciones; `onUnreadChange` avisa a la barra lateral que cambió el conteo.
+ * `onOpenProject(id, pestaña, etapaId)` lleva al proyecto o la etapa del aviso, y `onOpenTab` a otra pestaña.
+ */
+function Notifications({onUnreadChange, onOpenProject, onOpenTab}){
   const [notificaciones, setNotificaciones] = useState([]);
   const [busqueda, setBusqueda] = useState("");
   const [filtro, setFiltro] = useState("todas");
@@ -507,6 +513,24 @@ function Notifications({onUnreadChange}){
                           )}
                         </span>
                       </p>
+
+                      {notificacion.proyectoId != null && onOpenProject ? (
+                        <button
+                          type="button"
+                          className="notification-link"
+                          onClick={() => onOpenProject(notificacion.proyectoId, "stages", notificacion.etapaId)}
+                        >
+                          {notificacion.etapaId != null ? "Ir a la etapa" : "Abrir proyecto"}
+                        </button>
+                      ) : notificacion.fuente === "absences" ? (
+                        <button
+                          type="button"
+                          className="notification-link"
+                          onClick={() => onOpenTab("Ausencias")}
+                        >
+                          Ver ausencias
+                        </button>
+                      ) : null}
                     </div>
                   </article>
                 );

@@ -154,6 +154,8 @@ function Aplicacion() {
   
   const [areaPorAbrir, setAreaPorAbrir] = useState(null);
 
+  const [etapaPorAbrir, setEtapaPorAbrir] = useState(null);
+
   const [modoOscuro, setModoOscuro] = useState(() => {
     const savedTheme = localStorage.getItem("theme");
     if (savedTheme) {
@@ -261,10 +263,11 @@ function Aplicacion() {
 
   const puedeAbrirProyectos = canSee("Proyectos", rol, permisos);
 
-  /** Lleva a «Proyectos» con ese proyecto ya abierto, desde una tarea o una etapa. */
-  function abrirProyecto(id, initialTab = "stages") {
+  /** Lleva a «Proyectos» con ese proyecto ya abierto, desde una tarea o una etapa, y elige `etapaId` si viene. */
+  function abrirProyecto(id, initialTab = "stages", etapaId = null) {
     setProyectoPorAbrir(id);
     setPestanaProyectoPorAbrir(initialTab);
+    setEtapaPorAbrir(etapaId);
     setPestana("Proyectos");
   }
 
@@ -292,6 +295,7 @@ function Aplicacion() {
         onNavigate={(nombre) => {
           setProyectoPorAbrir(null);
           setAreaPorAbrir(null);
+          setEtapaPorAbrir(null);
           setPestana(nombre);
         }}
         onLogout={cerrarSesion}
@@ -347,7 +351,11 @@ function Aplicacion() {
         {!permisosListos || !canSee(activa, rol, permisos) ? null : activa === "Organigrama" ? (
           <OrgChart />
         ) : activa === "Notificaciones" ? (
-          <Notifications onUnreadChange={actualizarContadorNotificaciones} />
+          <Notifications
+            onUnreadChange={actualizarContadorNotificaciones}
+            onOpenProject={puedeAbrirProyectos ? abrirProyecto : null}
+            onOpenTab={setPestana}
+          />
         ) : activa === "Mi perfil" ? (
           <Profile
             usuario={usuario}
@@ -387,7 +395,7 @@ function Aplicacion() {
         ) : activa === "Bandeja de solicitudes" ? (
           <Inbox />
         ) : activa === "Proyectos" ? (
-          <Projects user={usuario} permissions={permisos} openId={proyectoPorAbrir} initialTab={pestanaProyectoPorAbrir}/>
+          <Projects user={usuario} permissions={permisos} openId={proyectoPorAbrir} initialTab={pestanaProyectoPorAbrir} openStageId={etapaPorAbrir}/>
         ) : activa === "Catálogo de estatus" ? (
           <StatusCatalog />
         ) : activa === "Diseñador de flujos" ? (
