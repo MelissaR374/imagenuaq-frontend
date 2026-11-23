@@ -62,7 +62,7 @@ function FlowCard({
                   ))}
                 </ul>
               )}
-              {notaEntrada && <p>{notaEntrada}</p>}
+              {notaEntrada && <p title={notaEntrada}>{notaEntrada}</p>}
             </div>
           </div>
 
@@ -76,7 +76,7 @@ function FlowCard({
                   ))}
                 </ul>
               )}
-              {notaSalida && (<p>{notaSalida}</p>)}
+              {notaSalida && <p title={notaSalida}>{notaSalida}</p>}
             </div>
           </div>
         </div>
