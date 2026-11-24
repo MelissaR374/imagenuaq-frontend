@@ -82,14 +82,6 @@ function leerModo() {
   }
 }
 
-/** El menú usa nombres de rol en español y el servidor los manda en inglés. */
-const ROLES = {
-  admin: "admin",
-  area_lead: "lider",
-  finance: "finanzas",
-  worker: "trabajador",
-};
-
 /**
  * El cambio de foto como actualizador de estado: libera el object URL anterior y crea el
  * del Blob nuevo, o deja null para quitarla.
@@ -264,7 +256,7 @@ function Aplicacion() {
   }
   if (!usuario) return <Login onEntrar={setUsuario} />;
 
-  const rol = ROLES[usuario.role] ?? "trabajador";
+  const rol = usuario.role;
   const modos = modesFor(rol, permisos);
   const enFotos = permisosListos ? modos.photo && (modo === "fotografia" || !modos.coordination) : modo === "fotografia";
   const delModo = pestana === "Mi perfil" || isPhotoTab(pestana) === enFotos;
@@ -389,7 +381,7 @@ function Aplicacion() {
         ) : activa === "Empleados" ? (
           <Users admin={usuario} canChangeRole={permisos.includes("user.role")} />
         ) : activa === "Áreas y usuarios" ? (
-          <Areas />
+          <Areas user={usuario} />
         ) : activa === "Roles y permisos" ? (
           <Roles />
         ) : activa === "Tipos de contrato" ? (

@@ -14,9 +14,6 @@ const USERS_MAX = 200;
 /** The server names the roles in English; the same names users.jsx shows. */
 const ROLE_NAMES = {
   admin: "Coordinación",
-  area_lead: "Responsable de área",
-  worker: "Integrante",
-  finance: "Finanzas",
 };
 
 /** The id of everybody who belongs to some area in the forest, to tell who belongs to none. */

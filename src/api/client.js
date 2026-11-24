@@ -158,7 +158,8 @@ export const listRoles = () => request("/roles");
 /** El catálogo completo de permisos, no los de un rol en particular. */
 export const listPermissions = () => request("/roles/permissions");
 
-export const listAreas = () => request("/areas");
+/** Las áreas en uso; con `includeRetired`, también las retiradas. */
+export const listAreas = (params = {}) => request(withQuery("/areas", params));
 
 /** Quién está en un área; lo puede leer cualquier sesión. */
 export const listAreaMembers = (areaId) => request(`/areas/${areaId}/members`);
