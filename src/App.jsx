@@ -73,12 +73,13 @@ const MODOS = [
   { clave: "fotografia", nombre: "Fotografía", icono: MdPhotoCamera },
 ];
 
-/** El último modo abierto en este navegador: "coordinacion" o "fotografia". */
+/** El modo que se eligió en este navegador, "coordinacion" o "fotografia", o null si ninguno todavía. */
 function leerModo() {
   try {
-    return localStorage.getItem("modo") === "fotografia" ? "fotografia" : "coordinacion";
+    const guardado = localStorage.getItem("modo");
+    return MODOS.some((opcion) => opcion.clave === guardado) ? guardado : null;
   } catch {
-    return "coordinacion";
+    return null;
   }
 }
 
@@ -133,7 +134,8 @@ function Aplicacion() {
 
   useEffect(() => {
     try {
-      localStorage.setItem("modo", modo);
+      if (modo === null) localStorage.removeItem("modo");
+      else localStorage.setItem("modo", modo);
     } catch {
       return;
     }
@@ -236,6 +238,7 @@ function Aplicacion() {
     setPermisos([]);
     setPermisosListos(false);
     setPestana(null);
+    setModo(null);
     try {
       localStorage.removeItem("pestana");
     } catch {
@@ -258,7 +261,8 @@ function Aplicacion() {
 
   const rol = usuario.role;
   const modos = modesFor(rol, permisos);
-  const enFotos = permisosListos ? modos.photo && (modo === "fotografia" || !modos.coordination) : modo === "fotografia";
+  const prefiereFotos = modo === "fotografia" || (modo === null && !modos.work);
+  const enFotos = permisosListos ? modos.photo && (prefiereFotos || !modos.coordination) : modo === "fotografia";
   const delModo = pestana === "Mi perfil" || isPhotoTab(pestana) === enFotos;
   const activa =
     pestana && delModo && descripciones[pestana] && (!permisosListos || canSee(pestana, rol, permisos))
