@@ -396,13 +396,15 @@ function Projects({ user, permissions = [], openId = null, initialTab = "stages"
           </div>
         </div>
 
-        <button
-          className="projects-btn projects-btn-primary"
-          type="button"
-          onClick={() => setCapturing(true)}
-        >
-          Nuevo proyecto
-        </button>
+        {permissions.includes("project.write") ? (
+          <button
+            className="projects-btn projects-btn-primary"
+            type="button"
+            onClick={() => setCapturing(true)}
+          >
+            Nuevo proyecto
+          </button>
+        ) : null}
       </div>
 
       <p className="projects-rule">

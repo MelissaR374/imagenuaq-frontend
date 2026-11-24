@@ -148,9 +148,6 @@ function myPartIn(stage, user) {
   if (user.role === "admin") {
     return "Coordinas el proyecto.";
   }
-  if (user.role === "finance") {
-    return `Solo consulta: la atiende ${stage.areaName}.`;
-  }
   return `La atiende ${stage.areaName}.`;
 }
 
@@ -201,7 +198,7 @@ function ProjectHead({
         </div>
 
         <div className="project-head-actions">
-          {editing ? null : (
+          {editing || !detail.editable ? null : (
             <button
               className="project-btn"
               type="button"
@@ -214,7 +211,7 @@ function ProjectHead({
               Editar
             </button>
           )}
-          {detail.archivedAt !== null ? null : confirmingArchive ? (
+          {detail.archivedAt !== null || !detail.editable ? null : confirmingArchive ? (
             <span className="project-confirm">
               Se quita de en medio; se puede ver en «Archivados».
               <button className="project-btn" type="button" onClick={onArchive} disabled={busy}>
@@ -288,14 +285,18 @@ function ProjectHead({
           <div className="project-fact">
             <dt>Estatus</dt>
             <dd>
-              <select value={detail.statusId} onChange={(event) => onStatus(event.target.value)} disabled={busy}>
-                {statuses.map((one) => (
-                  <option value={one.id} key={one.id}>
-                    {one.label}
-                    {one.isGlobal ? "" : ` (${one.areaName})`}
-                  </option>
-                ))}
-              </select>
+              {detail.editable ? (
+                <select value={detail.statusId} onChange={(event) => onStatus(event.target.value)} disabled={busy}>
+                  {statuses.map((one) => (
+                    <option value={one.id} key={one.id}>
+                      {one.label}
+                      {one.isGlobal ? "" : ` (${one.areaName})`}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                detail.statusLabel
+              )}
               <span className="project-fact-note">desde {shortDate(detail.statusSince)}</span>
             </dd>
           </div>
@@ -390,14 +391,14 @@ function StageList({ detail, phases, openStages, selected, busy, onSelect, onAdd
     <div className="project-list">
       <div className="project-list-head">
         <h3>Flujo</h3>
-        {detail.closedAt === null ? (
+        {detail.closedAt === null && detail.editable ? (
           <button className="project-btn" type="button" onClick={onAdd} disabled={busy}>
             + Etapa
           </button>
         ) : null}
       </div>
 
-      {phases.length === 0 ? <p className="project-note">Todavía sin etapas: agrega la primera.</p> : null}
+      {phases.length === 0 ? <p className="project-note">{detail.editable ? "Todavía sin etapas: agrega la primera." : "Todavía sin etapas."}</p> : null}
 
       {phases.map((phase, index) => (
         <section className="project-phase" key={phase.seq}>
@@ -420,19 +421,25 @@ function StageList({ detail, phases, openStages, selected, busy, onSelect, onAdd
         <h4>Fin</h4>
         {detail.closedAt === null ? (
           <div className="project-end">
-            <button
-              className="project-btn is-primary"
-              type="button"
-              onClick={() => onConclude(alsoArchive)}
-              disabled={busy || openStages.length > 0}
-            >
-              Concluir proyecto
-            </button>
-            <label className="project-check">
-              <input type="checkbox" checked={alsoArchive} onChange={(event) => setAlsoArchive(event.target.checked)} />
-              y archivarlo
-              <Help text="Concluir dice que el trabajo terminó. Archivar lo quita de en medio sin decir nada del trabajo; se puede archivar después." />
-            </label>
+            {detail.editable ? (
+              <>
+                <button
+                  className="project-btn is-primary"
+                  type="button"
+                  onClick={() => onConclude(alsoArchive)}
+                  disabled={busy || openStages.length > 0}
+                >
+                  Concluir proyecto
+                </button>
+                <label className="project-check">
+                  <input type="checkbox" checked={alsoArchive} onChange={(event) => setAlsoArchive(event.target.checked)} />
+                  y archivarlo
+                  <Help text="Concluir dice que el trabajo terminó. Archivar lo quita de en medio sin decir nada del trabajo; se puede archivar después." />
+                </label>
+              </>
+            ) : (
+              <span className="project-note">Todavía no se concluye.</span>
+            )}
             {openStages.length > 0 ? (
               <span className="project-note">
                 {openStages.length} {openStages.length === 1 ? "etapa sigue abierta" : "etapas siguen abiertas"}
@@ -442,13 +449,13 @@ function StageList({ detail, phases, openStages, selected, busy, onSelect, onAdd
         ) : (
           <div className="project-end">
             <strong>Concluido el {shortDate(detail.closedAt)}</strong>
-            {detail.archivedAt === null ? (
+            {detail.archivedAt !== null ? (
+              <span className="project-note">Archivado el {shortDate(detail.archivedAt)}</span>
+            ) : detail.editable ? (
               <button className="project-btn" type="button" onClick={onArchiveClosed} disabled={busy}>
                 Archivar
               </button>
-            ) : (
-              <span className="project-note">Archivado el {shortDate(detail.archivedAt)}</span>
-            )}
+            ) : null}
           </div>
         )}
       </section>
@@ -458,7 +465,8 @@ function StageList({ detail, phases, openStages, selected, busy, onSelect, onAdd
 
 /**
  * The values a stage delivers (RF-FLW-06), written where the stage is delivered and saved as
- * produced by it. While the stage is open they can be changed; once it is signed they only read.
+ * produced by it. While the stage is open whoever edits the project changes them; after that, or for
+ * anyone else, they only read.
  */
 function StageOutputs({ stage, detail, vocabulary, busy, onSave }) {
   const saved = valuesFrom(detail);
@@ -467,7 +475,7 @@ function StageOutputs({ stage, detail, vocabulary, busy, onSave }) {
   );
   const changed = stage.outputs.filter((key) => String(values[key] ?? "") !== String(saved[key] ?? ""));
 
-  if (!isOpen(stage)) {
+  if (!isOpen(stage) || !detail.editable) {
     return (
       <ul className="project-io">
         {stage.outputs.map((key) => (
@@ -569,7 +577,7 @@ function StagePanel({
         <select
           value={stage.assignedTo ?? ""}
           onChange={(event) => onAssignee(stage, event.target.value)}
-          disabled={busy || stage.status === "done"}
+          disabled={busy || stage.status === "done" || !detail.editable}
         >
           <option value="">Sin responsable</option>
           {people.map((person) => (
@@ -580,48 +588,52 @@ function StagePanel({
         </select>
       </div>
 
-      <div className="project-stage-actions">
-        {stage.status === "pending" ? (
-          <div className="project-action">
-            <button className="project-btn" type="button" onClick={() => onStart(stage)} disabled={busy}>
-              Iniciar ahora
+      {detail.editable ? (
+        <div className="project-stage-actions">
+          {stage.status === "pending" ? (
+            <div className="project-action">
+              <button className="project-btn" type="button" onClick={() => onStart(stage)} disabled={busy}>
+                Iniciar ahora
+              </button>
+              <p className="project-note">Empieza sola cuando concluya la fase anterior. Iniciar ahora es la excepción.</p>
+            </div>
+          ) : null}
+
+          {stage.status === "waiting_external" ? (
+            <div className="project-action">
+              <button className="project-btn is-primary" type="button" onClick={() => onResume(stage)} disabled={busy}>
+                Ya respondieron: reanudar
+              </button>
+              <p className="project-note">Vuelve a quedar activa, con su mismo intento.</p>
+            </div>
+          ) : null}
+
+          {stage.status === "active" && !waiting && signing === null ? (
+            <>
+              <button className="project-btn" type="button" onClick={() => setWaiting(true)} disabled={busy}>
+                Poner en espera
+              </button>
+              <Help text="Para cuando lo que falta no está en nuestras manos: un visto bueno de la entidad, material de un proveedor, un anticipo." />
+            </>
+          ) : null}
+
+          {stage.canSign && OPEN_STATES.includes(stage.status) && !waiting && signing === null ? (
+            <button
+              className="project-btn is-primary"
+              type="button"
+              onClick={() => setSigning({ decision: "approved", comment: "" })}
+              disabled={busy || missing !== null}
+            >
+              Visto bueno
             </button>
-            <p className="project-note">Empieza sola cuando concluya la fase anterior. Iniciar ahora es la excepción.</p>
-          </div>
-        ) : null}
+          ) : null}
+        </div>
+      ) : null}
 
-        {stage.status === "waiting_external" ? (
-          <div className="project-action">
-            <button className="project-btn is-primary" type="button" onClick={() => onResume(stage)} disabled={busy}>
-              Ya respondieron: reanudar
-            </button>
-            <p className="project-note">Vuelve a quedar activa, con su mismo intento.</p>
-          </div>
-        ) : null}
-
-        {stage.status === "active" && !waiting && signing === null ? (
-          <>
-            <button className="project-btn" type="button" onClick={() => setWaiting(true)} disabled={busy}>
-              Poner en espera
-            </button>
-            <Help text="Para cuando lo que falta no está en nuestras manos: un visto bueno de la entidad, material de un proveedor, un anticipo." />
-          </>
-        ) : null}
-
-        {OPEN_STATES.includes(stage.status) && !waiting && signing === null ? (
-          <button
-            className="project-btn is-primary"
-            type="button"
-            onClick={() => setSigning({ decision: "approved", comment: "" })}
-            disabled={busy || missing !== null}
-          >
-            Visto bueno
-          </button>
-        ) : null}
-      </div>
-
-      {OPEN_STATES.includes(stage.status) && !waiting && signing === null ? (
-        <p className={missing === null ? "project-note" : "project-note is-blocked"}>{signOffEffect}</p>
+      {detail.editable && OPEN_STATES.includes(stage.status) && !waiting && signing === null ? (
+        <p className={missing === null || !stage.canSign ? "project-note" : "project-note is-blocked"}>
+          {stage.canSign ? signOffEffect : `El visto bueno lo da quien lidera ${stage.areaName}.`}
+        </p>
       ) : null}
 
       {waiting ? (
@@ -741,7 +753,7 @@ function StagePanel({
           key={stage.id}
           stage={stage}
           busy={busy}
-          onDeliver={(note, file) => onDeliver(stage, note, file)}
+          onDeliver={stage.canDeliver ? (note, file) => onDeliver(stage, note, file) : null}
         />
       </section>
 
@@ -839,7 +851,7 @@ function ProjectData({ detail, stages, vocabulary, busy, onSave }) {
   }
 
   return (
-    <div className="project-data">
+    <fieldset className="project-data" disabled={!detail.editable}>
       <section className="project-sec">
         <h3>
           Lo que entregan las etapas
@@ -897,7 +909,7 @@ function ProjectData({ detail, stages, vocabulary, busy, onSave }) {
           </button>
         </div>
       )}
-    </div>
+    </fieldset>
   );
 }
 
@@ -1210,7 +1222,7 @@ function ProjectDetail({
       />
 
       <nav className="project-tabs" role="tablist">
-        {TABS.map((one) => (
+        {TABS.filter((one) => one.key !== "files" || permissions.includes("document.read")).map((one) => (
           <button
             className={one.key === tab ? "project-tab is-active" : "project-tab"}
             type="button"
@@ -1256,7 +1268,9 @@ function ProjectDetail({
             />
 
             {selectedStage === null ? (
-              <p className="project-stage is-empty">Agrega una etapa para empezar el flujo.</p>
+              <p className="project-stage is-empty">
+                {detail.editable ? "Agrega una etapa para empezar el flujo." : "Este proyecto todavía no tiene flujo."}
+              </p>
             ) : (
               <StagePanel
                 stage={selectedStage}
@@ -1326,6 +1340,7 @@ function ProjectDetail({
             key={detail.id}
             projectId={detail.id}
             permissions={permissions}
+            editable={detail.editable}
           />
         ) : null}
       </div>

@@ -1,7 +1,7 @@
 // Finance tab inside a project: quotes, invoices, oficios, payments, receipts with inline CRUD. No
 // record has stages: finance asks for a correction, and marks the project complete. RF-FIN-01 to
 // RF-FIN-18. Interview 008: expected-vs-uploaded invoices setter in the summary bar.
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   MdOutlineDescription,
   MdReceiptLong,
@@ -148,15 +148,22 @@ function InlineForm({ colSpan, saving, onSave, onCancel, children }) {
 }
 
 /**
- * @param {{ projectId: number, permissions?: string[] }} props
+ * @param {{ projectId: number, permissions?: string[], editable?: boolean }} props `editable` is
+ *   whether the viewer takes part in the project, which is what uploading asks of an area.
  */
-function ProjectBilling({ projectId, permissions = [] }) {
+function ProjectBilling({ projectId, permissions = [], editable = false }) {
   const [data, setData] = useState(undefined);
   const [providers, setProviders] = useState([]);
   const [folderId, setFolderId] = useState(null);
   const [error, setError] = useState(null);
   const [notice, setNotice] = useState(null);
   const [actionError, setActionError] = useState(null);
+  const errorLine = useRef(null);
+
+  useEffect(() => {
+    if (actionError !== null) errorLine.current?.scrollIntoView({ block: "center" });
+  }, [actionError]);
+
   const [zipping, setZipping] = useState(null);
   const [saving, setSaving] = useState(false);
   const [version, setVersion] = useState(0);
@@ -168,7 +175,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
   const [expectedDraft, setExpectedDraft] = useState("");
   const [correcting, setCorrecting] = useState(null);
 
-  const canWrite = permissions.includes("finance.write") || permissions.includes("project.write");
+  const canWrite = permissions.includes("finance.write") || editable;
   const canDecide = permissions.includes("finance.write");
   const canSetExpected = permissions.includes("finance.request");
 
@@ -526,7 +533,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
       </header>
 
       {notice ? <p className="project-billing-notice-msg">{notice}</p> : null}
-      {actionError ? <p className="project-billing-error-msg" role="alert">{actionError}</p> : null}
+      {actionError ? <p className="project-billing-error-msg" role="alert" ref={errorLine}>{actionError}</p> : null}
 
       {(data.flags ?? []).length > 0 && (
         <div className="project-billing-flags">
@@ -704,7 +711,7 @@ function ProjectBilling({ projectId, permissions = [] }) {
         zipButton={<ZipButton count={attachmentsOf(["receipts"]).length} busy={zipping !== null} onClick={() => handleDownloadZip(["receipts"], "recibos")} />}
         receipts={receipts}
         quotes={quotes}
-        canWrite={canWrite}
+        canWrite={canDecide}
         canCorrect={canDecide}
         onCorrect={(id) => setCorrecting({ kind: "receipt", id, note: "" })}
         creating={creating}
