@@ -217,6 +217,10 @@ function Timeline({ isAdmin, onOpenProject = null }) {
         <li className="timeline-hint">El color de cada área compara sus etapas con la gente presente ese día.</li>
       </ul>
 
+      {areas !== null && areas.length === 0 && error === null ? (
+        <p className="timeline-hint">Todavía no estás en ninguna área, así que no hay ocupación que mostrar.</p>
+      ) : null}
+
       <section className="timeline-card">
         <header className="timeline-toolbar">
           <div className="timeline-range print-hide">

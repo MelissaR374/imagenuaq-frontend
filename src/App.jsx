@@ -377,6 +377,7 @@ function Aplicacion() {
             onUnreadChange={actualizarContadorNotificaciones}
             onOpenProject={puedeAbrirProyectos ? abrirProyecto : null}
             onOpenTab={setPestana}
+            puedeVerTareas={canSee("Mis tareas", rol, permisos)}
           />
         ) : activa === "Mi perfil" ? (
           <Profile

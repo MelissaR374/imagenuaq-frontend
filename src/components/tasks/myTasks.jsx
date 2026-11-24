@@ -81,7 +81,7 @@ function MyTasks({ canReview = false, onOpenProject = null }) {
     setBusy(true);
     setError(null);
     try {
-      await api.deliverStage(stage.projectId, stage.id, note, file);
+      await api.deliverTask(stage.id, note, file);
       setStages((await api.listMyTasks()).stages);
       return true;
     } catch (err) {
@@ -152,21 +152,23 @@ function MyTasks({ canReview = false, onOpenProject = null }) {
                     </span>
                   )}
                   <span className={late ? "tasks-meta is-late" : "tasks-meta"}>
-                    Para el {stage.dueOn ? dayDate(stage.dueOn) : "sin fecha"}
+                    {stage.dueOn ? `Para el ${dayDate(stage.dueOn)}` : "Sin fecha"}
                   </span>
                   {onOpenProject === null ? null : (
                     <button className="tasks-btn" type="button" onClick={() => onOpenProject(stage.projectId)}>
                       Abrir proyecto
                     </button>
                   )}
-                  <button
-                    className={expanded || delivered ? "tasks-btn" : "tasks-btn is-primary"}
-                    type="button"
-                    aria-expanded={expanded}
-                    onClick={() => setOpenId(expanded ? null : stage.id)}
-                  >
-                    {expanded ? "Cerrar" : delivered ? "Ver entrega" : "Entregar"}
-                  </button>
+                  {stage.status === "pending" ? null : (
+                    <button
+                      className={expanded || delivered ? "tasks-btn" : "tasks-btn is-primary"}
+                      type="button"
+                      aria-expanded={expanded}
+                      onClick={() => setOpenId(expanded ? null : stage.id)}
+                    >
+                      {expanded ? "Cerrar" : delivered ? "Ver entrega" : "Entregar"}
+                    </button>
+                  )}
                 </div>
               </li>
             );

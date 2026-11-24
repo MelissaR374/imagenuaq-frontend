@@ -746,6 +746,16 @@ export async function deliverStage(projectId, stageId, note, file = null) {
   });
 }
 
+/** Entrega una etapa propia desde «Mis tareas», que no pide ver el proyecto. */
+export async function deliverTask(stageId, note, file = null) {
+  let fileId = null;
+  if (file !== null) {
+    const { folder } = await request(`/tasks/stages/${stageId}/folder`);
+    fileId = (await uploadFile(folder.id, file)).file.id;
+  }
+  return request(`/tasks/stages/${stageId}/delivery`, { method: "PUT", body: { note, fileId } });
+}
+
 /**
  * Lo que pasa entre `from` y `to` (YYYY-MM-DD): etapas, ausencias sin motivo, eventos globales y
  * ventanas de cierre. `scope` es "mine", "area" o "all" (solo coordinación).
