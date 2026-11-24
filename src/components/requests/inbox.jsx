@@ -155,7 +155,11 @@ function RequestRow({ request, opened, withProject, onOpen }) {
   );
 }
 
-function Inbox() {
+/**
+ * @param {{ canWrite: boolean, canConvert: boolean }} props Whether the viewer's role changes requests,
+ *   and whether it also turns them into projects.
+ */
+function Inbox({ canWrite, canConvert }) {
   const [requests, setSolicitudes] = useState([]);
   const [areas, setAreas] = useState([]);
   const [statuses, setEstatus] = useState([]);
@@ -436,9 +440,11 @@ function Inbox() {
           })}
         </div>
 
-        <button className="inbox-btn inbox-btn-primary" type="button" onClick={openCapture}>
-          Nueva solicitud
-        </button>
+        {canWrite ? (
+          <button className="inbox-btn inbox-btn-primary" type="button" onClick={openCapture}>
+            Nueva solicitud
+          </button>
+        ) : null}
       </div>
 
       <p className={activeTab.warns && counts[activeTab.key] > 0 ? "inbox-rule warn" : "inbox-rule"}>
@@ -548,6 +554,8 @@ function Inbox() {
                         <RequestDetail
                           request={opened}
                           areas={areas}
+                          canWrite={canWrite}
+                          canConvert={canConvert}
                           onClose={close}
                           onChanged={followTheStep}
                           key={opened.id}

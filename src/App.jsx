@@ -415,7 +415,10 @@ function Aplicacion() {
         ) : activa === "Libros de Excel" ? (
           <Spreadsheets onGo={setPestana} canWrite={permisos.includes("spreadsheet.write")} />
         ) : activa === "Bandeja de solicitudes" ? (
-          <Inbox />
+          <Inbox
+            canWrite={permisos.includes("request.write")}
+            canConvert={permisos.includes("request.write") && permisos.includes("project.write")}
+          />
         ) : activa === "Proyectos" ? (
           <Projects user={usuario} permissions={permisos} openId={proyectoPorAbrir} initialTab={pestanaProyectoPorAbrir} openStageId={etapaPorAbrir}/>
         ) : activa === "Catálogo de estatus" ? (

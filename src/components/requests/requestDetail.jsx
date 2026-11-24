@@ -311,7 +311,11 @@ function StoredFile({ field, fileId }) {
   );
 }
 
-function RequestDetail({ request, areas, onClose, onChanged }) {
+/**
+ * @param {{ request: object, areas: object[], canWrite: boolean, canConvert: boolean,
+ *   onClose: () => void, onChanged: (request: object) => void }} props Without `canWrite` it only reads.
+ */
+function RequestDetail({ request, areas, canWrite, canConvert, onClose, onChanged }) {
   const [detail, setDetalle] = useState(request);
   const [draft, setBorrador] = useState(null);
   const [statuses, setEstatus] = useState([]);
@@ -582,6 +586,7 @@ function RequestDetail({ request, areas, onClose, onChanged }) {
   }
 
   const flow = detail.flow ?? null;
+  const readOnly = isProject || !canWrite;
   const active = templates.filter((una) => una.isActive);
 
   let source = SOURCES[detail.source] ?? detail.source;
@@ -633,7 +638,7 @@ function RequestDetail({ request, areas, onClose, onChanged }) {
           <div className="request-detail-grid">
             <label className={mark("title", "request-detail-field")}>
               <span className="request-detail-label">Título</span>
-              {isProject ? (
+              {readOnly ? (
                 <p className="request-detail-value">{detail.title}</p>
               ) : (
                 <input
@@ -649,11 +654,15 @@ function RequestDetail({ request, areas, onClose, onChanged }) {
                 Entidad solicitante
                 <Help text="No hay padrón de solicitantes: el nombre es una cadena y el autocompletado es lo que evita que se vuelva cuatro. Se puede corregir incluso después de convertir." />
               </span>
-              <RequesterInput
-                id={`solicitante-${detail.id}`}
-                value={draft.requester}
-                onChange={(requester) => write("requester", requester)}
-              />
+              {canWrite ? (
+                <RequesterInput
+                  id={`solicitante-${detail.id}`}
+                  value={draft.requester}
+                  onChange={(requester) => write("requester", requester)}
+                />
+              ) : (
+                <p className="request-detail-value">{detail.requester || "Sin entidad solicitante"}</p>
+              )}
             </div>
 
             <label className={mark("areaId", "request-detail-field")}>
@@ -661,7 +670,7 @@ function RequestDetail({ request, areas, onClose, onChanged }) {
                 Área asignada
                 <Help text="El área que atiende la solicitud mientras no tiene flujo. Con flujo, la reciben las áreas de su primera fase. Una vez asignada ya no se puede dejar sin área: solo cambiarla." />
               </span>
-              {isProject ? (
+              {readOnly ? (
                 <p className="request-detail-value">{detail.areaName ?? "Sin asignar"}</p>
               ) : (
                 <select
@@ -686,7 +695,7 @@ function RequestDetail({ request, areas, onClose, onChanged }) {
               <select
                 value={detail.statusId}
                 onChange={(event) => changeStatus(event.target.value)}
-                disabled={busy}
+                disabled={busy || !canWrite}
               >
                 {statuses.map((one) => (
                   <option value={one.id} key={one.id}>
@@ -702,7 +711,7 @@ function RequestDetail({ request, areas, onClose, onChanged }) {
                 Urgencia
                 <Help text="Un número: mayor es más urgente. La imprenta y la producción priorizan por urgencia, nunca por orden de llegada." />
               </span>
-              {isProject ? (
+              {readOnly ? (
                 <p className="request-detail-value">{detail.priority}</p>
               ) : (
                 <input
@@ -746,6 +755,11 @@ function RequestDetail({ request, areas, onClose, onChanged }) {
                   </div>
                 ) : field.type === "document" && /^\d+$/.test(String(draft.data[field.code] ?? "")) ? (
                   <StoredFile key={field.code} field={field} fileId={draft.data[field.code]} />
+                ) : readOnly ? (
+                  <div className="request-detail-field" key={field.code}>
+                    <span className="request-detail-label">{field.name}</span>
+                    <p className="request-detail-value">{readable(draft.data[field.code], field.type)}</p>
+                  </div>
                 ) : (
                   <div className={mark(field.code, "request-detail-typed")} key={field.code}>
                     <FieldInput
@@ -764,7 +778,7 @@ function RequestDetail({ request, areas, onClose, onChanged }) {
       <section className="request-detail-sec">
         <div className="request-detail-sec-head">
           <h3>Flujo</h3>
-          {flow && !isProject ? (
+          {flow && !readOnly ? (
             <div className="request-detail-flow-actions">
               <button
                 className="request-detail-quiet"
@@ -827,7 +841,7 @@ function RequestDetail({ request, areas, onClose, onChanged }) {
                 ? "Sin flujo: todavía no pasa por ninguna área."
                 : `Sin flujo: la atiende ${detail.areaName} por el área asignada.`}
             </p>
-            {isProject ? null : (
+            {readOnly ? null : (
               <div className="request-detail-noflow-actions">
                 <select
                   value={chosenTemplate}
@@ -894,7 +908,7 @@ function RequestDetail({ request, areas, onClose, onChanged }) {
       ) : null}
 
       <footer className="request-detail-foot">
-        {isProject ? (
+        {!canWrite ? null : isProject ? (
           <p className="request-detail-note">
             Ya es un proyecto, así que no se edita ni se elimina: el proyecto perdería lo que
             contesta. El solicitante sí se puede corregir.
@@ -932,7 +946,7 @@ function RequestDetail({ request, areas, onClose, onChanged }) {
           </button>
         )}
 
-        {isProject ? null : (
+        {readOnly ? null : (
           <div className="request-detail-foot-right">
             {dirty ? (
               <>
@@ -964,18 +978,20 @@ function RequestDetail({ request, areas, onClose, onChanged }) {
                     {detail.missingRequired.map((field) => field.name).join(", ")}
                   </span>
                 ) : null}
-                <button
-                  className="request-detail-btn is-primary"
-                  type="button"
-                  onClick={openConversion}
-                  disabled={
-                    busy ||
-                    converting !== null ||
-                    (detail.missingRequired ?? []).length > 0
-                  }
-                >
-                  Convertir en proyecto
-                </button>
+                {canConvert ? (
+                  <button
+                    className="request-detail-btn is-primary"
+                    type="button"
+                    onClick={openConversion}
+                    disabled={
+                      busy ||
+                      converting !== null ||
+                      (detail.missingRequired ?? []).length > 0
+                    }
+                  >
+                    Convertir en proyecto
+                  </button>
+                ) : null}
               </>
             )}
           </div>
