@@ -17,12 +17,9 @@ import "./areas.css";
 
 const USERS_MAX = 200;
 
-/** The server names the roles in English; the same names users.jsx shows. */
+/** The one role the code knows by name; any other shows as coordination named it. */
 const ROLE_NAMES = {
   admin: "Coordinación",
-  area_lead: "Responsable de área",
-  worker: "Integrante",
-  finance: "Finanzas",
 };
 
 const EMPTY_NEW = { name: "", parentAreaId: "", leaderUserId: "", description: "" };
@@ -96,10 +93,16 @@ function Avatar({ person, lead }) {
   );
 }
 
-function MemberRow({ area, member, removing, onLead, onAskRemove, onRemove, onCancelRemove }) {
+/**
+ * One member of an open area. `canLead` lets the viewer decide who leads it and `canRemove` take the
+ * person out; `assigners` are the roles that hold `task.write`, or null while they load.
+ */
+function MemberRow({
+  area, member, removing, canLead, canRemove, assigners, onLead, onAskRemove, onRemove, onCancelRemove,
+}) {
   const original = area.members.find((person) => person.id === member.id);
   const changed = !original || original.isAreaLeader !== member.lead;
-  const mismatch = member.lead && member.role === "worker";
+  const mismatch = member.lead && assigners !== null && !assigners.has(member.role);
 
   return (
     <li className={`areas-member ${changed ? "is-changed" : ""}`}>
@@ -129,6 +132,7 @@ function MemberRow({ area, member, removing, onLead, onAskRemove, onRemove, onCa
               type="button"
               role="radio"
               aria-checked={!member.lead}
+              disabled={!canLead}
               onClick={() => onLead(false)}
             >
               Integrante
@@ -137,37 +141,45 @@ function MemberRow({ area, member, removing, onLead, onAskRemove, onRemove, onCa
               type="button"
               role="radio"
               aria-checked={member.lead}
+              disabled={!canLead}
               onClick={() => onLead(true)}
             >
               Responsable
             </button>
           </span>
 
-          <button
-            className="areas-rm"
-            type="button"
-            title="Quitar del área"
-            aria-label={`Quitar a ${member.fullName} del área`}
-            onClick={onAskRemove}
-          >
-            ✕
-          </button>
+          {canRemove ? (
+            <button
+              className="areas-rm"
+              type="button"
+              title="Quitar del área"
+              aria-label={`Quitar a ${member.fullName} del área`}
+              onClick={onAskRemove}
+            >
+              ✕
+            </button>
+          ) : null}
         </>
       )}
 
       {mismatch && (
         <span className="areas-warn">
-          Responsable aquí, pero su rol es Integrante: no tiene los permisos de un responsable. El
-          rol se cambia en Empleados.
+          Responsable aquí, pero su rol no puede repartir tareas. El rol se cambia en Empleados.
         </span>
       )}
     </li>
   );
 }
 
-function Areas() {
+/**
+ * @param {{ user: { id: number, role: string } }} props Coordination changes every area; anyone else
+ *   the ones they lead and those below them, and never who leads their own.
+ */
+function Areas({ user }) {
   const [areas, setAreas] = useState([]);
   const [people, setPeople] = useState([]);
+  const [assigners, setAssigners] = useState(null);
+  const [retired, setRetired] = useState([]);
   const [loading, setLoading] = useState(true);
   const [reload, setReload] = useState(0);
   const [error, setError] = useState(null);
@@ -188,6 +200,28 @@ function Areas() {
       .listUsers({ limit: USERS_MAX })
       .then((page) => setPeople(page.users))
       .catch((err) => setError(err.message));
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadAssigners() {
+      const { roles } = await api.listRoles();
+      const grants = await Promise.all(roles.map((role) => api.getRolePermissions(role.id)));
+      if (cancelled) return;
+      setAssigners(
+        new Set(
+          roles
+            .filter((_, index) => grants[index].permissions.some((one) => one.code === "task.write"))
+            .map((role) => role.name),
+        ),
+      );
+    }
+
+    loadAssigners().catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -231,10 +265,42 @@ function Areas() {
     setAdding("");
   }
 
+  const isAdmin = user.role === "admin";
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    let cancelled = false;
+    api
+      .listAreas({ includeRetired: true })
+      .then((data) => {
+        if (!cancelled) setRetired(data.areas.filter((area) => !area.isActive));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [isAdmin, reload]);
+
+  /** Whether the viewer leads `area` or one above it, which is what the server asks for. */
+  function manages(area) {
+    if (isAdmin) return true;
+    if (area === undefined) return false;
+    if (area.leaders.some((person) => String(person.id) === String(user.id))) return true;
+    return managesAbove(area);
+  }
+
+  /** Whether the viewer decides who leads `area`: only from an area above it. */
+  function managesAbove(area) {
+    if (isAdmin) return true;
+    return area.parentAreaId !== null && manages(areas.find((one) => one.id === area.parentAreaId));
+  }
+
+  const managed = areas.filter(manages);
+
   function startCreating() {
     closeArea();
     setCreateError(null);
-    setCreating(EMPTY_NEW);
+    setCreating(isAdmin ? EMPTY_NEW : { ...EMPTY_NEW, parentAreaId: String(managed[0].id) });
   }
 
   async function handleCreate(event) {
@@ -315,9 +381,24 @@ function Areas() {
     setSaving(true);
 
     try {
-      await api.deleteArea(area.id);
-      setNotice(`Se eliminó el área ${area.name}.`);
+      const { area: gone } = await api.deleteArea(area.id);
+      setNotice(gone.isActive ? `Se eliminó el área ${area.name}.` : `Se retiró el área ${area.name}; su historia se conserva.`);
       closeArea();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+      setReload(reload + 1);
+    }
+  }
+
+  async function handleReactivate(area) {
+    setError(null);
+    setSaving(true);
+
+    try {
+      await api.updateArea(area.id, { isActive: true });
+      setNotice(`El área ${area.name} vuelve a estar en uso.`);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -340,8 +421,9 @@ function Areas() {
     (person) => !areas.some((area) => area.members.some((member) => member.id === person.id)),
   );
 
-  function parentOptions(excluded) {
-    return areas
+  /** The areas another may hang from: for a new one, only those the viewer manages. */
+  function parentOptions(excluded, candidates = areas) {
+    return candidates
       .filter((area) => !excluded.has(area.id))
       .map((area) => (
         <option key={area.id} value={area.id}>
@@ -381,14 +463,16 @@ function Areas() {
           )}
         </span>
 
-        <button
-          className="areas-btn is-primary"
-          type="button"
-          disabled={creating !== null}
-          onClick={startCreating}
-        >
-          Nueva área
-        </button>
+        {managed.length > 0 || isAdmin ? (
+          <button
+            className="areas-btn is-primary"
+            type="button"
+            disabled={creating !== null}
+            onClick={startCreating}
+          >
+            Nueva área
+          </button>
+        ) : null}
       </div>
 
       <p className="areas-rule">
@@ -461,8 +545,8 @@ function Areas() {
                             setCreating({ ...creating, parentAreaId: event.target.value })
                           }
                         >
-                          <option value="">Ninguna: queda fuera del organigrama</option>
-                          {parentOptions(new Set())}
+                          {isAdmin ? <option value="">Ninguna: queda fuera del organigrama</option> : null}
+                          {parentOptions(new Set(), managed)}
                         </select>
                       </label>
 
@@ -608,6 +692,7 @@ function Areas() {
                                 <input
                                   type="text"
                                   maxLength={200}
+                                  disabled={!manages(area)}
                                   value={draft.name}
                                   onChange={(event) =>
                                     setDraft({ ...draft, name: event.target.value })
@@ -622,6 +707,7 @@ function Areas() {
                                 </span>
                                 <textarea
                                   rows={2}
+                                  disabled={!manages(area)}
                                   value={draft.description}
                                   onChange={(event) =>
                                     setDraft({ ...draft, description: event.target.value })
@@ -635,6 +721,7 @@ function Areas() {
                                   <Help text="Quien es responsable del área superior ve también el trabajo de esta. No se ofrecen esta área ni las que dependen de ella." />
                                 </span>
                                 <select
+                                  disabled={!isAdmin}
                                   value={draft.parentAreaId}
                                   onChange={(event) =>
                                     setDraft({ ...draft, parentAreaId: event.target.value })
@@ -667,6 +754,13 @@ function Areas() {
                                     area={area}
                                     member={member}
                                     removing={mode === `rm:${member.id}`}
+                                    canLead={managesAbove(area)}
+                                    canRemove={
+                                      manages(area) &&
+                                      (managesAbove(area) ||
+                                        !area.leaders.some((person) => person.id === member.id))
+                                    }
+                                    assigners={assigners}
                                     onLead={(lead) =>
                                       setDraft({
                                         ...draft,
@@ -704,43 +798,45 @@ function Areas() {
                               <p className="areas-note">Nadie está en esta área todavía.</p>
                             )}
 
-                            <div className="areas-add">
-                              <select
-                                aria-label="Agregar a una persona"
-                                value={adding}
-                                onChange={(event) => setAdding(event.target.value)}
-                              >
-                                <option value="">Agregar a una persona…</option>
-                                {people
-                                  .filter(
-                                    (person) =>
-                                      !draft.members.some((member) => member.id === person.id),
-                                  )
-                                  .map((person) => (
-                                    <option key={person.id} value={person.id}>
-                                      {person.fullName} · {ROLE_NAMES[person.role] ?? person.role}
-                                    </option>
-                                  ))}
-                              </select>
+                            {manages(area) ? (
+                              <div className="areas-add">
+                                <select
+                                  aria-label="Agregar a una persona"
+                                  value={adding}
+                                  onChange={(event) => setAdding(event.target.value)}
+                                >
+                                  <option value="">Agregar a una persona…</option>
+                                  {people
+                                    .filter(
+                                      (person) =>
+                                        !draft.members.some((member) => member.id === person.id),
+                                    )
+                                    .map((person) => (
+                                      <option key={person.id} value={person.id}>
+                                        {person.fullName} · {ROLE_NAMES[person.role] ?? person.role}
+                                      </option>
+                                    ))}
+                                </select>
 
-                              <button
-                                className="areas-btn"
-                                type="button"
-                                disabled={adding === ""}
-                                onClick={() => {
-                                  const person = people.find(
-                                    (one) => one.id === Number(adding),
-                                  );
-                                  setDraft({
-                                    ...draft,
-                                    members: [...draft.members, { ...person, lead: false }],
-                                  });
-                                  setAdding("");
-                                }}
-                              >
-                                Agregar
-                              </button>
-                            </div>
+                                <button
+                                  className="areas-btn"
+                                  type="button"
+                                  disabled={adding === ""}
+                                  onClick={() => {
+                                    const person = people.find(
+                                      (one) => one.id === Number(adding),
+                                    );
+                                    setDraft({
+                                      ...draft,
+                                      members: [...draft.members, { ...person, lead: false }],
+                                    });
+                                    setAdding("");
+                                  }}
+                                >
+                                  Agregar
+                                </button>
+                              </div>
+                            ) : null}
                           </section>
                         </div>
 
@@ -748,11 +844,8 @@ function Areas() {
                           {mode === "delete" ? (
                             <>
                               <p className="areas-confirm">
-                                ¿Eliminar «{area.name}»?
-                                {area.children.length > 0 &&
-                                  ` ${area.children.map((child) => child.name).join(" y ")} ${
-                                    area.children.length === 1 ? "queda" : "quedan"
-                                  } fuera del organigrama, sin área superior.`}
+                                ¿Eliminar «{area.name}»? Si ya tuvo trabajo, se retira: deja las listas y el
+                                organigrama, y su historia se conserva.
                               </p>
                               <span className="areas-right">
                                 <button
@@ -775,15 +868,22 @@ function Areas() {
                           ) : (
                             <>
                               <span className="areas-del">
-                                <button
-                                  className="areas-quiet is-danger"
-                                  type="button"
-                                  disabled={draft.members.length > 0}
-                                  onClick={() => setMode("delete")}
-                                >
-                                  Eliminar área
-                                </button>
-                                {draft.members.length > 0 && (
+                                {isAdmin ? (
+                                  <button
+                                    className="areas-quiet is-danger"
+                                    type="button"
+                                    disabled={draft.members.length > 0 || area.children.length > 0}
+                                    onClick={() => setMode("delete")}
+                                  >
+                                    Eliminar área
+                                  </button>
+                                ) : null}
+                                {isAdmin && draft.members.length === 0 && area.children.length > 0 && (
+                                  <span className="areas-muted">
+                                    Para eliminarla, primero mueve las áreas que dependen de ella.
+                                  </span>
+                                )}
+                                {isAdmin && draft.members.length > 0 && (
                                   <span className="areas-muted">
                                     Para eliminarla, primero quita a{" "}
                                     {draft.members.length === 1
@@ -808,14 +908,16 @@ function Areas() {
                                     Descartar
                                   </button>
                                 )}
-                                <button
-                                  className="areas-btn is-primary"
-                                  type="button"
-                                  disabled={changes === 0 || saving || draft.name.trim() === ""}
-                                  onClick={() => handleSave(area)}
-                                >
-                                  {saving ? "Guardando…" : "Guardar cambios"}
-                                </button>
+                                {manages(area) ? (
+                                  <button
+                                    className="areas-btn is-primary"
+                                    type="button"
+                                    disabled={changes === 0 || saving || draft.name.trim() === ""}
+                                    onClick={() => handleSave(area)}
+                                  >
+                                    {saving ? "Guardando…" : "Guardar cambios"}
+                                  </button>
+                                ) : null}
                               </span>
                             </>
                           )}
@@ -839,6 +941,20 @@ function Areas() {
           </p>
         )}
       </div>
+
+      {retired.length > 0 && term === "" && (
+        <p className="areas-unplaced">
+          <span className="areas-eyebrow">Retiradas</span>{" "}
+          {retired.map((area) => (
+            <Fragment key={area.id}>
+              {area.name}{" "}
+              <button className="areas-quiet" type="button" disabled={saving} onClick={() => handleReactivate(area)}>
+                Reactivar
+              </button>{" "}
+            </Fragment>
+          ))}
+        </p>
+      )}
 
       {unplaced.length > 0 && term === "" && (
         <p className="areas-unplaced">

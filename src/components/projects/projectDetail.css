@@ -1265,6 +1265,11 @@
 .project-data {
   display: flex;
   flex-direction: column;
+
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
 }
 
 .project-data-group + .project-data-group {

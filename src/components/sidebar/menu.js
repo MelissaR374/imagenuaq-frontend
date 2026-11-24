@@ -218,15 +218,18 @@ export function isPhotoTab(label) {
 
 /**
  * Los modos que puede abrir alguien: Fotografía con `photo.read`, Coordinación si ve alguna
- * pestaña de trabajo más allá de las generales que ven todos.
+ * pestaña de trabajo más allá de las generales que ven todos. `work` dice si en Coordinación tiene
+ * algo más que el calendario: quien no, trabaja en Fotografía y entra por ahí.
  *
- * @returns {{ coordination: boolean, photo: boolean }}
+ * @returns {{ coordination: boolean, photo: boolean, work: boolean }}
  */
 export function modesFor(role, permissions) {
+  const seen = menuSections
+    .flatMap((section) => section.items)
+    .filter((item) => (item.permission || item.roles) && itemVisible(item, role, permissions));
   return {
-    coordination: menuSections
-      .flatMap((section) => section.items)
-      .some((item) => (item.permission || item.roles) && itemVisible(item, role, permissions)),
+    coordination: seen.length > 0,
+    work: seen.some((item) => item.permission !== "calendar.read"),
     photo: permissions.includes("photo.read"),
   };
 }

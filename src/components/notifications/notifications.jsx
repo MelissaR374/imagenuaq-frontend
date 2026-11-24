@@ -155,8 +155,9 @@ function obtenerTiempoRelativo(fecha){
 /**
  * El historial de notificaciones; `onUnreadChange` avisa a la barra lateral que cambió el conteo.
  * `onOpenProject(id, pestaña, etapaId)` lleva al proyecto o la etapa del aviso, y `onOpenTab` a otra pestaña.
+ * Quien no puede abrir proyectos va a «Mis tareas» si `puedeVerTareas`.
  */
-function Notifications({onUnreadChange, onOpenProject, onOpenTab}){
+function Notifications({onUnreadChange, onOpenProject, onOpenTab, puedeVerTareas = false}){
   const [notificaciones, setNotificaciones] = useState([]);
   const [busqueda, setBusqueda] = useState("");
   const [filtro, setFiltro] = useState("todas");
@@ -522,6 +523,14 @@ function Notifications({onUnreadChange, onOpenProject, onOpenTab}){
                         >
                           {notificacion.etapaId != null ? "Ir a la etapa" : "Abrir proyecto"}
                         </button>
+                      ) : notificacion.etapaId != null && puedeVerTareas ? (
+                        <button
+                          type="button"
+                          className="notification-link"
+                          onClick={() => onOpenTab("Mis tareas")}
+                        >
+                          Ir a mis tareas
+                        </button>
                       ) : notificacion.fuente === "absences" ? (
                         <button
                           type="button"
@@ -543,7 +552,9 @@ function Notifications({onUnreadChange, onOpenProject, onOpenTab}){
           <div className="notifications-empty">
             <h3>No hay notificaciones</h3>
             <p>
-              No encontramos avisos que coincidan con tu búsqueda.
+              {notificaciones.length === 0
+                ? "Cuando pase algo en tu trabajo, el aviso aparece aquí."
+                : "No encontramos avisos que coincidan con tu búsqueda."}
             </p>
           </div>
         )}

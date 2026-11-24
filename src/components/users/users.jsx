@@ -23,9 +23,6 @@ const PAGE = 25;
  */
 const ROLES_EN_ESPANOL = {
   admin: "Coordinación",
-  area_lead: "Responsable de área",
-  worker: "Integrante",
-  finance: "Finanzas",
 };
 
 /** El formulario vacío: sirve para empezar y para limpiarlo después de crear a alguien. */

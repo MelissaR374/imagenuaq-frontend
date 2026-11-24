@@ -51,10 +51,20 @@ async function request(path, { method = "GET", body, auth = true } = {}) {
   return response.json().catch(() => null);
 }
 
+/** Los rechazos por permiso, que el servidor dice con el código del permiso que falta. */
+const NO_PERMISSION = /^(Missing permission|Needs one of these permissions|Insufficient role)/;
+
+/** El mensaje que se le muestra a la persona: los rechazos más comunes, en español. */
+function readable(message) {
+  if (NO_PERMISSION.test(message)) return "Tu rol no tiene permiso para hacer esto.";
+  if (message === "Invalid email or password.") return "Correo o contraseña incorrectos.";
+  return message;
+}
+
 /** El ApiError con el mensaje que mandó el servidor, o uno genérico con el código. */
 async function toError(response) {
   const data = await response.json().catch(() => null);
-  return new ApiError(data?.error?.message ?? `Error ${response.status}.`, response.status);
+  return new ApiError(readable(data?.error?.message ?? `Error ${response.status}.`), response.status);
 }
 
 /** La ruta con sus filtros como query string, omitiendo los vacíos. */
@@ -148,7 +158,8 @@ export const listRoles = () => request("/roles");
 /** El catálogo completo de permisos, no los de un rol en particular. */
 export const listPermissions = () => request("/roles/permissions");
 
-export const listAreas = () => request("/areas");
+/** Las áreas en uso; con `includeRetired`, también las retiradas. */
+export const listAreas = (params = {}) => request(withQuery("/areas", params));
 
 /** Quién está en un área; lo puede leer cualquier sesión. */
 export const listAreaMembers = (areaId) => request(`/areas/${areaId}/members`);
@@ -650,6 +661,15 @@ export async function downloadFile(id) {
   return response.blob();
 }
 
+/** El oficio de una ausencia, para su dueño o quien ve los motivos. */
+export async function downloadAbsenceDocument(id) {
+  const response = await fetch(`${API_URL}/absences/${id}/document`, {
+    headers: { Authorization: `Bearer ${getToken()}` },
+  });
+  if (!response.ok) throw await toError(response);
+  return response.blob();
+}
+
 /** Los datos de un archivo: nombre, tipo y tamaño. */
 export const getFile = (id) => request(`/documents/${id}`);
 
@@ -734,6 +754,16 @@ export async function deliverStage(projectId, stageId, note, file = null) {
     method: "PUT",
     body: { note, fileId },
   });
+}
+
+/** Entrega una etapa propia desde «Mis tareas», que no pide ver el proyecto. */
+export async function deliverTask(stageId, note, file = null) {
+  let fileId = null;
+  if (file !== null) {
+    const { folder } = await request(`/tasks/stages/${stageId}/folder`);
+    fileId = (await uploadFile(folder.id, file)).file.id;
+  }
+  return request(`/tasks/stages/${stageId}/delivery`, { method: "PUT", body: { note, fileId } });
 }
 
 /**
@@ -932,7 +962,8 @@ export const setAbsenceStatus = (id, input) =>
 export const updateAbsence = (id, changes) =>
   request(`/absences/${id}`, { method: "PATCH", body: changes });
 
-export const deleteAbsence = (id) =>
+/** Retira una solicitud propia: queda cancelada, con quién y cuándo. */
+export const withdrawAbsence = (id) =>
   request(`/absences/${id}`, { method: "DELETE" });
 
 /** Uploads the backing document ("oficio") for an absence. Returns `{ file: { id, name, size } }`. */

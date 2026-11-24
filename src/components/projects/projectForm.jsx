@@ -88,18 +88,20 @@ function ProjectForm({ onCreated, onCancel }) {
         const response = await api.getWorkflow(Number(templateId));
         if (cancelled) return;
         const stages = response.workflow.phases.flatMap((phase) => phase.stages);
-        setPlantilla(response.workflow);
-        setAssignees(
-          Object.fromEntries(
-            stages.map((stage) => [stage.id, stage.defaultAssigneeId ? String(stage.defaultAssigneeId) : ""]),
-          ),
-        );
-
         const areaIds = [...new Set(stages.map((stage) => stage.areaId))];
         const lists = await Promise.all(areaIds.map((areaId) => api.listUsers({ areaId })));
-        if (!cancelled) {
-          setPeople(Object.fromEntries(areaIds.map((areaId, i) => [areaId, lists[i].users])));
-        }
+        if (cancelled) return;
+
+        const byArea = Object.fromEntries(areaIds.map((areaId, i) => [areaId, lists[i].users]));
+        const stillThere = (stage) =>
+          byArea[stage.areaId].some((person) => String(person.id) === String(stage.defaultAssigneeId));
+        setPlantilla(response.workflow);
+        setPeople(byArea);
+        setAssignees(
+          Object.fromEntries(
+            stages.map((stage) => [stage.id, stillThere(stage) ? String(stage.defaultAssigneeId) : ""]),
+          ),
+        );
       } catch (failure) {
         if (!cancelled) setError(failure.message);
       }

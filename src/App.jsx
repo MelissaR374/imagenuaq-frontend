@@ -73,22 +73,15 @@ const MODOS = [
   { clave: "fotografia", nombre: "Fotografía", icono: MdPhotoCamera },
 ];
 
-/** El último modo abierto en este navegador: "coordinacion" o "fotografia". */
+/** El modo que se eligió en este navegador, "coordinacion" o "fotografia", o null si ninguno todavía. */
 function leerModo() {
   try {
-    return localStorage.getItem("modo") === "fotografia" ? "fotografia" : "coordinacion";
+    const guardado = localStorage.getItem("modo");
+    return MODOS.some((opcion) => opcion.clave === guardado) ? guardado : null;
   } catch {
-    return "coordinacion";
+    return null;
   }
 }
-
-/** El menú usa nombres de rol en español y el servidor los manda en inglés. */
-const ROLES = {
-  admin: "admin",
-  area_lead: "lider",
-  finance: "finanzas",
-  worker: "trabajador",
-};
 
 /**
  * El cambio de foto como actualizador de estado: libera el object URL anterior y crea el
@@ -141,7 +134,8 @@ function Aplicacion() {
 
   useEffect(() => {
     try {
-      localStorage.setItem("modo", modo);
+      if (modo === null) localStorage.removeItem("modo");
+      else localStorage.setItem("modo", modo);
     } catch {
       return;
     }
@@ -177,6 +171,8 @@ function Aplicacion() {
   const [foto, setFoto] = useState(null);
 
   const [verificando, setVerificando] = useState(() => Boolean(api.getToken()));
+  const [sinConexion, setSinConexion] = useState(false);
+  const [intento, setIntento] = useState(0);
 
   useEffect(() => {
     if (!api.getToken()) return;
@@ -184,9 +180,19 @@ function Aplicacion() {
     api
       .session()
       .then((data) => setUsuario(data.user))
-      .catch(() => api.clearToken())
+      .catch((err) => {
+        if (err.status === 0 || err.status >= 500) setSinConexion(true);
+        else api.clearToken();
+      })
       .finally(() => setVerificando(false));
-  }, []);
+  }, [intento]);
+
+  /** Vuelve a pedir la sesión; sin servidor el token se conserva, porque sigue siendo bueno. */
+  function reintentar() {
+    setSinConexion(false);
+    setVerificando(true);
+    setIntento(intento + 1);
+  }
 
   const usuarioId = usuario?.id ?? null;
 
@@ -232,6 +238,7 @@ function Aplicacion() {
     setPermisos([]);
     setPermisosListos(false);
     setPestana(null);
+    setModo(null);
     try {
       localStorage.removeItem("pestana");
     } catch {
@@ -240,11 +247,22 @@ function Aplicacion() {
   }
 
   if (verificando) return <p className="app-booting">Cargando...</p>;
+  if (sinConexion) {
+    return (
+      <div className="app-booting" role="alert">
+        <p>No se pudo conectar con el servidor.</p>
+        <button type="button" onClick={reintentar}>
+          Reintentar
+        </button>
+      </div>
+    );
+  }
   if (!usuario) return <Login onEntrar={setUsuario} />;
 
-  const rol = ROLES[usuario.role] ?? "trabajador";
+  const rol = usuario.role;
   const modos = modesFor(rol, permisos);
-  const enFotos = permisosListos ? modos.photo && (modo === "fotografia" || !modos.coordination) : modo === "fotografia";
+  const prefiereFotos = modo === "fotografia" || (modo === null && !modos.work);
+  const enFotos = permisosListos ? modos.photo && (prefiereFotos || !modos.coordination) : modo === "fotografia";
   const delModo = pestana === "Mi perfil" || isPhotoTab(pestana) === enFotos;
   const activa =
     pestana && delModo && descripciones[pestana] && (!permisosListos || canSee(pestana, rol, permisos))
@@ -355,6 +373,7 @@ function Aplicacion() {
             onUnreadChange={actualizarContadorNotificaciones}
             onOpenProject={puedeAbrirProyectos ? abrirProyecto : null}
             onOpenTab={setPestana}
+            puedeVerTareas={canSee("Mis tareas", rol, permisos)}
           />
         ) : activa === "Mi perfil" ? (
           <Profile
@@ -366,7 +385,7 @@ function Aplicacion() {
         ) : activa === "Empleados" ? (
           <Users admin={usuario} canChangeRole={permisos.includes("user.role")} />
         ) : activa === "Áreas y usuarios" ? (
-          <Areas />
+          <Areas user={usuario} />
         ) : activa === "Roles y permisos" ? (
           <Roles />
         ) : activa === "Tipos de contrato" ? (
@@ -393,7 +412,10 @@ function Aplicacion() {
         ) : activa === "Libros de Excel" ? (
           <Spreadsheets onGo={setPestana} canWrite={permisos.includes("spreadsheet.write")} />
         ) : activa === "Bandeja de solicitudes" ? (
-          <Inbox />
+          <Inbox
+            canWrite={permisos.includes("request.write")}
+            canConvert={permisos.includes("request.write") && permisos.includes("project.write")}
+          />
         ) : activa === "Proyectos" ? (
           <Projects user={usuario} permissions={permisos} openId={proyectoPorAbrir} initialTab={pestanaProyectoPorAbrir} openStageId={etapaPorAbrir}/>
         ) : activa === "Catálogo de estatus" ? (
