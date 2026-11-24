@@ -661,6 +661,15 @@ export async function downloadFile(id) {
   return response.blob();
 }
 
+/** El oficio de una ausencia, para su dueño o quien ve los motivos. */
+export async function downloadAbsenceDocument(id) {
+  const response = await fetch(`${API_URL}/absences/${id}/document`, {
+    headers: { Authorization: `Bearer ${getToken()}` },
+  });
+  if (!response.ok) throw await toError(response);
+  return response.blob();
+}
+
 /** Los datos de un archivo: nombre, tipo y tamaño. */
 export const getFile = (id) => request(`/documents/${id}`);
 
@@ -953,7 +962,8 @@ export const setAbsenceStatus = (id, input) =>
 export const updateAbsence = (id, changes) =>
   request(`/absences/${id}`, { method: "PATCH", body: changes });
 
-export const deleteAbsence = (id) =>
+/** Retira una solicitud propia: queda cancelada, con quién y cuándo. */
+export const withdrawAbsence = (id) =>
   request(`/absences/${id}`, { method: "DELETE" });
 
 /** Uploads the backing document ("oficio") for an absence. Returns `{ file: { id, name, size } }`. */

@@ -7,6 +7,7 @@ import { MdAdd, MdSearch, MdDescription } from "react-icons/md";
 
 import * as api from "../../api/client.js";
 import { shortDate, orDash } from "../shared/format.js";
+import Balances from "./balances.jsx";
 
 import "./absences.css";
 
@@ -51,6 +52,7 @@ function Absences({ canDetail, canApprove, canWrite, canRequestOthers, userId })
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
   const [actionForm, setActionForm] = useState(null);
+  const [withdrawing, setWithdrawing] = useState(null);
   const [saving, setSaving] = useState(false);
   const [version, setVersion] = useState(0);
 
@@ -180,12 +182,12 @@ function Absences({ canDetail, canApprove, canWrite, canRequestOthers, userId })
     }
   }
 
-  async function doDelete(eventId) {
+  async function doWithdraw(eventId) {
     setSaving(true);
     setError(null);
     try {
-      await api.deleteAbsence(eventId);
-      setActionForm(null);
+      await api.withdrawAbsence(eventId);
+      setWithdrawing(null);
       setVersion((v) => v + 1);
     } catch (e) {
       setError(e.message);
@@ -217,9 +219,9 @@ function Absences({ canDetail, canApprove, canWrite, canRequestOthers, userId })
     }
   }
 
-  async function downloadDoc(fileId) {
+  async function downloadDoc(eventId) {
     try {
-      const blob = await api.downloadFile(fileId);
+      const blob = await api.downloadAbsenceDocument(eventId);
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -266,6 +268,8 @@ function Absences({ canDetail, canApprove, canWrite, canRequestOthers, userId })
         ))}
       </nav>
 
+      <Balances userId={userId} canDetail={canDetail} version={version} />
+
       {error && <p className="absences-error">{error}</p>}
       {loading && <p className="absences-loading">Cargando…</p>}
 
@@ -296,7 +300,7 @@ function Absences({ canDetail, canApprove, canWrite, canRequestOthers, userId })
                     <button
                       className="absences-btn absences-btn-small"
                       type="button"
-                      onClick={() => downloadDoc(a.documentFileId)}
+                      onClick={() => downloadDoc(a.eventId)}
                       title="Descargar oficio"
                     >
                       <MdDescription /> Ver
@@ -349,7 +353,7 @@ function Absences({ canDetail, canApprove, canWrite, canRequestOthers, userId })
                       className="absences-btn absences-btn-small"
                       type="button"
                       disabled={saving}
-                      onClick={() => doDelete(a.eventId)}
+                      onClick={() => setWithdrawing(a)}
                     >
                       Cancelar
                     </button>
@@ -364,6 +368,31 @@ function Absences({ canDetail, canApprove, canWrite, canRequestOthers, userId })
 
       {!loading && filtered.length === 0 && (
         <p className="absences-empty">No hay ausencias que mostrar.</p>
+      )}
+
+      {withdrawing && (
+        <div className="absences-modal-backdrop" onClick={() => setWithdrawing(null)}>
+          <div className="absences-modal" role="dialog" onClick={(e) => e.stopPropagation()}>
+            <h3>Cancelar la solicitud</h3>
+            <p>
+              {withdrawing.typeLabel}, del {shortDate(withdrawing.startsAt)} al {shortDate(withdrawing.endsAt)}. Queda
+              registrada como cancelada y ya no se puede reactivar.
+            </p>
+            <div className="absences-modal-actions">
+              <button
+                className="absences-btn absences-btn-danger"
+                type="button"
+                disabled={saving}
+                onClick={() => doWithdraw(withdrawing.eventId)}
+              >
+                Cancelar la solicitud
+              </button>
+              <button className="absences-btn" type="button" disabled={saving} onClick={() => setWithdrawing(null)}>
+                Conservarla
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {approveForm && (

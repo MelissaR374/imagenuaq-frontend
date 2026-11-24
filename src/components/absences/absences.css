@@ -64,3 +64,14 @@
 .absences-btn-danger:hover:not(:disabled) { background: var(--danger); border-color: var(--danger); filter: brightness(0.9); }
 .absences-btn-info { border-color: var(--accent); background: var(--accent); color: #fff; }
 .absences-btn-info:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
+
+/* Solo acomodo: el diseño lo revisa quien lleva el CSS. */
+.absences-balances {
+  margin-bottom: 24px;
+}
+
+.absences-balances-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
