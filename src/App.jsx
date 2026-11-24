@@ -177,6 +177,8 @@ function Aplicacion() {
   const [foto, setFoto] = useState(null);
 
   const [verificando, setVerificando] = useState(() => Boolean(api.getToken()));
+  const [sinConexion, setSinConexion] = useState(false);
+  const [intento, setIntento] = useState(0);
 
   useEffect(() => {
     if (!api.getToken()) return;
@@ -184,9 +186,19 @@ function Aplicacion() {
     api
       .session()
       .then((data) => setUsuario(data.user))
-      .catch(() => api.clearToken())
+      .catch((err) => {
+        if (err.status === 0 || err.status >= 500) setSinConexion(true);
+        else api.clearToken();
+      })
       .finally(() => setVerificando(false));
-  }, []);
+  }, [intento]);
+
+  /** Vuelve a pedir la sesión; sin servidor el token se conserva, porque sigue siendo bueno. */
+  function reintentar() {
+    setSinConexion(false);
+    setVerificando(true);
+    setIntento(intento + 1);
+  }
 
   const usuarioId = usuario?.id ?? null;
 
@@ -240,6 +252,16 @@ function Aplicacion() {
   }
 
   if (verificando) return <p className="app-booting">Cargando...</p>;
+  if (sinConexion) {
+    return (
+      <div className="app-booting" role="alert">
+        <p>No se pudo conectar con el servidor.</p>
+        <button type="button" onClick={reintentar}>
+          Reintentar
+        </button>
+      </div>
+    );
+  }
   if (!usuario) return <Login onEntrar={setUsuario} />;
 
   const rol = ROLES[usuario.role] ?? "trabajador";

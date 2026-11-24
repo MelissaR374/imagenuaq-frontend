@@ -51,10 +51,20 @@ async function request(path, { method = "GET", body, auth = true } = {}) {
   return response.json().catch(() => null);
 }
 
+/** Los rechazos por permiso, que el servidor dice con el código del permiso que falta. */
+const NO_PERMISSION = /^(Missing permission|Needs one of these permissions|Insufficient role)/;
+
+/** El mensaje que se le muestra a la persona: los rechazos más comunes, en español. */
+function readable(message) {
+  if (NO_PERMISSION.test(message)) return "Tu rol no tiene permiso para hacer esto.";
+  if (message === "Invalid email or password.") return "Correo o contraseña incorrectos.";
+  return message;
+}
+
 /** El ApiError con el mensaje que mandó el servidor, o uno genérico con el código. */
 async function toError(response) {
   const data = await response.json().catch(() => null);
-  return new ApiError(data?.error?.message ?? `Error ${response.status}.`, response.status);
+  return new ApiError(readable(data?.error?.message ?? `Error ${response.status}.`), response.status);
 }
 
 /** La ruta con sus filtros como query string, omitiendo los vacíos. */
