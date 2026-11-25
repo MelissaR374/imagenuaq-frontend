@@ -12,15 +12,10 @@ import { Fragment, useEffect, useState } from "react";
 
 import * as api from "../../api/client.js";
 import Help from "../shared/help.jsx";
-import { initials } from "../shared/format.js";
+import { initials, roleName } from "../shared/format.js";
 import "./areas.css";
 
 const USERS_MAX = 200;
-
-/** The one role the code knows by name; any other shows as coordination named it. */
-const ROLE_NAMES = {
-  admin: "Coordinación",
-};
 
 const EMPTY_NEW = { name: "", parentAreaId: "", leaderUserId: "", description: "" };
 
@@ -111,7 +106,7 @@ function MemberRow({
       <span className="areas-who">
         <strong>{member.fullName}</strong>
         <span className="areas-muted">
-          {member.email} · rol {ROLE_NAMES[member.role] ?? member.role}
+          {member.email} · rol {roleName(member.role)}
         </span>
       </span>
 
@@ -564,7 +559,7 @@ function Areas({ user }) {
                           <option value="">Sin responsable por ahora</option>
                           {people.map((person) => (
                             <option key={person.id} value={person.id}>
-                              {person.fullName} · {ROLE_NAMES[person.role] ?? person.role}
+                              {person.fullName} · {roleName(person.role)}
                             </option>
                           ))}
                         </select>
@@ -813,7 +808,7 @@ function Areas({ user }) {
                                     )
                                     .map((person) => (
                                       <option key={person.id} value={person.id}>
-                                        {person.fullName} · {ROLE_NAMES[person.role] ?? person.role}
+                                        {person.fullName} · {roleName(person.role)}
                                       </option>
                                     ))}
                                 </select>

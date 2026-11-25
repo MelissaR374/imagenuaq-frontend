@@ -12,18 +12,11 @@ import { useEffect, useRef, useState } from "react";
 
 import * as api from "../../api/client.js";
 import { activationLink } from "../../config.js";
+import { roleName } from "../shared/format.js";
 import "./users.css";
 
 /** Cuántas personas se muestran por página. */
 const PAGE = 25;
-
-/**
- * Los roles llegan del servidor en inglés; aquí se traducen para mostrarlos. Si aparece uno
- * que no está en la lista, se muestra tal cual.
- */
-const ROLES_EN_ESPANOL = {
-  admin: "Coordinación",
-};
 
 /** El formulario vacío: sirve para empezar y para limpiarlo después de crear a alguien. */
 const FORMULARIO_VACIO = {
@@ -220,7 +213,7 @@ function Users({ admin, canChangeRole }) {
 
   async function handleCambiarRol(usuario, roleId) {
     const rol = roles.find((uno) => String(uno.id) === roleId);
-    const nombre = ROLES_EN_ESPANOL[rol.name] ?? rol.name;
+    const nombre = roleName(rol.name);
     const seguro = window.confirm(`¿Cambiar el rol de ${usuario.fullName} a ${nombre}?`);
     if (!seguro) return;
 
@@ -382,7 +375,7 @@ function Users({ admin, canChangeRole }) {
 
             {roles.map((rol) => (
               <option key={rol.id} value={rol.id}>
-                {ROLES_EN_ESPANOL[rol.name] ?? rol.name}
+                {roleName(rol.name)}
               </option>
             ))}
           </select>
@@ -509,7 +502,7 @@ function Users({ admin, canChangeRole }) {
 
             {roles.map((rol) => (
               <option key={rol.id} value={rol.id}>
-                {ROLES_EN_ESPANOL[rol.name] ?? rol.name}
+                {roleName(rol.name)}
               </option>
             ))}
           </select>
@@ -594,12 +587,12 @@ function Users({ admin, canChangeRole }) {
                       .filter((rol) => isAdmin || rol.name !== "admin")
                       .map((rol) => (
                         <option key={rol.id} value={rol.id}>
-                          {ROLES_EN_ESPANOL[rol.name] ?? rol.name}
+                          {roleName(rol.name)}
                         </option>
                       ))}
                   </select>
                 ) : (
-                  ROLES_EN_ESPANOL[usuario.role] ?? usuario.role
+                  roleName(usuario.role)
                 )}
               </td>
 

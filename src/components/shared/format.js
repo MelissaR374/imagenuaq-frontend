@@ -84,3 +84,17 @@ export function daysUntil(value) {
   today.setHours(0, 0, 0, 0);
   return Math.round((new Date(year, month - 1, day) - today) / 86_400_000);
 }
+
+/** The seeded roles as a person reads them; a role coordination adds reads by its own name. */
+const ROLE_NAMES = {
+  admin: "Coordinación",
+  area_lead: "Responsable de área",
+  worker: "Integrante",
+  finance: "Finanzas",
+  photo_manager: "Responsable de fotografía",
+};
+
+/** How a role reads, from the name the server gives it. */
+export function roleName(name) {
+  return ROLE_NAMES[name] ?? name;
+}

@@ -371,7 +371,8 @@ Busca el primer elemento que sea de este tipo dentro de su contenedor y que teng
     margin-left: 5px;
 }
 
-.users-filter-select {
+.users-filter-select,
+.users-role-select {
     height: 27px;
 
     padding: 0 9px;
@@ -394,7 +395,8 @@ Busca el primer elemento que sea de este tipo dentro de su contenedor y que teng
         border-color 0.3s ease;
 }
 
-.users-filter-select:focus {
+.users-filter-select:focus,
+.users-role-select:focus {
     border-color: #3b73b9;
 }
 

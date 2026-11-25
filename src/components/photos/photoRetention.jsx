@@ -50,34 +50,36 @@ function PhotoRetention() {
   if (saved === null) return <p className="photos-note">{error ?? "Cargando…"}</p>;
 
   return (
-    <form className="photos-form photos-card" onSubmit={save}>
-      <label className="photos-field">
-        <span>Días que se pueden descargar las fotos</span>
-        <input
-          type="number"
-          min={1}
-          step={1}
-          value={days}
-          onChange={(event) => {
-            setDays(event.target.value);
-            setDone(false);
-          }}
-          required
-        />
-      </label>
-      <p className="photos-note">
-        Cuentan desde que las fotos de un folio se marcan como listas. Al vencer se borran. Lo toma cada grupo nuevo; un grupo ya
-        creado conserva el suyo y se cambia desde su configuración.
-      </p>
-      {error !== null ? <p className="photos-error">{error}</p> : null}
-      {done ? <p className="photos-note">Guardado.</p> : null}
-      <div className="photos-actions">
-        <button className="photos-btn" type="submit" disabled={busy || days === String(saved.days)}>
-          Guardar
-        </button>
-        <span className="photos-note">Último cambio: {shortDate(saved.updatedAt)}</span>
-      </div>
-    </form>
+    <div className="photos">
+      <form className="photos-form photos-card" onSubmit={save}>
+        <label className="photos-field">
+          <span>Días que se pueden descargar las fotos</span>
+          <input
+            type="number"
+            min={1}
+            step={1}
+            value={days}
+            onChange={(event) => {
+              setDays(event.target.value);
+              setDone(false);
+            }}
+            required
+          />
+        </label>
+        <p className="photos-note">
+          Cuentan desde que las fotos de un folio se marcan como listas. Al vencer se borran. Lo toma cada grupo nuevo; un grupo ya
+          creado conserva el suyo y se cambia desde su configuración.
+        </p>
+        {error !== null ? <p className="photos-error">{error}</p> : null}
+        {done ? <p className="photos-note">Guardado.</p> : null}
+        <div className="photos-actions">
+          <button className="photos-btn" type="submit" disabled={busy || days === String(saved.days)}>
+            Guardar
+          </button>
+          <span className="photos-note">Último cambio: {shortDate(saved.updatedAt)}</span>
+        </div>
+      </form>
+    </div>
   );
 }
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { io } from "socket.io-client";
 import * as api from "../../api/client.js";
 import { API_URL } from "../../config.js";
+import { roleName } from "../shared/format.js";
 import "./sidebar.css";
 import { menuSections, itemVisible, leerOrden, ordenar } from "./menu.js";
 import { MdLogout, MdMenu } from "react-icons/md";
@@ -190,7 +191,7 @@ function Sidebar({ usuario, foto = null, role = "admin", permisos = [], activeIt
           <div className="user-info">
             <span className="user-name" title= {usuario.fullName} >{usuario.fullName}</span>
 
-            <span className="user-role">{usuario.role}</span>
+            <span className="user-role">{roleName(usuario.role)}</span>
           </div>
         </button>
 

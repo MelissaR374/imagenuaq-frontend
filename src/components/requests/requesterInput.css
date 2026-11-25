@@ -1,8 +1,8 @@
 /* Solo acomodo: el diseño lo revisa quien lleva el CSS. */
 
 .requester-input {
-  display: inline-flex;
-  min-width: 18rem;
+  display: flex;
+  min-width: min(18rem, 100%);
 }
 
 .requester-control {

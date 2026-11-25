@@ -13,6 +13,7 @@ import { useEffect, useState } from "react";
 import { MdVisibility, MdVisibilityOff } from "react-icons/md";
 
 import * as api from "../../api/client.js";
+import { roleName } from "../shared/format.js";
 import "./profile.css";
 
 /** Lo que acepta el servidor; el input lo usa como filtro del selector de archivos. */
@@ -223,7 +224,7 @@ function Profile({ usuario, foto, onActualizar, onFoto }) {
       <dl className="profile-summary">
         <div className="profile-summary-item">
           <dt className="profile-summary-label">Rol</dt>
-          <dd className="profile-summary-value">{perfil?.role ?? "—"}</dd>
+          <dd className="profile-summary-value">{perfil ? roleName(perfil.role) : "—"}</dd>
         </div>
 
         <div className="profile-summary-item">

@@ -12,19 +12,12 @@ import { Fragment, useEffect, useState } from "react";
 
 import * as api from "../../api/client.js";
 import Help from "../shared/help.jsx";
+import { roleName } from "../shared/format.js";
 import { tabsFor } from "../sidebar/menu.js";
 import "./roles.css";
 
 const ROLE_NAME_MAX = 50;
 const USERS_MAX = 200;
-
-/** The four seeded roles read in Spanish; any role added later reads by its own name. */
-const ROLE_NAMES = {
-  admin: "Coordinación",
-  area_lead: "Responsable de área",
-  worker: "Integrante",
-  finance: "Finanzas",
-};
 
 /** The module a permission belongs to, taken from its code: `project.read` is of Proyectos. */
 const GROUP_NAMES = {
@@ -45,7 +38,7 @@ const GROUP_NAMES = {
   print: "Impresión",
 };
 
-const labelOf = (role) => ROLE_NAMES[role.name] ?? role.name;
+const labelOf = (role) => roleName(role.name);
 const groupOf = (permission) => permission.code.split(".")[0];
 const actionOf = (permission) => permission.code.split(".").pop();
 

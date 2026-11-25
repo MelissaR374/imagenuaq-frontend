@@ -6,15 +6,10 @@ import { MdPrint } from "react-icons/md";
 import { Tree, TreeNode } from "react-organizational-chart";
 
 import * as api from "../../api/client.js";
-import { initials } from "../shared/format.js";
+import { initials, roleName } from "../shared/format.js";
 import "./orgChart.css";
 
 const USERS_MAX = 200;
-
-/** The server names the roles in English; the same names users.jsx shows. */
-const ROLE_NAMES = {
-  admin: "Coordinación",
-};
 
 /** The id of everybody who belongs to some area in the forest, to tell who belongs to none. */
 function memberIds(nodes, out = new Set()) {
@@ -59,7 +54,7 @@ function Person({ person, picture, scope }) {
         </a>
         <span className="org-card-role">
           {person.isAreaLeader ? "Responsable del área · " : ""}
-          {ROLE_NAMES[person.role] ?? person.role}
+          {roleName(person.role)}
         </span>
         <button className="org-card-close" type="button" popoverTarget={cardId} popoverTargetAction="hide">
           Cerrar
