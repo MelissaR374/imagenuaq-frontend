@@ -12,22 +12,12 @@ services:
         VITE_FRONTEND_DOMAIN: ${VITE_FRONTEND_DOMAIN}
     container_name: frontend #el contenedor se llama asi
     restart: unless-stopped #Si el contenedor se cae o docker se reincia, vuelve a levantarlo automaticamente
+    #Publicado solo en loopback: cloudflared corre en el host y entra por aqui (ver config.yml)
+    ports:
+      - "127.0.0.1:8080:80"
     networks:
       - frontend_network
       #Conecta el contenedor frontend a la red llamada frontend_network.
-
-  #contenedor 2
-  cloudflared:
-    image: cloudflare/cloudflared:latest #Utiliza la imagen oficial de Cloudflare Tunnel
-    container_name: cloudflared
-    restart: unless-stopped
-    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN} #ejecuta cloudfare tunnel usando este token
-    depends_on:
-      - frontend
-      #Antes de iniciar cloudfare, inicia el servicio frontend
-    networks:
-      - frontend_network
-      #permite comunicarse con frontend con la misma red q frontend
 
 #definir la red que utilizaremos
 networks:

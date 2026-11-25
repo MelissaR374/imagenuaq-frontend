@@ -122,12 +122,12 @@ nginx container.
 docker compose up --build
 ```
 
-`docker-compose.yml` also starts a Cloudflare Tunnel sidecar. Set `CLOUDFLARE_TUNNEL_TOKEN`
-in the shell or in a `.env` beside the compose file.
+`docker-compose.yml` publishes nginx on `127.0.0.1:8080`. On the server, `cloudflared` runs on the
+host and serves both halves from one hostname: `/api` and `/socket.io` go to the backend on port
+3000, the rest goes to 8080. Its ingress rules live in `~/.cloudflared/config.yml` there.
 
 `nginx.conf` serves the SPA with `try_files $uri $uri/ /index.html`. It has no `/api`
-location. The frontend and backend compose files share no network. Serving both from one
-origin in production is not yet done.
+location, since the tunnel splits the traffic before nginx sees it.
 
 ## Lint rules
 
