@@ -8,6 +8,7 @@ import { MdAdd, MdSearch, MdDescription } from "react-icons/md";
 import * as api from "../../api/client.js";
 import { shortDate, orDash } from "../shared/format.js";
 import Balances from "./balances.jsx";
+import PersonBalances from "./personBalances.jsx";
 
 import "./absences.css";
 
@@ -36,6 +37,11 @@ const FILTERS = [
   { id: "cancelled", label: "Canceladas", status: "cancelled" },
 ];
 
+const TABS = [
+  { id: "absences", label: "Ausencias" },
+  { id: "balances", label: "Días de ausencia" },
+];
+
 const EMPTY_DRAFT = { userId: "", absenceTypeId: "", startsAt: "", endsAt: "", reason: "" };
 
 /** The local calendar day of a timestamp, as a date input wants it. */
@@ -45,8 +51,12 @@ function dayOf(timestamp) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-/** @param {{ canDetail: boolean, canApprove: boolean, canWrite: boolean, canRequestOthers: boolean, userId: number }} props */
-function Absences({ canDetail, canApprove, canWrite, canRequestOthers, userId }) {
+/**
+ * @param {{ canDetail: boolean, canApprove: boolean, canWrite: boolean, canRequestOthers: boolean,
+ *   canAdjust: boolean, userId: number }} props
+ */
+function Absences({ canDetail, canApprove, canWrite, canRequestOthers, canAdjust, userId }) {
+  const [tab, setTab] = useState("absences");
   const [absences, setAbsences] = useState(null);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState("");
@@ -237,137 +247,160 @@ function Absences({ canDetail, canApprove, canWrite, canRequestOthers, userId })
 
   return (
     <section className="absences">
-      <header className="absences-header">
-        {canWrite && (
-          <button className="absences-btn absences-btn-primary" type="button" onClick={openCreate}>
-            <MdAdd /> Nueva ausencia
-          </button>
-        )}
-        <div className="absences-search">
-          <MdSearch />
-          <input
-            type="text"
-            placeholder="Buscar por nombre, tipo…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+      {canDetail && (
+        <div className="absences-tabs" role="tablist">
+          {TABS.map((item) => (
+            <button
+              className={tab === item.id ? "absences-tab is-active" : "absences-tab"}
+              type="button"
+              role="tab"
+              aria-selected={tab === item.id}
+              onClick={() => setTab(item.id)}
+              key={item.id}
+            >
+              {item.label}
+            </button>
+          ))}
         </div>
-      </header>
-
-      <nav className="absences-filters">
-        {FILTERS.map((f) => (
-          <button
-            key={f.id}
-            className={`filter-chip ${activeFilter === f.id ? "active" : ""}`}
-            type="button"
-            onClick={() => setActiveFilter(f.id)}
-          >
-            {f.label}
-            <span className="filter-count">{filterCount(f.id)}</span>
-          </button>
-        ))}
-      </nav>
-
-      <Balances userId={userId} canDetail={canDetail} version={version} />
-
-      {error && <p className="absences-error">{error}</p>}
-      {loading && <p className="absences-loading">Cargando…</p>}
-
-      {filtered.length > 0 && (
-        <table className="absences-table">
-          <thead>
-            <tr>
-              <th>Persona</th>
-              <th>Tipo</th>
-              <th>Desde</th>
-              <th>Hasta</th>
-              {canDetail && <th>Motivo</th>}
-              <th>Oficio</th>
-              <th>Estado</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((a) => (
-              <tr key={a.eventId}>
-                <td>{orDash(a.userName)}</td>
-                <td>{orDash(a.typeLabel)}</td>
-                <td>{shortDate(a.startsAt)}</td>
-                <td>{shortDate(a.endsAt)}</td>
-                {canDetail && <td className="absences-reason">{orDash(a.reason)}</td>}
-                <td className="absences-doc-cell">
-                  {a.documentFileId ? (
-                    <button
-                      className="absences-btn absences-btn-small"
-                      type="button"
-                      onClick={() => downloadDoc(a.eventId)}
-                      title="Descargar oficio"
-                    >
-                      <MdDescription /> Ver
-                    </button>
-                  ) : (
-                    <span className="absences-no-doc">—</span>
-                  )}
-                </td>
-                <td>
-                  <span className={`status-pill ${STATUS_CLASS[a.status] ?? ""}`}>
-                    {STATUS_LABELS[a.status] ?? a.status}
-                  </span>
-                </td>
-                <td>
-                  <div className="absences-actions-cell">
-                  {a.status === "requested" && canApprove && (
-                    <>
-                      <button
-                        className="absences-btn absences-btn-small absences-btn-primary"
-                        type="button"
-                        disabled={saving}
-                        onClick={() => setApproveForm({ eventId: a.eventId, file: null, confirmNoDoc: false })}
-                      >
-                        Aprobar
-                      </button>
-                      <button
-                        className="absences-btn absences-btn-small absences-btn-danger"
-                        type="button"
-                        disabled={saving}
-                        onClick={() => {
-                          setActionForm({ eventId: a.eventId, action: "rejected", note: "" });
-                        }}
-                      >
-                        Rechazar
-                      </button>
-                    </>
-                  )}
-                  {a.status === "requested" && canWrite && (a.userId === userId || canRequestOthers) && (
-                    <button
-                      className="absences-btn absences-btn-small"
-                      type="button"
-                      disabled={saving}
-                      onClick={() => openEdit(a)}
-                    >
-                      Editar
-                    </button>
-                  )}
-                  {a.status === "requested" && a.userId === userId && (
-                    <button
-                      className="absences-btn absences-btn-small"
-                      type="button"
-                      disabled={saving}
-                      onClick={() => setWithdrawing(a)}
-                    >
-                      Cancelar
-                    </button>
-                  )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
       )}
 
-      {!loading && filtered.length === 0 && (
-        <p className="absences-empty">No hay ausencias que mostrar.</p>
+      {canDetail && tab === "balances" ? (
+        <PersonBalances canAdjust={canAdjust} />
+      ) : (
+        <>
+          <header className="absences-header">
+            {canWrite && (
+              <button className="absences-btn absences-btn-primary" type="button" onClick={openCreate}>
+                <MdAdd /> Nueva ausencia
+              </button>
+            )}
+            <div className="absences-search">
+              <MdSearch />
+              <input
+                type="text"
+                placeholder="Buscar por nombre, tipo…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+          </header>
+
+          <nav className="absences-filters">
+            {FILTERS.map((f) => (
+              <button
+                key={f.id}
+                className={`filter-chip ${activeFilter === f.id ? "active" : ""}`}
+                type="button"
+                onClick={() => setActiveFilter(f.id)}
+              >
+                {f.label}
+                <span className="filter-count">{filterCount(f.id)}</span>
+              </button>
+            ))}
+          </nav>
+
+          <Balances userId={userId} version={version} />
+
+          {error && <p className="absences-error">{error}</p>}
+          {loading && <p className="absences-loading">Cargando…</p>}
+
+          {filtered.length > 0 && (
+            <table className="absences-table">
+              <thead>
+                <tr>
+                  <th>Persona</th>
+                  <th>Tipo</th>
+                  <th>Desde</th>
+                  <th>Hasta</th>
+                  {canDetail && <th>Motivo</th>}
+                  <th>Oficio</th>
+                  <th>Estado</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((a) => (
+                  <tr key={a.eventId}>
+                    <td>{orDash(a.userName)}</td>
+                    <td>{orDash(a.typeLabel)}</td>
+                    <td>{shortDate(a.startsAt)}</td>
+                    <td>{shortDate(a.endsAt)}</td>
+                    {canDetail && <td className="absences-reason">{orDash(a.reason)}</td>}
+                    <td className="absences-doc-cell">
+                      {a.documentFileId ? (
+                        <button
+                          className="absences-btn absences-btn-small"
+                          type="button"
+                          onClick={() => downloadDoc(a.eventId)}
+                          title="Descargar oficio"
+                        >
+                          <MdDescription /> Ver
+                        </button>
+                      ) : (
+                        <span className="absences-no-doc">—</span>
+                      )}
+                    </td>
+                    <td>
+                      <span className={`status-pill ${STATUS_CLASS[a.status] ?? ""}`}>
+                        {STATUS_LABELS[a.status] ?? a.status}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="absences-actions-cell">
+                      {a.status === "requested" && canApprove && (
+                        <>
+                          <button
+                            className="absences-btn absences-btn-small absences-btn-primary"
+                            type="button"
+                            disabled={saving}
+                            onClick={() => setApproveForm({ eventId: a.eventId, file: null, confirmNoDoc: false })}
+                          >
+                            Aprobar
+                          </button>
+                          <button
+                            className="absences-btn absences-btn-small absences-btn-danger"
+                            type="button"
+                            disabled={saving}
+                            onClick={() => {
+                              setActionForm({ eventId: a.eventId, action: "rejected", note: "" });
+                            }}
+                          >
+                            Rechazar
+                          </button>
+                        </>
+                      )}
+                      {a.status === "requested" && canWrite && (a.userId === userId || canRequestOthers) && (
+                        <button
+                          className="absences-btn absences-btn-small"
+                          type="button"
+                          disabled={saving}
+                          onClick={() => openEdit(a)}
+                        >
+                          Editar
+                        </button>
+                      )}
+                      {a.status === "requested" && a.userId === userId && (
+                        <button
+                          className="absences-btn absences-btn-small"
+                          type="button"
+                          disabled={saving}
+                          onClick={() => setWithdrawing(a)}
+                        >
+                          Cancelar
+                        </button>
+                      )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+
+          {!loading && filtered.length === 0 && (
+            <p className="absences-empty">No hay ausencias que mostrar.</p>
+          )}
+        </>
       )}
 
       {withdrawing && (

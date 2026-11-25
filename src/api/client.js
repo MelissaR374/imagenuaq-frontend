@@ -990,14 +990,16 @@ export const getAvailability = (params = {}) =>
 
 export const getBalances = (userId) => request(`/absences/balances/${userId}`);
 
+/** Otorga a una persona una cantidad propia de un tipo, para el año de `cycleStart`. */
+export const setBalance = (userId, input) =>
+  request(`/absences/balances/${userId}`, { method: "PUT", body: input });
+
 export const listEntitlements = (contractTypeId) =>
   request(`/contract-types/${contractTypeId}/entitlements`);
 
+/** Fija un tope a partir de una fecha; con `amount` nulo solo termina el que esté abierto. */
 export const createEntitlement = (contractTypeId, input) =>
   request(`/contract-types/${contractTypeId}/entitlements`, { method: "POST", body: input });
-
-export const updateEntitlement = (contractTypeId, entitlementId, changes) =>
-  request(`/contract-types/${contractTypeId}/entitlements/${entitlementId}`, { method: "PATCH", body: changes });
 
 export const listPrintOrders = (params = {}) => request(withQuery("/print/orders", params));
 export const getPrintOrder = (id) => request(`/print/orders/${id}`);

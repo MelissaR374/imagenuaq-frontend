@@ -398,6 +398,7 @@ function Aplicacion() {
             canApprove={usuario.role === "admin" || permisos.includes("absence.approve")}
             canWrite={usuario.role === "admin" || permisos.includes("absence.write")}
             canRequestOthers={usuario.role === "admin" || permisos.includes("absence.request_others")}
+            canAdjust={usuario.role === "admin" || permisos.includes("absence.manage")}
             userId={usuario.id}
           />
         ) : activa === "Órdenes de impresión" ? (
