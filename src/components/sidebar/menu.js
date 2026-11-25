@@ -128,7 +128,7 @@ export const descripciones = {
   "Roles y permisos": "Lo que puede hacer cada rol.",
   "Tipos de contrato": "Configura los tipos de contrato y los beneficios que se asignan a los empleados.",
   Ausencias: "Las ausencias del personal: permisos, incapacidades y días institucionales, con su estado de aprobación.",
-  "Tipos de ausencia": "El catálogo de tipos de ausencia y sus reglas: si consumen saldo, si requieren documento.",
+  "Tipos de ausencia": "El catálogo de tipos de ausencia y sus reglas: si consumen días de ausencia, si requieren documento.",
   "Formatos de solicitud":
     "Los formatos de captura de datos para generar un proyecto.",
   "Libros de Excel":
