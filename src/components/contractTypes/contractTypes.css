@@ -117,20 +117,7 @@
 }
 
 .contract-types-table thead th:first-child {
-    width: 23%;
-}
-
-.contract-types-table thead th:nth-child(2),
-.contract-types-table thead th:nth-child(3) {
-    width: 17%;
-}
-
-.contract-types-table thead th:nth-child(4) {
-    width: 18%;
-}
-
-.contract-types-table thead th:nth-child(5) {
-    width: 21%;
+    width: 34%;
 }
 
 .contract-types-table thead th:last-child {
@@ -148,7 +135,7 @@
 
 .contract-types-row-button {
     display: grid;
-    grid-template-columns: 23% 17% 17% 18% 21% 4%;
+    grid-template-columns: 34% 62% 4%;
     align-items: center;
     width: 100%;
     min-height: 66px;
@@ -203,25 +190,6 @@
     font-size: 21px;
 }
 
-.contract-types-badge {
-    display: inline-flex;
-    border-radius: 6px;
-    padding: 5px 8px;
-    font-size: 11px;
-    font-weight: 600;
-    white-space: nowrap;
-}
-
-.contract-types-badge.uaq {
-    color: #167052;
-    background: rgba(26, 158, 112, 0.12);
-}
-
-.contract-types-badge.independent {
-    color: #b66a28;
-    background: rgba(224, 141, 64, 0.15);
-}
-
 /* Editor desplegable */
 .contract-types-editor {
     margin: 0 14px 14px;
@@ -271,15 +239,7 @@
 }
 
 .contract-types-editor-body {
-    display: grid;
-    grid-template-columns: 0.9fr 1.1fr;
-    gap: 28px;
     padding: 23px;
-}
-
-.contract-types-editor-left {
-    padding-right: 25px;
-    border-right: 1px solid var(--border);
 }
 
 .contract-types-editor h3 {
@@ -291,12 +251,7 @@
     font-weight: 650;
 }
 
-.contract-types-editor h3 svg {
-    color: var(--text-muted, #8792a2);
-}
-
-.contract-types-label,
-.contract-types-field label {
+.contract-types-label {
     display: block;
     margin-bottom: 8px;
     font-size: 12px;
@@ -322,113 +277,7 @@
     box-shadow: 0 0 0 2px rgba(66, 141, 210, 0.12);
 }
 
-.contract-types-input[readonly] {
-    opacity: 0.78;
-}
-
-.contract-types-hint {
-    margin: 9px 0 0;
-    font-size: 12px;
-    line-height: 1.6;
-    color: var(--text-muted, #8792a2);
-}
-
-.contract-types-fields {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 17px;
-}
-
-.contract-types-field {
-    min-width: 0;
-}
-
-.contract-types-divider {
-    height: 1px;
-    margin: 22px 0;
-    background: var(--border);
-}
-
-.contract-types-radio-group {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    margin: 0 0 23px;
-}
-
-.contract-types-radio-group label {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    cursor: pointer;
-}
-
-.contract-types-radio-group input {
-    margin-top: 4px;
-    accent-color: #287bd0;
-}
-
-.contract-types-radio-group strong {
-    display: block;
-    font-size: 13px;
-    font-weight: 550;
-}
-
-.contract-types-radio-group small {
-    display: block;
-    margin-top: 3px;
-    color: var(--text-muted, #8792a2);
-    font-size: 11px;
-    line-height: 1.5;
-}
-
-.contract-types-date {
-    position: relative;
-}
-
-.contract-types-date .contract-types-input {
-    padding-right: 34px;
-    color-scheme: light;
-}
-
-.dark .contract-types-date .contract-types-input {
-    color-scheme: dark;
-}
-
-.contract-types-date>svg {
-    position: absolute;
-    right: 11px;
-    top: 12px;
-    pointer-events: none;
-    color: var(--text-muted, #8792a2);
-    font-size: 18px;
-}
-
 /* Pie del formulario */
-.contract-types-textarea {
-  width: 100%;
-  min-height: 100px;
-  padding: 12px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--surface);
-  color: var(--text);
-  font: inherit;
-  font-size: 13px;
-  line-height: 1.6;
-  resize: vertical;
-  outline: none;
-}
-
-.contract-types-textarea:focus {
-  border-color: #428dd2;
-  box-shadow: 0 0 0 2px rgba(66, 141, 210, 0.12);
-}
-
-.contract-types-hint {
-  margin-bottom: 20px;
-}
-
 /*eliminación */
 .contract-types-delete-area {
   margin-right: auto;
@@ -520,8 +369,6 @@
     color: #d34444;
 }
 
-
-
 /* Responsive */
 
 @media (max-width: 1050px) {
@@ -529,16 +376,6 @@
         min-width: 850px;
     }
 
-    .contract-types-editor-body {
-        grid-template-columns: 1fr;
-    }
-
-    .contract-types-editor-left {
-        padding-right: 0;
-        padding-bottom: 20px;
-        border-right: 0;
-        border-bottom: 1px solid var(--border);
-    }
 }
 
 @media (max-width: 850px) {
@@ -567,7 +404,7 @@
         padding: 15px;
     }
 
-    .contract-types-fields {
+    .contract-types-editor .contract-types-cap {
         grid-template-columns: 1fr;
     }
 
@@ -584,3 +421,9 @@
 .contract-types-create { display: flex; align-items: flex-end; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1rem; }
 .contract-types-create-field { display: flex; flex-direction: column; gap: 0.25rem; min-width: 16rem; }
 .contract-types-create .contract-types-error { flex-basis: 100%; margin: 0; }
+.contract-types-cap { display: grid; grid-template-columns: minmax(0, 1fr) 10rem 11rem; gap: 17px; align-items: center; padding: 10px 0; border-top: 1px solid var(--border); }
+.contract-types-cap-type { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.contract-types-cap .contract-types-label { margin: 0; }
+.contract-types-cap .contract-types-input { margin-top: 6px; }
+.contract-types-cap-date { color-scheme: light; }
+.dark .contract-types-cap-date { color-scheme: dark; }

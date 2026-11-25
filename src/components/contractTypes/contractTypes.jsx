@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+// The contract types and what each one grants per absence type (RF-AUS-03, RF-AUS-04). A cap is never
+// changed in place: saving closes the open one the day before and opens another.
+import { useEffect, useState } from "react";
 import {
   MdAdd,
   MdSearch,
@@ -6,260 +8,219 @@ import {
   MdKeyboardArrowUp,
   MdClose,
   MdSave,
-  MdInfoOutline,
-  MdCalendarMonth,
   MdWorkOutline,
 } from "react-icons/md";
 
 import * as api from "../../api/client.js";
-import { isoDay } from "../shared/format.js";
+import { dayDate, isoDay } from "../shared/format.js";
+import Help from "../shared/help.jsx";
 import "./contractTypes.css";
 
-function crearConfiguracion(contrato) {
-  return {
-    id: contrato.id,
-    name: contrato.name,
-    description: contrato.description ?? "",
-    vacationDays: "",
-    sickDays: "",
-    calendar: "uaq",
-    vacationStart: "",
-    vacationEnd: "",
-  };
+const UNIT_LABELS = { day: "días", hour: "horas" };
+
+/** The calendar day after a `YYYY-MM-DD`. */
+function dayAfter(value) {
+  const [year, month, day] = value.split("-").map(Number);
+  return isoDay(new Date(year, month - 1, day + 1));
+}
+
+/** The cap of a type that applies today, or undefined. */
+function capInForce(caps, typeId) {
+  const today = isoDay();
+  return caps.find(
+    (cap) =>
+      cap.absenceTypeId === typeId && cap.validFrom <= today && (cap.validTo === null || cap.validTo >= today),
+  );
+}
+
+/** The cap of a type that has no end yet: the one in force, or one scheduled to start. */
+function openCap(caps, typeId) {
+  return caps.find((cap) => cap.absenceTypeId === typeId && cap.validTo === null);
+}
+
+/** What the editor shows for a type: the open cap, starting over from today or from when it is due. */
+function rowOf(caps, typeId) {
+  const today = isoDay();
+  const open = openCap(caps, typeId);
+  const inForce = capInForce(caps, typeId);
+  let validFrom = today;
+  if (open && open.validFrom > today) validFrom = open.validFrom;
+  else if (!open && inForce) validFrom = dayAfter(inForce.validTo);
+  return { amount: open ? String(open.amount) : "", validFrom };
+}
+
+/** The caps that apply today in one line. */
+function summaryOf(caps, types) {
+  const parts = types
+    .map((type) => ({ type, cap: capInForce(caps, type.id) }))
+    .filter(({ cap }) => cap !== undefined)
+    .map(({ type, cap }) => `${type.label} ${cap.amount}`);
+  return parts.length > 0 ? parts.join(" · ") : "Sin topes";
+}
+
+/** The cap in force and the one due later, in words. */
+function standingOf(caps, typeId) {
+  const open = openCap(caps, typeId);
+  const inForce = capInForce(caps, typeId);
+  const parts = [];
+  if (inForce) {
+    const until = inForce.validTo === null ? "" : ` hasta el ${dayDate(inForce.validTo)}`;
+    parts.push(`Vigente: ${inForce.amount} desde el ${dayDate(inForce.validFrom)}${until}`);
+  }
+  if (open && open.validFrom > isoDay()) parts.push(`${open.amount} a partir del ${dayDate(open.validFrom)}`);
+  return parts.length > 0 ? parts.join(". ") : "Sin tope";
+}
+
+/** Why a cap could not be saved, in Spanish for the two cases dates cause. */
+function reasonOf(err) {
+  if (err.status === 404) return "no hay un tope abierto en esa fecha.";
+  if (err.status === 409) return "la fecha se cruza con otro tope.";
+  return err.message;
 }
 
 function ContractTypes() {
-  const [contratos, setContratos] = useState([]);
-  const [configuraciones, setConfiguraciones] = useState({});
-  const [absenceTypes, setAbsenceTypes] = useState([]);
-  const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState("");
+  const [contracts, setContracts] = useState([]);
+  const [caps, setCaps] = useState({});
+  const [types, setTypes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [search, setSearch] = useState("");
 
-  const [busqueda, setBusqueda] = useState("");
-  const [abierto, setAbierto] = useState(null);
-  const [form, setForm] = useState(null);
-  const [guardando, setGuardando] = useState(false);
-  const [mensaje, setMensaje] = useState("");
+  const [openId, setOpenId] = useState(null);
+  const [rows, setRows] = useState({});
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState(null);
+  const [saveError, setSaveError] = useState(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
-  const [confirmandoEliminar, setConfirmandoEliminar] = useState(false);
-
-  const [nuevoNombre, setNuevoNombre] = useState(null);
-  const [creando, setCreando] = useState(false);
-  const [errorNuevo, setErrorNuevo] = useState("");
+  const [newName, setNewName] = useState(null);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState(null);
 
   useEffect(() => {
-    let cancelado = false;
+    let cancelled = false;
 
-    async function cargarDatos() {
+    async function load() {
       try {
-        const [ctRes, atRes] = await Promise.all([
-          api.listContractTypes(),
-          api.listAbsenceTypes().catch(() => ({ types: [] })),
-        ]);
-        const lista = ctRes.contractTypes ?? [];
-        const derechos = await Promise.all(
-          lista.map((contrato) => api.listEntitlements(contrato.id).catch(() => ({ entitlements: [] }))),
+        const [contractData, typeData] = await Promise.all([api.listContractTypes(), api.listAbsenceTypes()]);
+        const capData = await Promise.all(
+          contractData.contractTypes.map((contract) => api.listEntitlements(contract.id)),
         );
-        if (cancelado) return;
-        const cargadas = {};
-        lista.forEach((contrato, indice) => {
-          const vigentes = (derechos[indice].entitlements ?? []).filter((e) => !e.validTo);
-          const vac = vigentes.find((e) => e.absenceTypeCode === "vacaciones");
-          const inc = vigentes.find((e) => e.absenceTypeCode === "incapacidad");
-          cargadas[contrato.id] = {
-            ...crearConfiguracion(contrato),
-            ...(vac ? { vacationDays: vac.amount } : {}),
-            ...(inc ? { sickDays: inc.amount } : {}),
-          };
-        });
-        setContratos(lista);
-        setConfiguraciones(cargadas);
-        setAbsenceTypes(atRes.types ?? []);
-        setError("");
+        if (cancelled) return;
+        setContracts(contractData.contractTypes);
+        setTypes(typeData.types.filter((type) => type.isActive && type.consumesBalance));
+        setCaps(
+          Object.fromEntries(
+            contractData.contractTypes.map((contract, index) => [contract.id, capData[index].entitlements]),
+          ),
+        );
       } catch (err) {
-        if (!cancelado) setError(err.message || "No se pudieron cargar los contratos.");
+        if (!cancelled) setError(err.message);
       } finally {
-        if (!cancelado) setCargando(false);
+        if (!cancelled) setLoading(false);
       }
     }
 
-    cargarDatos();
-    return () => { cancelado = true; };
+    load();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const contratosFiltrados = useMemo(() => {
-    const texto = busqueda.trim().toLowerCase();
+  const shown = contracts.filter((contract) => contract.name.toLowerCase().includes(search.trim().toLowerCase()));
 
-    return contratos.filter(
-      (contrato) =>
-        contrato.name.toLowerCase().includes(texto),
-    );
-  }, [contratos, busqueda]);
+  function rowsOf(contractCaps) {
+    return Object.fromEntries(types.map((type) => [type.id, rowOf(contractCaps, type.id)]));
+  }
 
-  async function crearContrato(event) {
+  function closeEditor() {
+    setOpenId(null);
+    setConfirmingDelete(false);
+  }
+
+  function toggleEditor(contract) {
+    if (openId === contract.id) {
+      closeEditor();
+      return;
+    }
+    setOpenId(contract.id);
+    setRows(rowsOf(caps[contract.id] ?? []));
+    setConfirmingDelete(false);
+    setMessage(null);
+    setSaveError(null);
+  }
+
+  function changeRow(typeId, changes) {
+    setRows((current) => ({ ...current, [typeId]: { ...current[typeId], ...changes } }));
+    setMessage(null);
+  }
+
+  async function createContract(event) {
     event.preventDefault();
-    setCreando(true);
-    setErrorNuevo("");
+    setCreating(true);
+    setCreateError(null);
     try {
-      const { contractType } = await api.createContractType(nuevoNombre.trim());
-      setContratos((actual) =>
-        [...actual, contractType].sort((a, b) => a.name.localeCompare(b.name)),
-      );
-      setNuevoNombre(null);
+      const { contractType } = await api.createContractType(newName.trim());
+      setContracts((current) => [...current, contractType].sort((a, b) => a.name.localeCompare(b.name)));
+      setNewName(null);
     } catch (err) {
-      setErrorNuevo(err.message || "No se pudo crear el tipo de contrato.");
+      setCreateError(err.message);
     } finally {
-      setCreando(false);
+      setCreating(false);
     }
   }
 
-  function obtenerConfiguracion(contrato) {
-    return configuraciones[contrato.id] ?? crearConfiguracion(contrato);
-  }
-
-  async function abrirEditor(contrato) {
-    setConfirmandoEliminar(false);
-
-    if (abierto === contrato.id) {
-      cerrarEditor();
-      return;
-    }
-
-    setAbierto(contrato.id);
-    const cfg = { ...obtenerConfiguracion(contrato) };
-
+  async function deleteContract(id) {
+    setSaving(true);
+    setSaveError(null);
     try {
-      const res = await api.listEntitlements(contrato.id);
-      const entitlements = res.entitlements ?? [];
-      const vac = entitlements.find((e) => e.absenceTypeCode === "vacaciones" && !e.validTo);
-      const inc = entitlements.find((e) => e.absenceTypeCode === "incapacidad" && !e.validTo);
-      if (vac) cfg.vacationDays = vac.amount;
-      if (inc) cfg.sickDays = inc.amount;
-    } catch { void 0; }
-
-    setForm(cfg);
-    setMensaje("");
-  }
-
-  function cerrarEditor() {
-    setConfirmandoEliminar(false); 
-    setAbierto(null);
-    setForm(null);
-    setMensaje("");
-  }
-
-  function cambiarCampo(campo, valor) {
-    setForm((actual) => ({
-      ...actual,
-      [campo]: valor,
-    }));
-
-    setMensaje("");
-  }
-
-  /** Desactiva el contrato en el servidor y lo quita de la lista. */
-  async function eliminarContrato() {
-    if (!form) return;
-
-    setGuardando(true);
-    try {
-      await api.deleteContractType(form.id);
-      setContratos((actual) => actual.filter((contrato) => contrato.id !== form.id));
-      setConfirmandoEliminar(false);
-      cerrarEditor();
+      await api.deleteContractType(id);
+      setContracts((current) => current.filter((contract) => contract.id !== id));
+      closeEditor();
     } catch (err) {
-      setMensaje(err.message || "No se pudo eliminar el tipo de contrato.");
+      setSaveError(err.message);
     } finally {
-      setGuardando(false);
+      setSaving(false);
     }
   }
 
-  async function guardarCambios(event) {
+  async function saveCaps(event) {
     event.preventDefault();
-
-    if (!form) return;
-
-    const vacaciones = Number(form.vacationDays);
-    const enfermedad = Number(form.sickDays);
-
-    if (
-      form.vacationDays === "" ||
-      form.sickDays === "" ||
-      !Number.isInteger(vacaciones) ||
-      !Number.isInteger(enfermedad) ||
-      vacaciones < 0 ||
-      enfermedad < 0
-    ) {
-      setMensaje("Introduce cantidades válidas de días de vacaciones y enfermedad.");
+    const contractCaps = caps[openId] ?? [];
+    const changed = types.filter((type) => rows[type.id].amount !== rowOf(contractCaps, type.id).amount);
+    if (changed.length === 0) {
+      setMessage("No hay topes por guardar.");
       return;
     }
 
-    if (
-      (form.vacationStart && !form.vacationEnd) ||
-      (!form.vacationStart && form.vacationEnd)
-    ) {
-      setMensaje("Debes seleccionar tanto el inicio como el fin de vacaciones.");
-      return;
+    setSaving(true);
+    setMessage(null);
+    setSaveError(null);
+    const failures = [];
+    const failed = {};
+    for (const type of changed) {
+      const { amount, validFrom } = rows[type.id];
+      try {
+        await api.createEntitlement(openId, {
+          absenceTypeId: type.id,
+          amount: amount === "" ? null : amount,
+          validFrom,
+        });
+      } catch (err) {
+        failures.push(`${type.label}: ${reasonOf(err)}`);
+        failed[type.id] = rows[type.id];
+      }
     }
-
-    if (form.vacationStart && form.vacationEnd && form.vacationEnd < form.vacationStart) {
-      setMensaje("La fecha de fin no puede ser anterior a la de inicio.");
-      return;
-    }
-
-    setGuardando(true);
     try {
-      const today = isoDay();
-      const vacType = absenceTypes.find((t) => t.code === "vacaciones");
-      const incType = absenceTypes.find((t) => t.code === "incapacidad");
-
-      const saves = [];
-      if (vacType) {
-        saves.push(api.createEntitlement(form.id, {
-          absenceTypeId: vacType.id, amount: vacaciones, validFrom: today,
-        }));
-      }
-      if (incType) {
-        saves.push(api.createEntitlement(form.id, {
-          absenceTypeId: incType.id, amount: enfermedad, validFrom: today,
-        }));
-      }
-      await Promise.all(saves);
-
-      setConfiguraciones((actual) => ({
-        ...actual,
-        [form.id]: { ...form, vacationDays: vacaciones, sickDays: enfermedad },
-      }));
-      setMensaje("Cambios guardados.");
+      const { entitlements } = await api.listEntitlements(openId);
+      setCaps((current) => ({ ...current, [openId]: entitlements }));
+      setRows({ ...rowsOf(entitlements), ...failed });
     } catch (err) {
-      setMensaje(err.message || "Error al guardar.");
-    } finally {
-      setGuardando(false);
+      failures.push(err.message);
     }
-  }
-
-  function mostrarDias(valor) {
-    if (valor === "" || valor == null) {
-      return "Sin configurar";
-    }
-
-    return `${valor} ${Number(valor) === 1 ? "día" : "días"}`;
-  }
-
-  function mostrarPeriodo(configuracion) {
-    if (!configuracion.vacationStart || !configuracion.vacationEnd) {
-      return "Sin configurar";
-    }
-
-    function fechaCorta(valor) {
-      const [anio, mes, dia] = valor.split("-");
-      return `${dia}/${mes}/${anio}`;
-    }
-
-    return (
-      `${fechaCorta(configuracion.vacationStart)} – ` +
-      `${fechaCorta(configuracion.vacationEnd)}`
-    );
+    if (failures.length > 0) setSaveError(failures.join(" "));
+    else setMessage("Topes guardados.");
+    setSaving(false);
   }
 
   return (
@@ -267,21 +228,17 @@ function ContractTypes() {
       <div className="contract-types-toolbar">
         <div className="contract-types-summary">
           <span>
-            {contratos.length}{" "}
-            {contratos.length === 1 ? "tipo de contrato" : "tipos de contrato"}
+            {contracts.length} {contracts.length === 1 ? "tipo de contrato" : "tipos de contrato"}
           </span>
-
-          <p>
-            Selecciona un contrato para configurar sus beneficios y periodos vacacionales.
-          </p>
+          <p>Selecciona un contrato para configurar cuánto otorga de cada tipo de ausencia.</p>
         </div>
 
         <button
           type="button"
           className="contract-types-new"
           onClick={() => {
-            setErrorNuevo("");
-            setNuevoNombre(nuevoNombre === null ? "" : null);
+            setCreateError(null);
+            setNewName(newName === null ? "" : null);
           }}
         >
           <MdAdd />
@@ -289,28 +246,28 @@ function ContractTypes() {
         </button>
       </div>
 
-      {nuevoNombre !== null && (
-        <form className="contract-types-create" onSubmit={crearContrato}>
+      {newName !== null && (
+        <form className="contract-types-create" onSubmit={createContract}>
           <label className="contract-types-create-field">
             <span>Nombre del tipo de contrato</span>
             <input
               type="text"
               maxLength={200}
               autoFocus
-              value={nuevoNombre}
-              onChange={(event) => setNuevoNombre(event.target.value)}
+              value={newName}
+              onChange={(event) => setNewName(event.target.value)}
             />
           </label>
-          <button type="submit" className="contract-types-new" disabled={creando || !nuevoNombre.trim()}>
+          <button type="submit" className="contract-types-new" disabled={creating || !newName.trim()}>
             <MdSave />
-            {creando ? "Guardando..." : "Guardar"}
+            {creating ? "Guardando..." : "Guardar"}
           </button>
-          <button type="button" className="contract-types-cancel" onClick={() => setNuevoNombre(null)}>
+          <button type="button" className="contract-types-cancel" onClick={() => setNewName(null)}>
             Cancelar
           </button>
-          {errorNuevo && (
+          {createError !== null && (
             <p className="contract-types-error" role="alert">
-              {errorNuevo}
+              {createError}
             </p>
           )}
         </form>
@@ -321,96 +278,66 @@ function ContractTypes() {
         <input
           type="search"
           placeholder="Buscar tipo de contrato..."
-          value={busqueda}
-          onChange={(event) => setBusqueda(event.target.value)}
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
         />
       </div>
 
-      {error && (
+      {error !== null && (
         <p className="contract-types-error" role="alert">
           {error}
         </p>
       )}
 
-      {cargando ? (
-        <p className="contract-types-message">Cargando tipos de contrato...</p>
-      ) : (
+      {loading && <p className="contract-types-message">Cargando tipos de contrato...</p>}
+
+      {!loading && error === null && (
         <div className="contract-types-table-wrapper">
           <table className="contract-types-table">
             <thead>
               <tr>
                 <th>Tipo de contrato</th>
-                <th>Días de vacaciones</th>
-                <th>Días de enfermedad</th>
-                <th>Calendario</th>
-                <th>Periodo vacacional</th>
+                <th>Topes vigentes</th>
                 <th aria-label="Acciones"></th>
               </tr>
             </thead>
 
             <tbody>
-              {contratosFiltrados.map((contrato) => {
-                const configuracion = obtenerConfiguracion(contrato);
-
-                const expandido = abierto === contrato.id;
+              {shown.map((contract) => {
+                const contractCaps = caps[contract.id] ?? [];
+                const expanded = openId === contract.id;
 
                 return (
-                  <tr
-                    key={contrato.id}
-                    className={expandido ? "contract-types-row-expanded" : ""}
-                  >
-                    <td colSpan={6} className="contract-types-row-cell">
-                      <div className="contract-types-row-content">
-                        <button
-                          type="button"
-                          className="contract-types-row-button"
-                          onClick={() => abrirEditor(contrato)}
-                          aria-expanded={expandido}
-                        >
-                          <span className="contract-types-name">
-                            <MdWorkOutline />
-                            <strong>{contrato.name}</strong>
-                          </span>
+                  <tr key={contract.id} className={expanded ? "contract-types-row-expanded" : ""}>
+                    <td colSpan={3} className="contract-types-row-cell">
+                      <button
+                        type="button"
+                        className="contract-types-row-button"
+                        onClick={() => toggleEditor(contract)}
+                        aria-expanded={expanded}
+                      >
+                        <span className="contract-types-name">
+                          <MdWorkOutline />
+                          <strong>{contract.name}</strong>
+                        </span>
+                        <span>{summaryOf(contractCaps, types)}</span>
+                        <span className="contract-types-arrow">
+                          {expanded ? <MdKeyboardArrowUp /> : <MdKeyboardArrowDown />}
+                        </span>
+                      </button>
 
-                          <span>{mostrarDias(configuracion.vacationDays)}</span>
-
-                          <span>{mostrarDias(configuracion.sickDays)}</span>
-
-                          <span>
-                            <span
-                              className={
-                                "contract-types-badge " +
-                                (configuracion.calendar === "uaq" ? "uaq" : "independent")
-                              }
-                            >
-                              {configuracion.calendar === "uaq"
-                                ? "Calendario UAQ"
-                                : "Independiente"}
-                            </span>
-                          </span>
-
-                          <span>{mostrarPeriodo(configuracion)}</span>
-
-                          <span className="contract-types-arrow">
-                            {expandido ? <MdKeyboardArrowUp /> : <MdKeyboardArrowDown />}
-                          </span>
-                        </button>
-                      </div>
-
-                      {expandido && form && (
-                        <form className="contract-types-editor" onSubmit={guardarCambios}>
+                      {expanded && (
+                        <form className="contract-types-editor" onSubmit={saveCaps}>
                           <div className="contract-types-editor-header">
                             <div>
-                              <span className="contract-types-eyebrow">
-                                EDITANDO TIPO DE CONTRATO
-                              </span>
-                              <h2>{contrato.name}</h2>
+                              <span className="contract-types-eyebrow">EDITANDO TIPO DE CONTRATO</span>
+                              <h2>{contract.name}</h2>
                             </div>
 
                             <button
                               type="button"
                               className="contract-types-close"
-                              onClick={cerrarEditor}
+                              onClick={closeEditor}
                               aria-label="Cerrar editor"
                             >
                               <MdClose />
@@ -418,203 +345,76 @@ function ContractTypes() {
                           </div>
 
                           <div className="contract-types-editor-body">
-                            <div className="contract-types-editor-left">
-                              <h3>Información del contrato</h3>
+                            <h3>Topes por tipo de ausencia</h3>
 
-                              <label
-                                className="contract-types-label"
-                                htmlFor="contract-name"
-                              >
-                                Nombre del tipo de contrato
-                              </label>
+                            {types.length === 0 && (
+                              <p className="contract-types-message">Ningún tipo activo consume días de ausencia.</p>
+                            )}
 
-                              <input
-                                id="contract-name"
-                                className="contract-types-input"
-                                value={form.name}
-                                readOnly
-                              />
+                            {types.map((type) => (
+                              <div className="contract-types-cap" key={type.id}>
+                                <div className="contract-types-cap-type">
+                                  <strong>{type.label}</strong>
+                                  <small>{standingOf(contractCaps, type.id)}</small>
+                                </div>
+                                <label className="contract-types-label" htmlFor={`cap-amount-${type.id}`}>
+                                  Tope en {UNIT_LABELS[type.unit]}
+                                  <Help text="Déjalo vacío si el contrato no otorga este tipo. Los días de ausencia ya otorgados no cambian: se ajustan por persona en Ausencias, pestaña Días de ausencia." />
+                                  <input
+                                    id={`cap-amount-${type.id}`}
+                                    type="number"
+                                    min="0"
+                                    max="9999.99"
+                                    step="0.01"
+                                    className="contract-types-input"
+                                    value={rows[type.id].amount}
+                                    onChange={(event) => changeRow(type.id, { amount: event.target.value })}
+                                    placeholder="Sin tope"
+                                  />
+                                </label>
+                                <label className="contract-types-label" htmlFor={`cap-from-${type.id}`}>
+                                  A partir del
+                                  <Help text="El día en que empieza a valer el tope; puede ser una fecha futura. El anterior termina un día antes y se conserva. Con el tope vacío, es el día en que deja de valer." />
+                                  <input
+                                    id={`cap-from-${type.id}`}
+                                    type="date"
+                                    required
+                                    className="contract-types-input contract-types-cap-date"
+                                    value={rows[type.id].validFrom}
+                                    onChange={(event) => changeRow(type.id, { validFrom: event.target.value })}
+                                  />
+                                </label>
+                              </div>
+                            ))}
 
-                              <p className="contract-types-hint">
-                                El nombre se obtiene del catálogo registrado en el
-                                sistema.
+                            {saveError !== null && (
+                              <p className="contract-types-error" role="alert">
+                                {saveError}
                               </p>
-
-                              <label
-                                className="contract-types-label"
-                                htmlFor="contract-description"
-                              >
-                                Descripción
-                              </label>
-
-                              <textarea
-                                id="contract-description"
-                                className="contract-types-textarea"
-                                placeholder="Describe las características de este contrato..."
-                                value={form.description}
-                                onChange={(event) =>
-                                  cambiarCampo("description", event.target.value)
-                                }
-                                rows={4}
-                              />
-                            </div>
-
-                            <div className="contract-types-editor-right">
-                              <h3>Beneficios del contrato</h3>
-
-                              <div className="contract-types-fields">
-                                <div className="contract-types-field">
-                                  <label htmlFor="contract-vacation-days">
-                                    Días de vacaciones
-                                  </label>
-
-                                  <input
-                                    id="contract-vacation-days"
-                                    type="number"
-                                    min="0"
-                                    step="1"
-                                    required
-                                    className="contract-types-input"
-                                    value={form.vacationDays}
-                                    onChange={(event) =>
-                                      cambiarCampo("vacationDays", event.target.value)
-                                    }
-                                    placeholder="0"
-                                  />
-                                </div>
-
-                                <div className="contract-types-field">
-                                  <label htmlFor="contract-sick-days">
-                                    Días de enfermedad
-                                  </label>
-
-                                  <input
-                                    id="contract-sick-days"
-                                    type="number"
-                                    min="0"
-                                    step="1"
-                                    required
-                                    className="contract-types-input"
-                                    value={form.sickDays}
-                                    onChange={(event) =>
-                                      cambiarCampo("sickDays", event.target.value)
-                                    }
-                                    placeholder="0"
-                                  />
-                                </div>
-                              </div>
-
-                              <div className="contract-types-divider" />
-
-                              <h3>
-                                Configuración de vacaciones
-                                <MdInfoOutline title="Determina si este contrato sigue el calendario institucional." />
-                              </h3>
-
-                              <div className="contract-types-radio-group">
-                                <label>
-                                  <input
-                                    type="radio"
-                                    name="contract-calendar"
-                                    value="uaq"
-                                    checked={form.calendar === "uaq"}
-                                    onChange={() => cambiarCampo("calendar", "uaq")}
-                                  />
-                                  <span>
-                                    <strong>Sigue el calendario UAQ</strong>
-                                    <small>
-                                      Se rige por los periodos institucionales.
-                                    </small>
-                                  </span>
-                                </label>
-
-                                <label>
-                                  <input
-                                    type="radio"
-                                    name="contract-calendar"
-                                    value="independent"
-                                    checked={form.calendar === "independent"}
-                                    onChange={() =>
-                                      cambiarCampo("calendar", "independent")
-                                    }
-                                  />
-                                  <span>
-                                    <strong>Calendario independiente</strong>
-                                    <small>
-                                      No sigue automáticamente el calendario
-                                      institucional.
-                                    </small>
-                                  </span>
-                                </label>
-                              </div>
-
-                              <div className="contract-types-fields">
-                                <div className="contract-types-field">
-                                  <label htmlFor="contract-start">
-                                    Inicio de vacaciones
-                                  </label>
-
-                                  <div className="contract-types-date">
-                                    <input
-                                      id="contract-start"
-                                      type="date"
-                                      className="contract-types-input"
-                                      value={form.vacationStart}
-                                      onChange={(event) =>
-                                        cambiarCampo("vacationStart", event.target.value)
-                                      }
-                                    />
-                                    <MdCalendarMonth />
-                                  </div>
-                                </div>
-
-                                <div className="contract-types-field">
-                                  <label htmlFor="contract-end">Fin de vacaciones</label>
-
-                                  <div className="contract-types-date">
-                                    <input
-                                      id="contract-end"
-                                      type="date"
-                                      className="contract-types-input"
-                                      min={form.vacationStart || undefined}
-                                      value={form.vacationEnd}
-                                      onChange={(event) =>
-                                        cambiarCampo("vacationEnd", event.target.value)
-                                      }
-                                    />
-                                    <MdCalendarMonth />
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
+                            )}
                           </div>
 
                           <div className="contract-types-editor-footer">
                             <div className="contract-types-delete-area">
-                              {!confirmandoEliminar ? (
+                              {!confirmingDelete ? (
                                 <button
                                   type="button"
                                   className="contract-types-delete"
-                                  onClick={() => setConfirmandoEliminar(true)}
+                                  onClick={() => setConfirmingDelete(true)}
                                 >
                                   Eliminar tipo de contrato
                                 </button>
                               ) : (
                                 <div className="contract-types-delete-confirm">
                                   <span>¿Eliminar este contrato de la lista?</span>
-
-                                  <button
-                                    type="button"
-                                    onClick={() => setConfirmandoEliminar(false)}
-                                  >
+                                  <button type="button" onClick={() => setConfirmingDelete(false)}>
                                     Cancelar
                                   </button>
-
                                   <button
                                     type="button"
                                     className="contract-types-delete-confirm-button"
-                                    disabled={guardando}
-                                    onClick={eliminarContrato}
+                                    disabled={saving}
+                                    onClick={() => deleteContract(contract.id)}
                                   >
                                     Confirmar
                                   </button>
@@ -622,26 +422,17 @@ function ContractTypes() {
                               )}
                             </div>
 
-                            <p className="contract-types-save-note">
-                              {mensaje || ""}
+                            <p className="contract-types-save-note" role="status">
+                              {message}
                             </p>
 
                             <div className="contract-types-actions">
-                              <button
-                                type="button"
-                                className="contract-types-cancel"
-                                onClick={cerrarEditor}
-                              >
+                              <button type="button" className="contract-types-cancel" onClick={closeEditor}>
                                 Descartar
                               </button>
-
-                              <button
-                                type="submit"
-                                className="contract-types-save"
-                                disabled={guardando}
-                              >
+                              <button type="submit" className="contract-types-save" disabled={saving}>
                                 <MdSave />
-                                {guardando ? "Guardando..." : "Guardar cambios"}
+                                {saving ? "Guardando..." : "Guardar topes"}
                               </button>
                             </div>
                           </div>
@@ -654,9 +445,7 @@ function ContractTypes() {
             </tbody>
           </table>
 
-          {contratosFiltrados.length === 0 && (
-            <p className="contract-types-message">No se encontraron tipos de contrato.</p>
-          )}
+          {shown.length === 0 && <p className="contract-types-message">No se encontraron tipos de contrato.</p>}
         </div>
       )}
     </section>
